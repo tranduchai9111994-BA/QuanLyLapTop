@@ -5,7 +5,7 @@ import { logger } from '../../lib/logger';
 export async function snapshotSync() {
   const laptops = await prisma.laptop.findMany({
     where: { isActive: true },
-    include: { cpu: true, gpu: true, segmentLabel: true },
+    include: { cpu: true, gpu: true, segmentLabel: true, brand: true },
   });
 
   const items = laptops
@@ -24,6 +24,9 @@ export async function snapshotSync() {
       weight_kg: l.weightKg,
       battery_wh: l.batteryWh ?? 55,
       price_vnd: l.priceVnd,
+      // Dac trung moi cho Mo hinh B: uy tin thuong hieu + do "dang tien" (hieu nang/trieu dong)
+      brand_tier: l.brand.tier,
+      value_index: l.valueIdx,
       segment: l.segmentLabel!.segment,
       name: l.name,
       gpu_model: l.gpu.displayName,

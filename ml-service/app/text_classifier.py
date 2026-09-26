@@ -165,26 +165,27 @@ def extract_constraints(text: str) -> dict:
 
 
 # Tu khoa dieu chinh muc uu tien (tri thuc ho tro, cong vao ho so tu mo hinh kNN)
+# (regex, nhom uu tien, muc thay doi, mo ta hien thi cho nguoi dung)
 PRIORITY_HINTS = [
-    (r"\b(re|gia re|tiet kiem|it tien|binh dan|sinh vien ngheo|ngan sach thap)\b", "price", +2),
-    (r"\b(cao cap|sang|khong quan trong gia|bao nhieu cung duoc)\b", "price", -2),
-    (r"\b(nhe|mong nhe|gon|de mang|di chuyen|cong tac|pin trau|pin lau)\b", "mobility", +2),
-    (r"\b(manh|khoe|cau hinh cao|muot|khung|nang)\b", "performance", +1),
-    (r"\b(man dep|mau chuan|srgb|do phan giai cao|4k|man hinh tot)\b", "display", +2),
-    (r"\b(ben|do ben|it hong|bao hanh tot)\b", "brand", +1),
+    (r"\b(re|gia re|tiet kiem|it tien|binh dan|sinh vien ngheo|ngan sach thap)\b", "price", +2, "muốn tiết kiệm chi phí"),
+    (r"\b(cao cap|sang|khong quan trong gia|bao nhieu cung duoc)\b", "price", -2, "không đặt nặng giá"),
+    (r"\b(nhe|mong nhe|gon|de mang|di chuyen|cong tac|pin trau|pin lau)\b", "mobility", +2, "cần nhẹ / pin lâu"),
+    (r"\b(manh|khoe|cau hinh cao|muot|khung|nang)\b", "performance", +1, "cần cấu hình mạnh"),
+    (r"\b(man dep|mau chuan|srgb|do phan giai cao|4k|man hinh tot)\b", "display", +2, "cần màn hình đẹp"),
+    (r"\b(ben|do ben|it hong|bao hanh tot)\b", "brand", +1, "ưu tiên thương hiệu bền, uy tín"),
 ]
 
 
 def apply_hints(priorities: dict, text: str) -> tuple[dict, list[str]]:
-    """Dieu chinh ho so uu tien theo tu khoa xuat hien trong cau. Tra ve (priorities, cac tu khoa bat duoc)."""
+    """Dieu chinh ho so uu tien theo tu khoa xuat hien trong cau.
+    Tra ve (priorities, danh sach MO TA de hien thi cho nguoi dung - khong phai tu tho da bo dau)."""
     t = normalize_text(text)
     out = dict(priorities)
     matched: list[str] = []
-    for pattern, key, delta in PRIORITY_HINTS:
-        m = re.search(pattern, t)
-        if not m:
+    for pattern, key, delta, description in PRIORITY_HINTS:
+        if not re.search(pattern, t):
             continue
-        matched.append(m.group(0))
+        matched.append(description)
         if key == "brand":
             out["brand_weight"] = out.get("brand_weight", 1.0) + 0.6  # uu tien hang uy tin
         else:

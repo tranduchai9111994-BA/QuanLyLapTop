@@ -1,0 +1,154 @@
+# Kết quả thực nghiệm SmartLap (chạy lại trên bộ dữ liệu 1.000 máy)
+
+> Mọi con số dưới đây đều **truy được về file artifact**: `ml-service/artifacts/evaluation.json`
+> và `ml-service/artifacts/<version>/metadata.json`. Tái tạo bằng:
+> `cd ml-service && python -m app.train && python -m app.evaluate`
+
+## 1. Bộ dữ liệu
+
+| Hạng mục | Giá trị |
+|---|---|
+| Số máy | 1.000 |
+| Nguồn điểm CPU/GPU | PassMark CPU Mark / G3D Mark (tham chiếu cpubenchmark.net, videocardbenchmark.net) |
+| Số cặp CPU–GPU khác nhau | 195 |
+| Phân bố phân khúc | OFFICE 352 · GAMING 286 · ULTRABOOK 234 · CREATOR 128 |
+
+**Ràng buộc hợp lý đã áp dụng khi sinh dữ liệu** (`data/generate_catalog.py`):
+- Chỉ ghép CPU–GPU **khả dĩ trên thị trường**: Intel CPU không đi với iGPU AMD, Apple M-series chỉ
+  dùng GPU Apple (không có Apple + RTX), CPU tiết kiệm điện (U-series) không gắn RTX 4070/4080,
+  chip Celeron/Pentium không bao giờ kèm card rời.
+- **Giá là hàm của cấu hình × thương hiệu × nhiễu**: `giá = (chi phí CPU + GPU + RAM + SSD + màn
+  hình + vỏ máy) × hệ số thương hiệu × (1 ± 7%)`, không phải random theo phân khúc.
+- **Phân khúc chồng lấn tự nhiên**: nhãn được gán bằng điểm số có trọng số + nhiễu ngẫu nhiên, nên
+  khoảng giá các phân khúc giao nhau mạnh (GAMING 17,7–71,6tr; CREATOR 18,2–68,2tr).
+- Hãng cao cấp (tier ≥ 4) không dùng chip entry; hãng giá rẻ không bán máy cấu hình cao.
+
+## 2. Mô hình A — kNN phân lớp phân khúc
+
+| Chỉ số | Giá trị | Mục tiêu | Đạt? |
+|---|---|---|---|
+| macro-F1 (5-fold CV) | **0,766** | — | — |
+| macro-F1 trên tập test 20% | **0,797** | ≥ 0,75 | ✅ |
+| Vượt baseline đa số (Dummy) | **+0,668** | ≥ 0,30 | ✅ |
+| Vượt baseline luật if-else | **+0,122** | ≥ 0,05 | ✅ |
+| Tham số tốt nhất | k = 9, Manhattan, weights = distance | — | — |
+
+**Điểm đáng chú ý cho hội đồng**: trên bộ dữ liệu cũ (sinh theo khuôn mẫu, phân khúc tách bạch),
+kNN **thua** baseline luật if-else (−0,043) vì luật khớp đúng khuôn mẫu sinh dữ liệu. Trên bộ dữ
+liệu mới có chồng lấn thực tế, kNN **vượt luật +0,122** — đúng như kỳ vọng: luật cứng chỉ hiệu quả
+khi ranh giới rõ ràng, còn kNN học được ranh giới mờ. Tham số `k` cũng chuyển từ 1 (dấu hiệu
+overfit dữ liệu quá sạch) sang 9 (mô hình mượt, hợp lý).
+
+Confusion matrix (5-fold CV) cho thấy nhầm lẫn tập trung ở **CREATOR ↔ GAMING** (41/128 máy
+CREATOR bị đoán thành GAMING) — đúng dự đoán trong đặc tả, vì hai nhóm này dùng cấu hình gần giống
+nhau, chỉ khác mục đích sử dụng.
+
+## 3. Mô hình C — phân loại câu nhu cầu tự do (TF-IDF + kNN) — **MỚI**
+
+Đây là phần trả lời trực tiếp góp ý "chọn tiêu chí qua dropdown/thanh kéo không phải là thông minh".
+
+| Chỉ số | Giá trị |
+|---|---|
+| Số câu huấn luyện | 132 câu tiếng Việt viết tay |
+| Số nhóm nhu cầu | 6 (Văn phòng, Học tập, Lập trình, Đồ họa, Gaming, Di động) |
+| macro-F1 (5-fold CV) | **0,773** (k = 7) |
+| Độ chính xác trên 30 câu persona | **93%** (28/30) |
+
+Kiến trúc: `câu văn → TF-IDF (word 1-2gram + char_wb 3-5gram) → kNN cosine → nhóm nhu cầu → hồ sơ
+ưu tiên`. Dùng char n-gram nên **chịu được câu không dấu**: "con hoc ke toan can may ben re" vẫn
+cho kết quả giống hệt câu có dấu (đã kiểm thử).
+
+Regex chỉ dùng để **trích số cụ thể** (ngân sách "tầm 20 triệu", "dưới 1.4kg", "ram 16gb") — đây là
+tri thức hỗ trợ, việc **phân loại nhu cầu hoàn toàn do kNN đảm nhiệm**.
+
+## 4. Mô hình B — kNN truy hồi, khoảng cách một phía
+
+### 4.1 So với baseline (30 persona, top-5)
+
+| Phương pháp | P@5 | nDCG@5 | Đúng ngân sách |
+|---|---|---|---|
+| **kNN một phía (Mô hình B)** | **0,453** | **0,788** | 100% |
+| Baseline: value_index (hiệu năng/giá) | 0,227 | 0,679 | 100% |
+| Baseline: ngẫu nhiên | 0,153 | 0,627 | 100% |
+| Baseline: giá tăng dần | 0,073 | 0,541 | 100% |
+
+→ kNN vượt baseline tốt nhất **+0,110 nDCG@5** và **P@5 gấp đôi**.
+
+Độ liên quan được tính tự động từ hồ sơ persona (không gán nhãn tay): với mỗi tiêu chí, máy nhận
+điểm theo **hạng phân vị** (liên tục 0–1) nhân trọng số `mức_ưu_tiên/5`. Cách này công bằng cho mọi
+phương pháp — baseline một chiều không còn lợi thế cấu trúc như thước đo nhị phân ban đầu.
+
+### 4.2 Khoảng cách một phía
+
+```
+d(x, q) = √( Σⱼ wⱼ · penⱼ² )
+penⱼ = max(0, qⱼ − xⱼ)   nếu đặc trưng "càng cao càng tốt"  (mạnh hơn → KHÔNG phạt)
+penⱼ = max(0, xⱼ − qⱼ)   nếu đặc trưng "càng thấp càng tốt" (rẻ/nhẹ hơn → KHÔNG phạt)
+penⱼ = |xⱼ − qⱼ|         nếu hai phía (kích thước màn hình)
+```
+
+Hàm này được đưa **thẳng vào metric của kNN** (`NearestNeighbors(metric=callable)`), không phải xếp
+hạng lại bên ngoài.
+
+**Một lỗi nghiêm trọng đã phát hiện và sửa trong quá trình làm**: scikit-learn gọi hàm metric theo
+thứ tự `metric(query, train)`, ngược với thứ tự `(x, q)` mà công thức một phía yêu cầu. Vì hàm này
+**không đối xứng**, việc đảo thứ tự làm **lật dấu** — hệ thống đang ưu tiên máy *yếu hơn* thay vì
+*mạnh hơn*. Sau khi sửa, nDCG@5 tăng từ 0,589 lên **0,788**. Đã thêm test
+`test_one_sided_metric_argument_order` để chặn lỗi tái phát.
+
+### 4.3 Các thay đổi khác theo góp ý
+
+| Góp ý | Đã làm |
+|---|---|
+| Đưa giá vào xếp hạng | `price_vnd` và `value_index` là đặc trưng trong metric (trước đây "đáng tiền" chỉ là huy hiệu hiển thị) |
+| Thêm thuộc tính thương hiệu | `brand_tier` 1–5 là đặc trưng; từ khóa "bền/uy tín" trong câu nói đẩy trọng số thương hiệu lên 1,6× |
+| Bỏ lọc cứng theo phân khúc | Phân khúc là **một đặc trưng trong metric** (trọng số 0,18) — máy phân khúc kề bên vẫn lọt top nếu thực sự phù hợp. Lọc cứng chỉ còn: ngân sách, RAM/SSD/cân nặng tối thiểu, máy bị cấm |
+| Sửa match % | Dùng mốc cố định `100·e^(−d/0,9)`, không chuẩn hóa theo top-N nữa → điểm so sánh được giữa các lần truy vấn, máy hạng 1 không còn luôn được điểm cao |
+
+## 5. Tiêu chí 3 — hệ thống thông minh lên theo thời gian
+
+### 5.1 Máy mới tự được gán phân khúc
+
+Khi nhân viên nhập máy mới, Mô hình A đọc cấu hình và gợi ý phân khúc kèm phân bố xác suất. Ví dụ
+đã kiểm thử trên giao diện: ASUS ROG (i9-13900H + RTX 4070, 32GB, 240Hz, 2,6kg) → **Gaming 89%**,
+Đồ họa 11%. Độ tin cậy < 60% sẽ hiện cảnh báo "cần nhân viên xác minh".
+
+### 5.2 Học từ phản hồi người dùng
+
+`python -m app.retrain_from_feedback --demo` mô phỏng dòng thời gian thực tế: người dùng gõ câu với
+từ ngữ hệ thống chưa từng học ("tiệm tạp hóa", "khai báo thuế", "quay tiktok").
+
+| | Kết quả |
+|---|---|
+| Học từ 12 câu đợt 1 (được 👍) | |
+| Độ chính xác trên 12 câu đợt 2 (chưa từng thấy) — **trước** khi học | 11/12 = **91,7%** |
+| Độ chính xác trên 12 câu đợt 2 — **sau** khi học | 12/12 = **100%** |
+
+Câu cụ thể được sửa: *"cần máy chỉnh ảnh cưới hàng loạt, màu phải chính xác"* từ VAN_PHONG →
+**DO_HOA** (đúng).
+
+Chỉ nhận câu có phản hồi 👍 vào tập huấn luyện — không tự tin vào dự đoán của chính mình, tránh
+hiệu ứng "buồng vọng âm" (echo chamber).
+
+## 6. Độ đo thực tế — công sức tìm kiếm
+
+Đo bằng **số máy người dùng phải xem qua** trước khi gặp máy phù hợp (máy thuộc nhóm 20% hài lòng
+nhất), tái lập được bằng code nên không cần bấm giờ từng người:
+
+| Cách tìm | Số máy phải xem |
+|---|---|
+| Duyệt danh mục thủ công (sắp theo giá) | **19,5 máy/lần** (trung vị 9) |
+| Dùng hệ thống gợi ý | **1,4 máy/lần** |
+| Tỷ lệ tìm thấy ngay trong top-5 | **67%** |
+
+→ Giảm công sức khoảng **14 lần**.
+
+## 7. Hạn chế cần nói rõ khi bảo vệ
+
+1. **Dữ liệu là dữ liệu tổng hợp có logic**, không phải catalog thu thập thật. Điểm PassMark là số
+   tham chiếu từ kiến thức sẵn có, nhóm nên đối chiếu lại trên cpubenchmark.net và ghi ngày tra.
+2. **Mô hình C mới có 132 câu huấn luyện** — macro-F1 0,773 là khá với quy mô này nhưng còn xa mức
+   sản phẩm thật. Nhóm DO_HOA yếu nhất (9/21 đúng trong CV) vì từ ngữ đa dạng nhất.
+3. **Thí nghiệm đối chứng Kaggle chưa chạy** (chưa tải được `laptop_price.csv`).
+4. Thước đo "công sức tìm kiếm" là **proxy tính bằng code**, không phải đo thời gian thật trên
+   người dùng. Muốn có số liệu thuyết phục hơn cần thử nghiệm với 5–10 người thật.

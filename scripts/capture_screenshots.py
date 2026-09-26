@@ -23,6 +23,16 @@ def main():
         page.wait_for_timeout(400)
         page.screenshot(path=OUT / "02_wizard_nhu_cau.png")
 
+        # Mo hinh C: nhap nhu cau bang CAU TU DO (diem moi quan trong nhat - tieu chi 2)
+        page.get_by_placeholder('Ví dụ: "con học kế toán, cần máy bền, rẻ"').fill(
+            "con học kế toán, cần máy bền, rẻ"
+        )
+        page.get_by_text("Phân tích nhu cầu").click()
+        page.wait_for_timeout(1500)
+        page.get_by_text("Vì sao hệ thống hiểu như vậy?").click()
+        page.wait_for_timeout(400)
+        page.screenshot(path=OUT / "02b_cau_tu_do_tfidf_knn.png")
+
         page.get_by_text("Chơi game", exact=True).click()
         page.get_by_text("Lập trình", exact=True).click()
         page.wait_for_timeout(200)

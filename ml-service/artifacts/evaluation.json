@@ -169,5 +169,13 @@
         23
       ]
     ]
+  },
+  "search_effort": {
+    "n_personas": 30,
+    "manual_avg_items_viewed": 19.5,
+    "manual_median_items_viewed": 9.0,
+    "system_avg_items_viewed": 1.4,
+    "system_hit_rate_top5": 0.6667,
+    "speedup_times": 14.0
   }
 }

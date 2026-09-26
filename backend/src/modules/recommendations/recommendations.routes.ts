@@ -27,6 +27,9 @@ const recommendSchema = z.object({
     })
     .default({}),
   topN: z.number().optional(),
+  brandWeight: z.number().optional(),
+  needText: z.string().optional(),
+  needLabel: z.string().optional(),
 });
 
 recommendationsRouter.post('/', optionalAuth, async (req, res, next) => {
@@ -34,6 +37,20 @@ recommendationsRouter.post('/', optionalAuth, async (req, res, next) => {
     const body = recommendSchema.parse(req.body);
     const data = await recommendService.recommend({ ...body, userId: req.user?.id });
     res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+const parseNeedSchema = z.object({ text: z.string().min(3, 'Vui lòng mô tả nhu cầu dài hơn') });
+
+/** Doc cau nhu cau TU DO cua nguoi dung (Mo hinh C: TF-IDF + kNN) -> ho so uu tien/ngan sach.
+ * Day la duong vao "thong minh" thay cho viec tu keo thanh truot. */
+recommendationsRouter.post('/parse-need', async (req, res, next) => {
+  try {
+    const body = parseNeedSchema.parse(req.body);
+    const r = await mlClient.post('/parse-need', body);
+    res.json({ success: true, data: r.data });
   } catch (err) {
     next(err);
   }

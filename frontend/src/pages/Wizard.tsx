@@ -8,6 +8,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { PrioritySlider } from '../components/smart/PrioritySlider';
+import { NeedTextInput, type ParsedNeed } from '../components/smart/NeedTextInput';
 import { api } from '../lib/api';
 import type { Priorities, RecommendationResult } from '../types';
 
@@ -32,6 +33,18 @@ export function Wizard() {
   const [ramMin, setRamMin] = useState<number | null>(null);
   const [priorities, setPriorities] = useState<Priorities>({ performance: 3, mobility: 3, display: 3, price: 3 });
   const [loading, setLoading] = useState(false);
+  // Ket qua doc cau tu do (Mo hinh C) - dung de gui kem telemetry va truyen trong so thuong hieu
+  const [parsedNeed, setParsedNeed] = useState<{ need: ParsedNeed; text: string } | null>(null);
+
+  /** Khi Mo hinh C doc xong cau noi: dien san moi lua chon ben duoi. Nguoi dung van sua duoc -
+   * he thong goi y chu khong ep (nguyen tac "ton trong quyet dinh nguoi dung", docs/07 SS1). */
+  function applyParsedNeed(need: ParsedNeed, text: string) {
+    setParsedNeed({ need, text });
+    setPriorities(need.priorities);
+    setBudget([need.budget.min, need.budget.max]);
+    setActivities(need.activities);
+    if (need.must.ramMin) setRamMin(need.must.ramMin);
+  }
 
   async function handleSubmit() {
     setLoading(true);
@@ -43,6 +56,9 @@ export function Wizard() {
         priorities,
         must: ramMin ? { ramMin } : {},
         topN: 5,
+        brandWeight: parsedNeed?.need.brandWeight ?? 1,
+        needText: parsedNeed?.text,
+        needLabel: parsedNeed?.need.label,
       });
       navigate('/results', { state: { result: r.data.data } });
     } catch (err) {
@@ -55,6 +71,12 @@ export function Wizard() {
   return (
     <div style={{ maxWidth: 640, margin: '40px auto', padding: '0 16px' }}>
       <h1>Cho chúng tôi biết nhu cầu của bạn</h1>
+
+      <NeedTextInput onParsed={applyParsedNeed} />
+
+      <div style={{ textAlign: 'center', color: '#64748B', marginBottom: 20 }}>
+        — hoặc chọn thủ công bên dưới —
+      </div>
 
       <h3>Bạn dùng laptop để làm gì?</h3>
       <Checkbox.Group

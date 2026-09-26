@@ -13,6 +13,12 @@ export interface RecommendRequestBody {
   must: { ramMin?: number; ssdMin?: number; weightMax?: number; brandIds?: number[] };
   topN?: number;
   userId?: number;
+  /** Trong so uy tin thuong hieu (Mo hinh C day len khi cau noi co "ben", "bao hanh tot"). */
+  brandWeight?: number;
+  /** Cau nhu cau goc neu nguoi dung nhap bang van ban tu do (luu vao telemetry de hoc them). */
+  needText?: string;
+  /** Nhan nhu cau do Mo hinh C suy ra, dung de hien thi va thong ke. */
+  needLabel?: string;
 }
 
 const DEFAULT_MIN_CANDIDATES = 3;
@@ -29,11 +35,13 @@ async function inferSegment(activities: string[]) {
   }
 }
 
+/** LOC CUNG chi gom nhung dieu kien nguoi dung noi ro: ngan sach, RAM/SSD/can nang toi thieu,
+ * hang may, va may bi BAN. KHONG loc theo phan khuc nua - phan khuc da chuyen sang LOC MEM
+ * (la mot dac trung trong metric cua Mo hinh B), de khong loai mat may tot o phan khuc ke ben. */
 async function findCandidates(segment: Segment, budgetMax: number, must: RecommendRequestBody['must']) {
   const where: any = {
     isActive: true,
     priceVnd: { lte: budgetMax },
-    segmentLabel: { segment },
   };
   if (must.ramMin) where.ramGb = { gte: must.ramMin };
   if (must.ssdMin) where.ssdGb = { gte: must.ssdMin };
@@ -92,6 +100,7 @@ export async function recommend(body: RecommendRequestBody) {
         priorities: body.priorities,
         must: body.must,
         topN,
+        brandWeight: body.brandWeight ?? 1.0,
       });
       ideal = r.data.ideal;
       weights = r.data.weights;
@@ -130,7 +139,16 @@ export async function recommend(body: RecommendRequestBody) {
   const session = await prisma.recommendationSession.create({
     data: {
       userId: body.userId,
-      needJson: toJson({ activities: body.activities, budget: body.budget, priorities: body.priorities, must: body.must }),
+      needJson: toJson({
+        activities: body.activities,
+        budget: body.budget,
+        priorities: body.priorities,
+        must: body.must,
+        // Luu cau goc + nhan Mo hinh C suy ra: day la nguon du lieu THAT de bo sung vao tap
+        // huan luyen Mo hinh C sau nay (tieu chi 3 - he thong thong minh len theo thoi gian)
+        needText: body.needText,
+        needLabel: body.needLabel,
+      }),
       inferredSegment,
       inferredConf,
       usedSegment,

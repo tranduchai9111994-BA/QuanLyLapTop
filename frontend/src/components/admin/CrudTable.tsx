@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Switch, Table, Upload, message } from 'antd';
 import { UploadOutlined, DownloadOutlined, SearchOutlined } from '@ant-design/icons';
 import * as XLSX from 'xlsx';
@@ -25,6 +25,7 @@ export function CrudTable({
   listEndpoint,
   fields,
   transformSubmit,
+  renderFormExtra,
 }: {
   title: string;
   /** Duong dan goc dung cho POST/PUT/DELETE, vd "/brands" (khong kem query string). */
@@ -33,6 +34,8 @@ export function CrudTable({
   listEndpoint?: string;
   fields: CrudField[];
   transformSubmit?: (values: any) => any;
+  /** Noi dung phu hien trong modal (vd o AI goi y phan khuc khi them laptop moi). */
+  renderFormExtra?: (form: any) => ReactNode;
 }) {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -245,8 +248,11 @@ export function CrudTable({
         okText="Lưu"
         cancelText="Hủy"
         width={useGrid ? 720 : 480}
+        // Form nhap laptop kha dai - khong cho dong khi lo bam ra ngoai (mat het du lieu dang nhap)
+        maskClosable={false}
       >
         <Form form={form} layout="vertical">
+          {renderFormExtra?.(form)}
           <div
             style={
               useGrid

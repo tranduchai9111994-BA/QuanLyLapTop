@@ -60,8 +60,12 @@ async function seedBenchmarks() {
   const gpuMap = new Map<string, number>();
   for (const row of gpuRows) {
     const score = (100 * Number(row.raw_score)) / maxGpu;
+    // Uu tien cot `dedicated` that trong file benchmark; chi doan tu ten khi file khong co cot do
     const norm = row.display_name.toLowerCase();
-    const dedicated = dedicatedMarkers.some((m) => norm.includes(m));
+    const dedicated =
+      row.dedicated !== undefined && row.dedicated !== ''
+        ? row.dedicated === '1' || String(row.dedicated).toLowerCase() === 'true'
+        : dedicatedMarkers.some((m) => norm.includes(m));
     const rec = await prisma.gpuBenchmark.upsert({
       where: { pattern: row.pattern },
       create: {
@@ -120,7 +124,12 @@ async function seedCatalog(cpuMap: Map<string, number>, gpuMap: Map<string, numb
   for (const row of rows) {
     let brandId = brandCache.get(row.brand);
     if (!brandId) {
-      const brand = await prisma.brand.upsert({ where: { name: row.brand }, create: { name: row.brand }, update: {} });
+      const tier = row.brand_tier ? Number(row.brand_tier) : 3;
+      const brand = await prisma.brand.upsert({
+        where: { name: row.brand },
+        create: { name: row.brand, tier },
+        update: { tier },
+      });
       brandId = brand.id;
       brandCache.set(row.brand, brandId);
     }
@@ -212,7 +221,30 @@ async function seedKnowledgeConfig() {
   console.log('Da tao cau hinh tri thuc mac dinh');
 }
 
+/** Xoa sach catalog + telemetry mo phong truoc khi nap bo du lieu moi.
+ * KHONG xoa tai khoan nguoi dung va cau hinh tri thuc.
+ * Chay khi truyen co `--reset`: `npm run seed -- --reset`.
+ * Can thiet khi doi bo du lieu (vd bang benchmark moi), neu khong DB se lan ca ban cu lan moi
+ * khien viec tra cuu CPU/GPU khop nham dong cu. */
+async function resetCatalog() {
+  await prisma.recommendationItem.deleteMany();
+  await prisma.interactionEvent.deleteMany();
+  await prisma.recommendationSession.deleteMany();
+  await prisma.favorite.deleteMany();
+  await prisma.priceHistory.deleteMany();
+  await prisma.segmentLabel.deleteMany();
+  await prisma.laptopPin.deleteMany();
+  await prisma.laptop.deleteMany();
+  await prisma.cpuBenchmark.deleteMany();
+  await prisma.gpuBenchmark.deleteMany();
+  await prisma.brand.deleteMany();
+  console.log('Da xoa catalog + telemetry cu (giu lai tai khoan va cau hinh tri thuc)');
+}
+
 async function main() {
+  if (process.argv.includes('--reset')) {
+    await resetCatalog();
+  }
   await seedUsers();
   const { cpuMap, gpuMap } = await seedBenchmarks();
   await seedCatalog(cpuMap, gpuMap);

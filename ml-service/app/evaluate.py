@@ -193,6 +193,62 @@ def evaluate_model_b(df: pd.DataFrame, personas: list[dict]) -> dict:
     return summary
 
 
+def evaluate_search_effort(df: pd.DataFrame, personas: list[dict]) -> dict:
+    """Do 'cong suc tim kiem': NGUOI DUNG PHAI XEM QUA BAO NHIEU MAY moi gap may phu hop.
+
+    Day la thuoc do thay the khach quan cho "thoi gian tim duoc may", tai lap duoc bang code
+    (khong can bam gio tung nguoi that):
+      - Khong co he thong: nguoi dung duyet danh muc nhu tren web ban le - sap xep theo gia tang
+        dan roi doc lan luot cho den khi gap may thoa nhu cau.
+      - Co he thong: doc lan luot trong top-5 goi y.
+    "May thoa nhu cau" = may nam trong nhom 20% hai long nhat (cung dinh nghia relevance o tren).
+    """
+    scaler = fit_scaler(df)
+    model_a = build_pipeline()
+    model_a.set_params(knn__n_neighbors=5, knn__weights="distance", knn__metric="euclidean")
+    model_a.fit(df[MODEL_A_FEATURES], df["segment"])
+
+    manual_positions, system_positions, system_found = [], [], 0
+    for persona in personas:
+        inp = persona["input"]
+        must = inp.get("must", {})
+        segment = inp["segment"] or infer_segment(model_a, df, inp["activities"])["segment"]
+
+        cand = df[df["price_vnd"] <= inp["budget"][1]]
+        if must.get("ram_min"):
+            cand = cand[cand["ram_gb"] >= must["ram_min"]]
+        if must.get("gpu_dedicated"):
+            cand = cand[cand["gpu_dedicated"] == 1]
+        if len(cand) < TOP_K:
+            continue
+
+        gains = relevance_scores(cand, persona)
+        threshold = float(gains.quantile(0.80))
+
+        # (a) Duyet thu cong: sap theo gia tang dan, dem so may phai xem
+        manual_order = cand.sort_values("price_vnd").index
+        pos = next((i + 1 for i, idx in enumerate(manual_order) if gains.loc[idx] >= threshold), len(cand))
+        manual_positions.append(pos)
+
+        # (b) Dung he thong: xem trong top-5
+        top = rank_knn(cand, scaler, persona, segment)
+        hit = next((i + 1 for i, idx in enumerate(top.index) if gains.loc[idx] >= threshold), None)
+        if hit:
+            system_positions.append(hit)
+            system_found += 1
+
+    return {
+        "n_personas": len(manual_positions),
+        "manual_avg_items_viewed": round(float(np.mean(manual_positions)), 1),
+        "manual_median_items_viewed": float(np.median(manual_positions)),
+        "system_avg_items_viewed": round(float(np.mean(system_positions)), 2) if system_positions else None,
+        "system_hit_rate_top5": round(system_found / len(manual_positions), 4) if manual_positions else 0,
+        "speedup_times": round(float(np.mean(manual_positions) / np.mean(system_positions)), 1)
+        if system_positions
+        else None,
+    }
+
+
 def evaluate_model_a(df: pd.DataFrame) -> dict:
     """Mo hinh A: macro-F1 + confusion matrix bang cross-validation (khong cham tap test)."""
     X, y = df[MODEL_A_FEATURES], df["segment"]
@@ -280,7 +336,18 @@ def main() -> None:
     best_baseline = max(v["ndcg_at_5"] for k, v in b.items() if "Baseline" in k)
     print(f"\n  => kNN vuot baseline tot nhat: {knn_ndcg - best_baseline:+.3f} nDCG@5")
 
-    out = {"model_a": a, "model_b": b, "model_c": c}
+    print()
+    print("=" * 74)
+    print("DO DO THUC TE - cong suc tim kiem (so may phai xem qua)")
+    print("=" * 74)
+    e = evaluate_search_effort(df, personas)
+    print(f"  Duyet thu cong (sap theo gia) : {e['manual_avg_items_viewed']} may/lan "
+          f"(trung vi {e['manual_median_items_viewed']:.0f})")
+    print(f"  Dung he thong goi y           : {e['system_avg_items_viewed']} may/lan")
+    print(f"  Ty le tim thay ngay trong top-5: {e['system_hit_rate_top5']:.0%}")
+    print(f"  => Nhanh hon khoang {e['speedup_times']} lan ve so may phai xem")
+
+    out = {"model_a": a, "model_b": b, "model_c": c, "search_effort": e}
     ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
     path = ARTIFACTS_DIR / "evaluation.json"
     path.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")

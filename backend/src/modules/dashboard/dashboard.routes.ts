@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../../lib/prisma';
 import { requireAuth, requireRole } from '../../middlewares/auth';
+import { fromJson } from '../../lib/json';
 
 export const dashboardRouter = Router();
 
@@ -45,6 +46,40 @@ dashboardRouter.get('/alerts', requireAuth, requireRole('ADMIN'), async (_req, r
 });
 
 export const feedbackSummaryRouter = Router();
+
+/** Cac CAU NHU CAU THAT nguoi dung da go, kem nhan Mo hinh C suy ra, CHI lay nhung phien co
+ * phan hoi 👍 (nguoi dung hai long) - dung lam du lieu hoc them cho Mo hinh C (tieu chi 3).
+ * Khong lay phien 👎 vi nhan co the sai; cung khong tu tin vao du doan cua chinh minh. */
+feedbackSummaryRouter.get('/need-texts', requireAuth, requireRole('ADMIN'), async (_req, res, next) => {
+  try {
+    const liked = await prisma.interactionEvent.findMany({
+      where: { type: 'LIKE', sessionId: { not: null } },
+      select: { sessionId: true },
+      distinct: ['sessionId'],
+    });
+    const sessionIds = liked.map((e) => e.sessionId!).filter(Boolean);
+    if (sessionIds.length === 0) return res.json({ success: true, data: [] });
+
+    const sessions = await prisma.recommendationSession.findMany({
+      where: { id: { in: sessionIds } },
+      select: { needJson: true },
+    });
+
+    const seen = new Set<string>();
+    const data: { text: string; label: string }[] = [];
+    for (const s of sessions) {
+      const need = fromJson<{ needText?: string; needLabel?: string }>(s.needJson, {});
+      if (!need.needText || !need.needLabel) continue;
+      const key = need.needText.trim().toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      data.push({ text: need.needText.trim(), label: need.needLabel });
+    }
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+});
 
 feedbackSummaryRouter.get('/summary', requireAuth, requireRole('ADMIN'), async (req, res, next) => {
   try {

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { optionalAuth, requireAuth, requireRole } from '../../middlewares/auth';
+import { AppError } from '../../middlewares/error';
 import { prisma } from '../../lib/prisma';
 import { mlClient } from '../../lib/mlClient';
 import { snapshotSync } from '../jobs/snapshotSync';
@@ -137,9 +138,18 @@ laptopsRouter.post('/predict-segment', requireAuth, requireRole('STAFF', 'ADMIN'
     const { cpuId, gpuId, ramGb, ssdGb, screenInch, resWidth, resHeight, refreshHz, srgb100, weightKg, batteryWh } =
       req.body;
     const [cpu, gpu] = await Promise.all([
-      prisma.cpuBenchmark.findUniqueOrThrow({ where: { id: cpuId } }),
-      prisma.gpuBenchmark.findUniqueOrThrow({ where: { id: gpuId } }),
+      prisma.cpuBenchmark.findUnique({ where: { id: cpuId } }),
+      prisma.gpuBenchmark.findUnique({ where: { id: gpuId } }),
     ]);
+    // Bao loi ro rang thay vi 500 chung chung: hay gap khi trang dang mo tu truoc luc nap lai
+    // du lieu (ID trong dropdown da cu) - luc do nguoi dung chi can tai lai trang.
+    if (!cpu || !gpu) {
+      throw new AppError(
+        404,
+        'BENCHMARK_NOT_FOUND',
+        'Không tìm thấy CPU/GPU đã chọn. Dữ liệu có thể vừa được cập nhật — hãy tải lại trang rồi chọn lại.'
+      );
+    }
     const ppi = laptopsService.computePpi(resWidth, resHeight, screenInch);
     const r = await mlClient.post('/predict-segment', {
       items: [

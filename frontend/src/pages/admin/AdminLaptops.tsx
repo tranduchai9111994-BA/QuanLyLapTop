@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Spin } from 'antd';
 import { api } from '../../lib/api';
 import { CrudTable, type CrudField } from '../../components/admin/CrudTable';
+import { SegmentSuggester } from '../../components/admin/SegmentSuggester';
 
 export function AdminLaptops() {
   const [fields, setFields] = useState<CrudField[] | null>(null);
@@ -50,5 +51,13 @@ export function AdminLaptops() {
   }, []);
 
   if (!fields) return <Spin />;
-  return <CrudTable title="Laptop" endpoint="/laptops" listEndpoint="/laptops?pageSize=500" fields={fields} />;
+  return (
+    <CrudTable
+      title="Laptop"
+      endpoint="/laptops"
+      listEndpoint="/laptops?pageSize=1000"
+      fields={fields}
+      renderFormExtra={(form) => <SegmentSuggester form={form} />}
+    />
+  );
 }

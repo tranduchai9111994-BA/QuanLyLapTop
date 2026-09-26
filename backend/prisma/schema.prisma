@@ -23,8 +23,11 @@ model User {
 }
 
 model Brand {
-  id      Int      @id @default(autoincrement())
-  name    String   @unique @db.NVarChar(60)
+  id   Int    @id @default(autoincrement())
+  name String @unique @db.NVarChar(60)
+  /// Hang uy tin thuong hieu 1..5 (5 = uy tin nhat) - dung lam dac trung cho Mo hinh B
+  tier Int    @default(3)
+
   laptops Laptop[]
 }
 
