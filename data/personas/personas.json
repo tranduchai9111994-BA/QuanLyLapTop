@@ -1,0 +1,918 @@
+[
+  {
+    "id": "P01",
+    "mo_ta": "Sinh vien nam nhat, chi hoc va luot web, ngan sach thap",
+    "input": {
+      "segment": null,
+      "activities": [
+        "hoc_tap",
+        "van_phong"
+      ],
+      "budget": [
+        9000000,
+        13000000
+      ],
+      "priorities": {
+        "performance": 1,
+        "mobility": 3,
+        "display": 2,
+        "price": 5
+      },
+      "must": {}
+    },
+    "expect": {
+      "segment_in": [
+        "OFFICE"
+      ],
+      "all_price_lte": 14300000
+    }
+  },
+  {
+    "id": "P02",
+    "mo_ta": "Nhan vien van phong can may nhe di lai nhieu",
+    "input": {
+      "segment": null,
+      "activities": [
+        "van_phong",
+        "di_chuyen_nhieu"
+      ],
+      "budget": [
+        15000000,
+        22000000
+      ],
+      "priorities": {
+        "performance": 2,
+        "mobility": 5,
+        "display": 3,
+        "price": 3
+      },
+      "must": {}
+    },
+    "expect": {
+      "segment_in": [
+        "OFFICE",
+        "ULTRABOOK"
+      ],
+      "all_price_lte": 24200000
+    }
+  },
+  {
+    "id": "P03",
+    "mo_ta": "Freelancer thiet ke can man hinh mau chuan",
+    "input": {
+      "segment": null,
+      "activities": [
+        "thiet_ke",
+        "do_hoa"
+      ],
+      "budget": [
+        30000000,
+        45000000
+      ],
+      "priorities": {
+        "performance": 4,
+        "mobility": 3,
+        "display": 5,
+        "price": 2
+      },
+      "must": {
+        "srgb_100": 1
+      }
+    },
+    "expect": {
+      "segment_in": [
+        "CREATOR"
+      ],
+      "all_price_lte": 49500000
+    }
+  },
+  {
+    "id": "P04",
+    "mo_ta": "Game thu FPS ngan sach tam trung",
+    "input": {
+      "segment": null,
+      "activities": [
+        "choi_game"
+      ],
+      "budget": [
+        20000000,
+        28000000
+      ],
+      "priorities": {
+        "performance": 5,
+        "mobility": 1,
+        "display": 4,
+        "price": 3
+      },
+      "must": {
+        "gpu_dedicated": 1
+      }
+    },
+    "expect": {
+      "segment_in": [
+        "GAMING"
+      ],
+      "all_price_lte": 30800000,
+      "top1_gpu_dedicated": true
+    }
+  },
+  {
+    "id": "P05",
+    "mo_ta": "Sinh vien CNTT lap trinh va choi game nhe",
+    "input": {
+      "segment": null,
+      "activities": [
+        "lap_trinh",
+        "choi_game"
+      ],
+      "budget": [
+        18000000,
+        22000000
+      ],
+      "priorities": {
+        "performance": 4,
+        "mobility": 3,
+        "display": 2,
+        "price": 3
+      },
+      "must": {
+        "ram_min": 16
+      }
+    },
+    "expect": {
+      "segment_in": [
+        "GAMING",
+        "OFFICE"
+      ],
+      "all_price_lte": 24200000,
+      "all_ram_gte": 16,
+      "top1_gpu_dedicated": true
+    }
+  },
+  {
+    "id": "P06",
+    "mo_ta": "Nhan vien ke toan can may on dinh",
+    "input": {
+      "segment": null,
+      "activities": [
+        "choi_game",
+        "van_phong"
+      ],
+      "budget": [
+        16200000,
+        57700000
+      ],
+      "priorities": {
+        "performance": 1,
+        "mobility": 2,
+        "display": 2,
+        "price": 3
+      },
+      "must": {
+        "ram_min": 16,
+        "gpu_dedicated": 1
+      }
+    },
+    "expect": {
+      "segment_in": [
+        "GAMING"
+      ],
+      "all_price_lte": 59900000,
+      "all_ram_gte": 16,
+      "top1_gpu_dedicated": true
+    }
+  },
+  {
+    "id": "P07",
+    "mo_ta": "Sinh vien thiet ke do hoa ngan sach vua",
+    "input": {
+      "segment": null,
+      "activities": [
+        "do_hoa",
+        "dung_video"
+      ],
+      "budget": [
+        25200000,
+        73500000
+      ],
+      "priorities": {
+        "performance": 5,
+        "mobility": 5,
+        "display": 3,
+        "price": 2
+      },
+      "must": {
+        "ram_min": 8,
+        "gpu_dedicated": 1
+      }
+    },
+    "expect": {
+      "segment_in": [
+        "CREATOR"
+      ],
+      "all_price_lte": 75700000,
+      "all_ram_gte": 8,
+      "top1_gpu_dedicated": true
+    }
+  },
+  {
+    "id": "P08",
+    "mo_ta": "Kien truc su can render 3D nhe",
+    "input": {
+      "segment": null,
+      "activities": [
+        "van_phong",
+        "hoc_tap"
+      ],
+      "budget": [
+        8100000,
+        18900000
+      ],
+      "priorities": {
+        "performance": 3,
+        "mobility": 3,
+        "display": 4,
+        "price": 5
+      },
+      "must": {}
+    },
+    "expect": {
+      "segment_in": [
+        "OFFICE"
+      ],
+      "all_price_lte": 21100000
+    }
+  },
+  {
+    "id": "P09",
+    "mo_ta": "Streamer can cau hinh manh, man hinh tan so cao",
+    "input": {
+      "segment": null,
+      "activities": [
+        "lap_trinh",
+        "di_chuyen_nhieu"
+      ],
+      "budget": [
+        16200000,
+        36700000
+      ],
+      "priorities": {
+        "performance": 3,
+        "mobility": 4,
+        "display": 2,
+        "price": 3
+      },
+      "must": {
+        "ram_min": 16
+      }
+    },
+    "expect": {
+      "segment_in": [
+        "ULTRABOOK"
+      ],
+      "all_price_lte": 38900000,
+      "all_ram_gte": 16
+    }
+  },
+  {
+    "id": "P10",
+    "mo_ta": "Giao vien can may nhe mang di day hoc",
+    "input": {
+      "segment": null,
+      "activities": [
+        "choi_game",
+        "lap_trinh"
+      ],
+      "budget": [
+        16200000,
+        57700000
+      ],
+      "priorities": {
+        "performance": 2,
+        "mobility": 4,
+        "display": 1,
+        "price": 2
+      },
+      "must": {
+        "ram_min": 8,
+        "gpu_dedicated": 1
+      }
+    },
+    "expect": {
+      "segment_in": [
+        "GAMING"
+      ],
+      "all_price_lte": 59900000,
+      "all_ram_gte": 8,
+      "top1_gpu_dedicated": true
+    }
+  },
+  {
+    "id": "P11",
+    "mo_ta": "Lap trinh vien backend can RAM lon",
+    "input": {
+      "segment": null,
+      "activities": [
+        "thiet_ke",
+        "do_hoa"
+      ],
+      "budget": [
+        25200000,
+        73500000
+      ],
+      "priorities": {
+        "performance": 2,
+        "mobility": 1,
+        "display": 5,
+        "price": 5
+      },
+      "must": {}
+    },
+    "expect": {
+      "segment_in": [
+        "CREATOR"
+      ],
+      "all_price_lte": 75700000
+    }
+  },
+  {
+    "id": "P12",
+    "mo_ta": "Nguoi dung pho thong xem phim luot web",
+    "input": {
+      "segment": null,
+      "activities": [
+        "van_phong",
+        "hoc_tap"
+      ],
+      "budget": [
+        8100000,
+        18900000
+      ],
+      "priorities": {
+        "performance": 3,
+        "mobility": 1,
+        "display": 4,
+        "price": 3
+      },
+      "must": {}
+    },
+    "expect": {
+      "segment_in": [
+        "OFFICE"
+      ],
+      "all_price_lte": 21100000
+    }
+  },
+  {
+    "id": "P13",
+    "mo_ta": "Nhiep anh gia chinh sua anh mau chuan",
+    "input": {
+      "segment": null,
+      "activities": [
+        "lap_trinh",
+        "di_chuyen_nhieu"
+      ],
+      "budget": [
+        16200000,
+        36700000
+      ],
+      "priorities": {
+        "performance": 1,
+        "mobility": 5,
+        "display": 1,
+        "price": 1
+      },
+      "must": {
+        "ram_min": 16
+      }
+    },
+    "expect": {
+      "segment_in": [
+        "ULTRABOOK"
+      ],
+      "all_price_lte": 38900000,
+      "all_ram_gte": 16
+    }
+  },
+  {
+    "id": "P14",
+    "mo_ta": "Sinh vien nganh y hoc lieu tuc",
+    "input": {
+      "segment": null,
+      "activities": [
+        "choi_game",
+        "lap_trinh"
+      ],
+      "budget": [
+        16200000,
+        57700000
+      ],
+      "priorities": {
+        "performance": 1,
+        "mobility": 4,
+        "display": 4,
+        "price": 4
+      },
+      "must": {
+        "ram_min": 16
+      }
+    },
+    "expect": {
+      "segment_in": [
+        "GAMING"
+      ],
+      "all_price_lte": 59900000,
+      "all_ram_gte": 16
+    }
+  },
+  {
+    "id": "P15",
+    "mo_ta": "Nhan su marketing di cong tac nhieu",
+    "input": {
+      "segment": null,
+      "activities": [
+        "do_hoa",
+        "dung_video"
+      ],
+      "budget": [
+        25200000,
+        73500000
+      ],
+      "priorities": {
+        "performance": 2,
+        "mobility": 2,
+        "display": 1,
+        "price": 3
+      },
+      "must": {
+        "gpu_dedicated": 1
+      }
+    },
+    "expect": {
+      "segment_in": [
+        "CREATOR"
+      ],
+      "all_price_lte": 75700000,
+      "top1_gpu_dedicated": true
+    }
+  },
+  {
+    "id": "P16",
+    "mo_ta": "Ky su xay dung dung phan mem CAD nhe",
+    "input": {
+      "segment": null,
+      "activities": [
+        "van_phong",
+        "xem_phim"
+      ],
+      "budget": [
+        8100000,
+        18900000
+      ],
+      "priorities": {
+        "performance": 1,
+        "mobility": 5,
+        "display": 3,
+        "price": 5
+      },
+      "must": {
+        "ram_min": 8
+      }
+    },
+    "expect": {
+      "segment_in": [
+        "OFFICE"
+      ],
+      "all_price_lte": 21100000,
+      "all_ram_gte": 8
+    }
+  },
+  {
+    "id": "P17",
+    "mo_ta": "Nguoi moi bat dau hoc lap trinh",
+    "input": {
+      "segment": null,
+      "activities": [
+        "lap_trinh",
+        "di_chuyen_nhieu"
+      ],
+      "budget": [
+        16200000,
+        36700000
+      ],
+      "priorities": {
+        "performance": 2,
+        "mobility": 4,
+        "display": 1,
+        "price": 5
+      },
+      "must": {
+        "ram_min": 16
+      }
+    },
+    "expect": {
+      "segment_in": [
+        "ULTRABOOK"
+      ],
+      "all_price_lte": 38900000,
+      "all_ram_gte": 16
+    }
+  },
+  {
+    "id": "P18",
+    "mo_ta": "Content creator dung phong dung premiere",
+    "input": {
+      "segment": null,
+      "activities": [
+        "choi_game",
+        "xem_phim"
+      ],
+      "budget": [
+        16200000,
+        57700000
+      ],
+      "priorities": {
+        "performance": 1,
+        "mobility": 1,
+        "display": 4,
+        "price": 2
+      },
+      "must": {
+        "ram_min": 16
+      }
+    },
+    "expect": {
+      "segment_in": [
+        "GAMING"
+      ],
+      "all_price_lte": 59900000,
+      "all_ram_gte": 16
+    }
+  },
+  {
+    "id": "P19",
+    "mo_ta": "Nhan vien IT ho tro can may ben",
+    "input": {
+      "segment": null,
+      "activities": [
+        "do_hoa",
+        "dung_video"
+      ],
+      "budget": [
+        25200000,
+        73500000
+      ],
+      "priorities": {
+        "performance": 5,
+        "mobility": 2,
+        "display": 3,
+        "price": 4
+      },
+      "must": {
+        "ram_min": 16,
+        "gpu_dedicated": 1
+      }
+    },
+    "expect": {
+      "segment_in": [
+        "CREATOR"
+      ],
+      "all_price_lte": 75700000,
+      "all_ram_gte": 16,
+      "top1_gpu_dedicated": true
+    }
+  },
+  {
+    "id": "P20",
+    "mo_ta": "Sinh vien cao hoc phan tich du lieu",
+    "input": {
+      "segment": null,
+      "activities": [
+        "van_phong",
+        "hoc_tap"
+      ],
+      "budget": [
+        8100000,
+        18900000
+      ],
+      "priorities": {
+        "performance": 1,
+        "mobility": 5,
+        "display": 4,
+        "price": 2
+      },
+      "must": {
+        "ram_min": 8
+      }
+    },
+    "expect": {
+      "segment_in": [
+        "OFFICE"
+      ],
+      "all_price_lte": 21100000,
+      "all_ram_gte": 8
+    }
+  },
+  {
+    "id": "P21",
+    "mo_ta": "Nguoi dung gia dinh dung chung ca nha",
+    "input": {
+      "segment": null,
+      "activities": [
+        "hoc_tap",
+        "di_chuyen_nhieu"
+      ],
+      "budget": [
+        16200000,
+        36700000
+      ],
+      "priorities": {
+        "performance": 3,
+        "mobility": 2,
+        "display": 1,
+        "price": 1
+      },
+      "must": {
+        "ram_min": 16
+      }
+    },
+    "expect": {
+      "segment_in": [
+        "ULTRABOOK"
+      ],
+      "all_price_lte": 38900000,
+      "all_ram_gte": 16
+    }
+  },
+  {
+    "id": "P22",
+    "mo_ta": "Chuyen vien tai chinh dung Excel nang",
+    "input": {
+      "segment": null,
+      "activities": [
+        "choi_game",
+        "lap_trinh"
+      ],
+      "budget": [
+        16200000,
+        57700000
+      ],
+      "priorities": {
+        "performance": 5,
+        "mobility": 4,
+        "display": 2,
+        "price": 1
+      },
+      "must": {
+        "ram_min": 16,
+        "gpu_dedicated": 1
+      }
+    },
+    "expect": {
+      "segment_in": [
+        "GAMING"
+      ],
+      "all_price_lte": 59900000,
+      "all_ram_gte": 16,
+      "top1_gpu_dedicated": true
+    }
+  },
+  {
+    "id": "P23",
+    "mo_ta": "Sinh vien kien truc dung Sketchup/3ds Max",
+    "input": {
+      "segment": null,
+      "activities": [
+        "thiet_ke",
+        "dung_video"
+      ],
+      "budget": [
+        25200000,
+        73500000
+      ],
+      "priorities": {
+        "performance": 1,
+        "mobility": 3,
+        "display": 2,
+        "price": 4
+      },
+      "must": {
+        "ram_min": 16,
+        "gpu_dedicated": 1
+      }
+    },
+    "expect": {
+      "segment_in": [
+        "CREATOR"
+      ],
+      "all_price_lte": 75700000,
+      "all_ram_gte": 16,
+      "top1_gpu_dedicated": true
+    }
+  },
+  {
+    "id": "P24",
+    "mo_ta": "Dev mobile can may nhe pin trau",
+    "input": {
+      "segment": null,
+      "activities": [
+        "hoc_tap",
+        "xem_phim"
+      ],
+      "budget": [
+        8100000,
+        18900000
+      ],
+      "priorities": {
+        "performance": 4,
+        "mobility": 1,
+        "display": 1,
+        "price": 2
+      },
+      "must": {
+        "ram_min": 8
+      }
+    },
+    "expect": {
+      "segment_in": [
+        "OFFICE"
+      ],
+      "all_price_lte": 21100000,
+      "all_ram_gte": 8
+    }
+  },
+  {
+    "id": "P25",
+    "mo_ta": "Game thu MOBA ngan sach thap",
+    "input": {
+      "segment": null,
+      "activities": [
+        "hoc_tap",
+        "di_chuyen_nhieu"
+      ],
+      "budget": [
+        16200000,
+        36700000
+      ],
+      "priorities": {
+        "performance": 3,
+        "mobility": 3,
+        "display": 4,
+        "price": 1
+      },
+      "must": {}
+    },
+    "expect": {
+      "segment_in": [
+        "ULTRABOOK"
+      ],
+      "all_price_lte": 38900000
+    }
+  },
+  {
+    "id": "P26",
+    "mo_ta": "Nguoi dung cao cap can hieu nang toi da",
+    "input": {
+      "segment": null,
+      "activities": [
+        "choi_game",
+        "lap_trinh"
+      ],
+      "budget": [
+        16200000,
+        57700000
+      ],
+      "priorities": {
+        "performance": 1,
+        "mobility": 2,
+        "display": 2,
+        "price": 3
+      },
+      "must": {}
+    },
+    "expect": {
+      "segment_in": [
+        "GAMING"
+      ],
+      "all_price_lte": 59900000
+    }
+  },
+  {
+    "id": "P27",
+    "mo_ta": "Nhan vien kinh doanh dung Powerpoint thuong xuyen",
+    "input": {
+      "segment": null,
+      "activities": [
+        "thiet_ke",
+        "dung_video"
+      ],
+      "budget": [
+        25200000,
+        73500000
+      ],
+      "priorities": {
+        "performance": 3,
+        "mobility": 1,
+        "display": 3,
+        "price": 3
+      },
+      "must": {
+        "ram_min": 8
+      }
+    },
+    "expect": {
+      "segment_in": [
+        "CREATOR"
+      ],
+      "all_price_lte": 75700000,
+      "all_ram_gte": 8
+    }
+  },
+  {
+    "id": "P28",
+    "mo_ta": "Sinh vien ngoai ngu hoc online",
+    "input": {
+      "segment": null,
+      "activities": [
+        "van_phong",
+        "hoc_tap"
+      ],
+      "budget": [
+        8100000,
+        18900000
+      ],
+      "priorities": {
+        "performance": 4,
+        "mobility": 4,
+        "display": 4,
+        "price": 3
+      },
+      "must": {}
+    },
+    "expect": {
+      "segment_in": [
+        "OFFICE"
+      ],
+      "all_price_lte": 21100000
+    }
+  },
+  {
+    "id": "P29",
+    "mo_ta": "Chuyen gia du lieu chay model nho tren may",
+    "input": {
+      "segment": null,
+      "activities": [
+        "lap_trinh",
+        "di_chuyen_nhieu"
+      ],
+      "budget": [
+        16200000,
+        36700000
+      ],
+      "priorities": {
+        "performance": 4,
+        "mobility": 4,
+        "display": 2,
+        "price": 1
+      },
+      "must": {
+        "ram_min": 8
+      }
+    },
+    "expect": {
+      "segment_in": [
+        "ULTRABOOK"
+      ],
+      "all_price_lte": 38900000,
+      "all_ram_gte": 8
+    }
+  },
+  {
+    "id": "P30",
+    "mo_ta": "Nguoi dung phong thu do hoa 2D",
+    "input": {
+      "segment": null,
+      "activities": [
+        "choi_game",
+        "lap_trinh"
+      ],
+      "budget": [
+        16200000,
+        57700000
+      ],
+      "priorities": {
+        "performance": 2,
+        "mobility": 1,
+        "display": 4,
+        "price": 5
+      },
+      "must": {}
+    },
+    "expect": {
+      "segment_in": [
+        "GAMING"
+      ],
+      "all_price_lte": 59900000
+    }
+  }
+]

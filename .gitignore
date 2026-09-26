@@ -1,0 +1,15 @@
+node_modules/
+.env
+.env.*
+dist/
+build/
+*.pyc
+__pycache__/
+.pytest_cache/
+ml-service/artifacts/*/
+!ml-service/artifacts/.gitkeep
+backend/node_modules/
+frontend/node_modules/
+frontend/dist/
+*.log
+.DS_Store
