@@ -11,7 +11,8 @@ from app.explain import build_explanation
 from app.features import MODEL_A_FEATURES, MODEL_B_FEATURES
 from app.registry import registry
 from app.retriever import build_ideal_vector, build_weights, fit_scaler, match_pct, recommend, similar_items
-from app.schemas import CatalogSyncRequest, PredictSegmentRequest, RecommendRequest, SimilarRequest, TrainRequest  # noqa: F401
+from app.schemas import CatalogSyncRequest, PredictSegmentRequest, RecommendRequest, SimilarRequest, TrainRequest
+from app.segment_inference import infer_segment
 
 app = FastAPI(title="SmartLap ML service")
 
@@ -69,6 +70,18 @@ def predict_segment(req: PredictSegmentRequest) -> dict:
             "distribution": {labels[i]: float(row_proba[i]) for i in order},
         })
     return {"items": results, "modelVersion": registry.version}
+
+
+@app.post("/infer-segment")
+def infer_segment_endpoint(payload: dict) -> dict:
+    """{activities: [...]}. -> suy phan khuc tu hoat dong khi nguoi dung chon 'Chua ro'."""
+    catalog = _require_catalog()
+    if registry.model is None:
+        raise HTTPException(status_code=503, detail="Chua co mo hinh phan lop duoc kich hoat")
+    activities = payload.get("activities", [])
+    result = infer_segment(registry.model, catalog, activities)
+    result["modelVersion"] = registry.version
+    return result
 
 
 @app.post("/recommend")
