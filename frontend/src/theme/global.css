@@ -1,0 +1,33 @@
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap');
+
+:root {
+  --primary-50: #EEF5FF;
+  --primary-100: #DCEBFF;
+  --primary-500: #1A73E8;
+  --primary-700: #0F4494;
+  --ai-500: #06B6D4;
+  --bg-page: #F5F9FF;
+  --border: #E2EAF5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-page);
+  font-family: 'Be Vietnam Pro', 'Segoe UI', Roboto, Arial, sans-serif;
+  color: #0F1B2D;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
