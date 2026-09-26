@@ -19,6 +19,12 @@ Chạy `stop-smartlap.bat` để tắt toàn bộ (đọc PID đã lưu ở `log
 Yêu cầu trước khi dùng icon: SQL Server, Python, Node.js đã cài, và các bước `npm install`/
 `pip install`/`prisma migrate`/seed ở dưới đã chạy ít nhất một lần.
 
+Muốn xem log trực tiếp (debug) thay vì chạy ẩn: chạy `start-smartlap.bat` (bản cũ, mở 3 cửa sổ
+console) thay cho icon Desktop.
+
+**Truy cập quản trị**: menu trang khách hàng có link "Quản trị viên / Nhân viên" ở góc phải
+(`/admin/login`), đăng nhập `admin@smartlap.vn` / `Demo@123` để vào CRUD Laptop/Hãng máy/Benchmark.
+
 ## Chạy toàn bộ hệ thống (Windows, SQL Server cục bộ)
 
 ```bash
