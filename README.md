@@ -2,7 +2,15 @@
 
 Repo triển khai theo bộ đặc tả trong [docs/](docs/00_README.md). Trạng thái tính đến phiên làm việc
 này: **GĐ1–GĐ5 đã triển khai và kiểm thử thật** (dữ liệu mô phỏng, dịch vụ ML, backend, frontend
-khách hàng); **GĐ6 (frontend quản trị) và một phần GĐ7 chưa làm** — xem mục "Việc còn lại" bên dưới.
+khách hàng), **GĐ6 đã có CRUD admin rút gọn** (Brand, Benchmark CPU/GPU, Laptop — dùng chung 1
+component bảng+form thay vì 8 màn riêng biệt); một phần GĐ7 chưa làm — xem mục "Việc còn lại".
+
+## Chạy nhanh — icon Desktop
+
+Đã tạo shortcut **`SmartLap`** trên Desktop, bấm đúp để khởi động cả 3 dịch vụ (ML service, backend,
+frontend) trong 3 cửa sổ console riêng và tự mở trình duyệt tới `http://localhost:5180`. Đóng 3 cửa
+sổ đó hoặc chạy `stop-smartlap.bat` để tắt. Yêu cầu: SQL Server, Python, Node.js đã cài, và các bước
+`npm install`/`pip install`/`prisma migrate`/seed ở dưới đã chạy ít nhất một lần.
 
 ## Chạy toàn bộ hệ thống (Windows, SQL Server cục bộ)
 
@@ -41,7 +49,7 @@ npm run dev
 | 3. Backend nền | ✅ | Prisma + SQL Server thật, seed, tính ppi/performanceIdx/valueIdx |
 | 4. Backend thông minh | ✅ (rút gọn) | `/recommendations` đủ 7 bước + fallback đã kiểm thử tắt ML — xem [backend/README.md](backend/README.md) |
 | 5. Frontend khách hàng | ✅ (màn 1–5, chưa đủ 8 màn) | Luồng Trang chủ→Wizard→Kết quả→Vì sao→👍/👎→Chi tiết→Tương tự→So sánh đã chạy được trên trình duyệt thật |
-| 6. Frontend quản trị | ❌ chưa làm | Backend đã có API (`/models`, `/knowledge`, `/dashboard`) nhưng chưa có giao diện |
+| 6. Frontend quản trị | ✅ (rút gọn) | CRUD Brand/Benchmark CPU/Benchmark GPU/Laptop qua `/admin` (đăng nhập `admin@smartlap.vn`/`Demo@123`). Còn thiếu: màn Mô hình (train/promote/rollback), Dashboard KPI, Cấu hình tri thức — backend đã có API sẵn |
 | 7. Hoàn thiện & báo cáo | ⚠️ một phần | Ảnh chức năng đã có ở [screenshots/](screenshots/); chưa chạy kịch bản demo 3 lần, chưa viết báo cáo |
 
 ## Ảnh chức năng cho báo cáo
@@ -56,8 +64,9 @@ cổng 5180 và backend ở 4000 đang chạy) để tái tạo hoặc bổ sung
    trọng nhất, vì mọi con số hiện tại (macro-F1 0,957, so sánh với luật thủ công) đều dựa trên dữ
    liệu tổng hợp có ranh giới phân khúc sạch hơn thực tế.
 2. Chạy thí nghiệm đối chứng Kaggle (`docs/04 §6.4`) — chưa có file `laptop_price.csv` trong phiên này.
-3. Xây frontend quản trị (GĐ6: màn 9–16) — thêm/sửa laptop, xem confusion matrix, promote/rollback
-   mô hình, dashboard KPI, cấu hình tri thức. Backend đã có API sẵn sàng.
+3. Hoàn thiện frontend quản trị: đã có CRUD Brand/Benchmark/Laptop, còn thiếu màn Mô hình (xem
+   confusion matrix, đường cong k, promote/rollback), Dashboard KPI/cảnh báo, Cấu hình tri thức &
+   ghim/loại laptop. Backend đã có API sẵn sàng (`/models`, `/dashboard`, `/knowledge`).
 4. Cài `alertScan`/`retrainCheck` cron thật (hiện chỉ có `snapshotSync`).
 5. Viết test tự động cho backend (`vitest`/`supertest`) — hiện chỉ kiểm thử thủ công qua `curl`.
 6. Chạy kịch bản demo 10 phút (`docs/11`) ba lần, chụp thêm ảnh cho các phần còn thiếu, viết báo
