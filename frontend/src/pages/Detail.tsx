@@ -18,17 +18,22 @@ export function Detail() {
   useEffect(() => {
     setLoading(true);
     setError(false);
-    Promise.all([
-      api.get(`/laptops/${id}`),
-      api.get(`/laptops/${id}/similar?k=6`),
-      api.post('/events', { laptopId: Number(id), type: 'VIEW_DETAIL' }).catch(() => null),
-    ])
-      .then(([detailRes, similarRes]) => {
+    setSimilar([]);
+    // "May tuong tu" khong duoc phep lam sap ca trang Chi tiet neu no loi (vd ML service
+    // chua dong bo catalog) - moi lenh goi doc lap, chi trang chinh moi bat buoc thanh cong.
+    api
+      .get(`/laptops/${id}`)
+      .then((detailRes) => {
         setLaptop(detailRes.data.data);
-        setSimilar(similarRes.data.data);
+        api
+          .get(`/laptops/${id}/similar?k=6`)
+          .then((similarRes) => setSimilar(similarRes.data.data))
+          .catch(() => setSimilar([]));
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
+
+    api.post('/events', { laptopId: Number(id), type: 'VIEW_DETAIL' }).catch(() => null);
   }, [id]);
 
   if (loading) return <div style={{ maxWidth: 900, margin: '32px auto' }}><Skeleton active /></div>;
@@ -68,14 +73,18 @@ export function Detail() {
       </Card>
 
       <h2>Máy tương tự</h2>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
-        {similar.map((s) => (
-          <Card key={s.laptopId} hoverable onClick={() => navigate(`/laptop/${s.laptopId}`)} size="small">
-            <div style={{ fontWeight: 600 }}>{s.laptop?.name}</div>
-            <div className="tabular-nums">{formatVnd(s.laptop?.priceVnd)}</div>
-          </Card>
-        ))}
-      </div>
+      {similar.length === 0 ? (
+        <div style={{ color: t.textTertiary }}>Chưa tìm được máy tương tự lúc này.</div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+          {similar.map((s) => (
+            <Card key={s.laptopId} hoverable onClick={() => navigate(`/laptop/${s.laptopId}`)} size="small">
+              <div style={{ fontWeight: 600 }}>{s.laptop?.name}</div>
+              <div className="tabular-nums">{formatVnd(s.laptop?.priceVnd)}</div>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

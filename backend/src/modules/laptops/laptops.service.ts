@@ -83,14 +83,22 @@ export async function getLaptopDetail(id: number) {
 }
 
 export async function getSimilarLaptops(id: number, k: number) {
-  const r = await mlClient.post('/similar', { laptopId: id, k });
-  const ids: number[] = r.data.items.map((it: any) => it.laptopId);
+  let similarItems: any[];
+  try {
+    const r = await mlClient.post('/similar', { laptopId: id, k });
+    similarItems = r.data.items;
+  } catch (err) {
+    // ML service loi/timeout/chua dong bo catalog -> tra danh sach rong, khong lam sap trang Chi tiet
+    // (cung triet ly du phong nhu recommend.service.ts, xem docs/09 §4)
+    return [];
+  }
+  const ids: number[] = similarItems.map((it: any) => it.laptopId);
   const laptops = await prisma.laptop.findMany({
     where: { id: { in: ids } },
     include: { brand: true, cpu: true, gpu: true, segmentLabel: true },
   });
   const byId = new Map(laptops.map((l) => [l.id, l]));
-  return r.data.items
+  return similarItems
     .map((it: any) => ({ ...it, laptop: byId.get(it.laptopId) }))
     .filter((it: any) => it.laptop);
 }

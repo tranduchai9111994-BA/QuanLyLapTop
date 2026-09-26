@@ -8,9 +8,16 @@ component bảng+form thay vì 8 màn riêng biệt); một phần GĐ7 chưa l�
 ## Chạy nhanh — icon Desktop
 
 Đã tạo shortcut **`SmartLap`** trên Desktop, bấm đúp để khởi động cả 3 dịch vụ (ML service, backend,
-frontend) trong 3 cửa sổ console riêng và tự mở trình duyệt tới `http://localhost:5180`. Đóng 3 cửa
-sổ đó hoặc chạy `stop-smartlap.bat` để tắt. Yêu cầu: SQL Server, Python, Node.js đã cài, và các bước
-`npm install`/`pip install`/`prisma migrate`/seed ở dưới đã chạy ít nhất một lần.
+frontend) **hoàn toàn ẩn** (không hiện cửa sổ terminal nào) rồi tự mở trình duyệt tới
+`http://localhost:5180` khi frontend sẵn sàng (chờ tối đa ~30s). Cơ chế:
+`start-smartlap.vbs` → gọi `start-smartlap.ps1` (PowerShell ẩn) → mỗi dịch vụ chạy nền, log ghi vào
+`logs/*.log` (dùng để xem lỗi nếu có dịch vụ không lên được). Script tự đợi ML service sẵn sàng trước
+khi bật backend, và backend tự thử lại vài lần nếu lần đồng bộ catalog đầu tiên thất bại do ML chưa
+kịp khởi động.
+
+Chạy `stop-smartlap.bat` để tắt toàn bộ (đọc PID đã lưu ở `logs/pids.txt`, dọn cả tiến trình con).
+Yêu cầu trước khi dùng icon: SQL Server, Python, Node.js đã cài, và các bước `npm install`/
+`pip install`/`prisma migrate`/seed ở dưới đã chạy ít nhất một lần.
 
 ## Chạy toàn bộ hệ thống (Windows, SQL Server cục bộ)
 

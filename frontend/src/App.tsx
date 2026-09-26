@@ -31,6 +31,9 @@ function TopNav() {
           { key: '/laptops', label: <Link to="/laptops">Danh mục</Link> },
         ]}
       />
+      <Link to="/admin/login" style={{ color: t.textTertiary, fontSize: 13 }}>
+        Quản trị viên / Nhân viên
+      </Link>
     </Header>
   );
 }
