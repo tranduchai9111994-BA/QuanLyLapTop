@@ -1,10 +1,15 @@
 import { Layout, Menu } from 'antd';
-import { Link, Route, Routes, useLocation } from 'react-router-dom';
+import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Home } from './pages/Home';
 import { Wizard } from './pages/Wizard';
 import { Results } from './pages/Results';
 import { Detail } from './pages/Detail';
 import { Compare } from './pages/Compare';
+import { AdminLogin } from './pages/admin/AdminLogin';
+import { AdminLayout } from './pages/admin/AdminLayout';
+import { AdminBrands } from './pages/admin/AdminBrands';
+import { AdminCpuBenchmark, AdminGpuBenchmark } from './pages/admin/AdminBenchmarks';
+import { AdminLaptops } from './pages/admin/AdminLaptops';
 import { t } from './theme/tokens';
 
 const { Header, Content } = Layout;
@@ -29,7 +34,7 @@ function TopNav() {
   );
 }
 
-export default function App() {
+function CustomerApp() {
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <TopNav />
@@ -44,4 +49,23 @@ export default function App() {
       </Content>
     </Layout>
   );
+}
+
+export default function App() {
+  const location = useLocation();
+  if (location.pathname.startsWith('/admin')) {
+    return (
+      <Routes>
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<Navigate to="brands" replace />} />
+          <Route path="brands" element={<AdminBrands />} />
+          <Route path="benchmarks/cpu" element={<AdminCpuBenchmark />} />
+          <Route path="benchmarks/gpu" element={<AdminGpuBenchmark />} />
+          <Route path="laptops" element={<AdminLaptops />} />
+        </Route>
+      </Routes>
+    );
+  }
+  return <CustomerApp />;
 }

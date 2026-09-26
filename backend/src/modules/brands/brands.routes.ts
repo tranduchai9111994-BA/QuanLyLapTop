@@ -21,3 +21,21 @@ brandsRouter.post('/', requireAuth, requireRole('ADMIN'), async (req, res, next)
     next(err);
   }
 });
+
+brandsRouter.put('/:id', requireAuth, requireRole('ADMIN'), async (req, res, next) => {
+  try {
+    const data = await prisma.brand.update({ where: { id: Number(req.params.id) }, data: { name: req.body.name } });
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+brandsRouter.delete('/:id', requireAuth, requireRole('ADMIN'), async (req, res, next) => {
+  try {
+    await prisma.brand.delete({ where: { id: Number(req.params.id) } });
+    res.json({ success: true, data: null });
+  } catch (err) {
+    next(err);
+  }
+});
