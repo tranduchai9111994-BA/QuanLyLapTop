@@ -1,19 +1,30 @@
 ﻿pattern,display_name,raw_score,source
-i3-1215U,Intel Core i3-1215U,11500,"PassMark (mo phong, cho du lieu that thay the) - 2026-01-15"
-i5-1235U,Intel Core i5-1235U,15200,"PassMark (mo phong, cho du lieu that thay the) - 2026-01-15"
-i5-1240P,Intel Core i5-1240P,18700,"PassMark (mo phong, cho du lieu that thay the) - 2026-01-15"
-i5-12500H,Intel Core i5-12500H,21800,"PassMark (mo phong, cho du lieu that thay the) - 2026-01-15"
-i7-1255U,Intel Core i7-1255U,16800,"PassMark (mo phong, cho du lieu that thay the) - 2026-01-15"
-i7-12700H,Intel Core i7-12700H,27900,"PassMark (mo phong, cho du lieu that thay the) - 2026-01-15"
-i7-13700H,Intel Core i7-13700H,32400,"PassMark (mo phong, cho du lieu that thay the) - 2026-01-15"
-i9-13900H,Intel Core i9-13900H,34800,"PassMark (mo phong, cho du lieu that thay the) - 2026-01-15"
-i5-13420H,Intel Core i5-13420H,19800,"PassMark (mo phong, cho du lieu that thay the) - 2026-01-15"
-ryzen-5-5500U,AMD Ryzen 5 5500U,15800,"PassMark (mo phong, cho du lieu that thay the) - 2026-01-15"
-ryzen-5-7530U,AMD Ryzen 5 7530U,17600,"PassMark (mo phong, cho du lieu that thay the) - 2026-01-15"
-ryzen-7-5800H,AMD Ryzen 7 5800H,26500,"PassMark (mo phong, cho du lieu that thay the) - 2026-01-15"
-ryzen-7-7735HS,AMD Ryzen 7 7735HS,29800,"PassMark (mo phong, cho du lieu that thay the) - 2026-01-15"
-ryzen-9-7940HS,AMD Ryzen 9 7940HS,35600,"PassMark (mo phong, cho du lieu that thay the) - 2026-01-15"
-m1,Apple M1,14800,"PassMark (mo phong, cho du lieu that thay the) - 2026-01-15"
-m2,Apple M2,16700,"PassMark (mo phong, cho du lieu that thay the) - 2026-01-15"
-celeron-n4500,Intel Celeron N4500,4200,"PassMark (mo phong, cho du lieu that thay the) - 2026-01-15"
-pentium-silver-n6000,Intel Pentium Silver N6000,6300,"PassMark (mo phong, cho du lieu that thay the) - 2026-01-15"
+celeron-n4500,Intel Celeron N4500,1780,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+pentium-n6000,Intel Pentium Silver N6000,2600,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+i3-1215u,Intel Core i3-1215U,10500,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+i5-1235u,Intel Core i5-1235U,13800,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+i5-1335u,Intel Core i5-1335U,15300,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+i7-1255u,Intel Core i7-1255U,14800,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+i7-1355u,Intel Core i7-1355U,15700,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+i5-1240p,Intel Core i5-1240P,16400,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+i7-1260p,Intel Core i7-1260P,18200,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+i5-12450h,Intel Core i5-12450H,17200,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+i5-12500h,Intel Core i5-12500H,19700,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+i5-13420h,Intel Core i5-13420H,19000,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+i7-12700h,Intel Core i7-12700H,24500,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+i7-13620h,Intel Core i7-13620H,23000,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+i7-13700h,Intel Core i7-13700H,26500,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+i9-13900h,Intel Core i9-13900H,28500,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+i7-14700hx,Intel Core i7-14700HX,37000,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+ryzen3-7320u,AMD Ryzen 3 7320U,9000,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+ryzen5-5500u,AMD Ryzen 5 5500U,13000,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+ryzen5-7530u,AMD Ryzen 5 7530U,15000,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+ryzen7-7730u,AMD Ryzen 7 7730U,17500,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+ryzen5-7535hs,AMD Ryzen 5 7535HS,18000,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+ryzen7-5800h,AMD Ryzen 7 5800H,21000,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+ryzen7-7735hs,AMD Ryzen 7 7735HS,24000,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+ryzen7-7840hs,AMD Ryzen 7 7840HS,28000,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+ryzen9-7940hs,AMD Ryzen 9 7940HS,29500,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+apple-m1,Apple M1,14800,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+apple-m2,Apple M2,17000,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)
+apple-m3,Apple M3,19500,PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)

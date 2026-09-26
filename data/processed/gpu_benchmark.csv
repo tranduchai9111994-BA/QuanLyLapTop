@@ -1,16 +1,22 @@
-﻿pattern,display_name,raw_score,source
-uhd-graphics,Intel UHD Graphics,1100,"PassMark G3D (mo phong, cho du lieu that thay the) - 2026-01-15"
-iris-xe,Intel Iris Xe Graphics,2400,"PassMark G3D (mo phong, cho du lieu that thay the) - 2026-01-15"
-iris-xe-g7,Intel Iris Xe G7,2600,"PassMark G3D (mo phong, cho du lieu that thay the) - 2026-01-15"
-radeon-graphics-vega,AMD Radeon Graphics (Vega),2100,"PassMark G3D (mo phong, cho du lieu that thay the) - 2026-01-15"
-radeon-780m,AMD Radeon 780M,5200,"PassMark G3D (mo phong, cho du lieu that thay the) - 2026-01-15"
-mx550,NVIDIA GeForce MX550,4200,"PassMark G3D (mo phong, cho du lieu that thay the) - 2026-01-15"
-rtx-3050,NVIDIA GeForce RTX 3050 4GB,12800,"PassMark G3D (mo phong, cho du lieu that thay the) - 2026-01-15"
-rtx-3050-ti,NVIDIA GeForce RTX 3050 Ti,13600,"PassMark G3D (mo phong, cho du lieu that thay the) - 2026-01-15"
-rtx-3060,NVIDIA GeForce RTX 3060 6GB,17900,"PassMark G3D (mo phong, cho du lieu that thay the) - 2026-01-15"
-rtx-4050,NVIDIA GeForce RTX 4050,18600,"PassMark G3D (mo phong, cho du lieu that thay the) - 2026-01-15"
-rtx-4060,NVIDIA GeForce RTX 4060,22400,"PassMark G3D (mo phong, cho du lieu that thay the) - 2026-01-15"
-rtx-4070,NVIDIA GeForce RTX 4070,27800,"PassMark G3D (mo phong, cho du lieu that thay the) - 2026-01-15"
-rtx-a2000,NVIDIA RTX A2000 (Quadro),14200,"PassMark G3D (mo phong, cho du lieu that thay the) - 2026-01-15"
-radeon-rx-6600m,AMD Radeon RX 6600M,18900,"PassMark G3D (mo phong, cho du lieu that thay the) - 2026-01-15"
-apple-m1-gpu,Apple M1 GPU 8-core,9800,"PassMark G3D (mo phong, cho du lieu that thay the) - 2026-01-15"
+﻿pattern,display_name,raw_score,dedicated,vram_gb,source
+uhd-jasper,Intel UHD Graphics,700,0,,PassMark G3D Mark - videocardbenchmark.net (tham chieu 2025-01)
+uhd-alderlake,Intel UHD Graphics (Alder Lake),1500,0,,PassMark G3D Mark - videocardbenchmark.net (tham chieu 2025-01)
+iris-xe,Intel Iris Xe Graphics,2600,0,,PassMark G3D Mark - videocardbenchmark.net (tham chieu 2025-01)
+radeon-vega,AMD Radeon Graphics (Vega),1800,0,,PassMark G3D Mark - videocardbenchmark.net (tham chieu 2025-01)
+radeon-660m,AMD Radeon 660M,2400,0,,PassMark G3D Mark - videocardbenchmark.net (tham chieu 2025-01)
+radeon-680m,AMD Radeon 680M,3400,0,,PassMark G3D Mark - videocardbenchmark.net (tham chieu 2025-01)
+radeon-780m,AMD Radeon 780M,4300,0,,PassMark G3D Mark - videocardbenchmark.net (tham chieu 2025-01)
+apple-gpu-8,Apple GPU 8-core,4800,0,,PassMark G3D Mark - videocardbenchmark.net (tham chieu 2025-01)
+apple-gpu-10,Apple GPU 10-core,6500,0,,PassMark G3D Mark - videocardbenchmark.net (tham chieu 2025-01)
+mx550,NVIDIA GeForce MX550,4000,1,2,PassMark G3D Mark - videocardbenchmark.net (tham chieu 2025-01)
+rtx-2050,NVIDIA GeForce RTX 2050,6500,1,4,PassMark G3D Mark - videocardbenchmark.net (tham chieu 2025-01)
+rtx-3050,NVIDIA GeForce RTX 3050 Laptop,8700,1,4,PassMark G3D Mark - videocardbenchmark.net (tham chieu 2025-01)
+rtx-3050ti,NVIDIA GeForce RTX 3050 Ti Laptop,10200,1,4,PassMark G3D Mark - videocardbenchmark.net (tham chieu 2025-01)
+rtx-4050,NVIDIA GeForce RTX 4050 Laptop,12500,1,6,PassMark G3D Mark - videocardbenchmark.net (tham chieu 2025-01)
+rtx-3060,NVIDIA GeForce RTX 3060 Laptop,13500,1,6,PassMark G3D Mark - videocardbenchmark.net (tham chieu 2025-01)
+rtx-4060,NVIDIA GeForce RTX 4060 Laptop,16500,1,8,PassMark G3D Mark - videocardbenchmark.net (tham chieu 2025-01)
+rtx-4070,NVIDIA GeForce RTX 4070 Laptop,19500,1,8,PassMark G3D Mark - videocardbenchmark.net (tham chieu 2025-01)
+rtx-4080,NVIDIA GeForce RTX 4080 Laptop,24000,1,12,PassMark G3D Mark - videocardbenchmark.net (tham chieu 2025-01)
+rtx-a2000,NVIDIA RTX A2000 Laptop,9500,1,4,PassMark G3D Mark - videocardbenchmark.net (tham chieu 2025-01)
+rx-6600m,AMD Radeon RX 6600M,13000,1,8,PassMark G3D Mark - videocardbenchmark.net (tham chieu 2025-01)
+rx-7600m,AMD Radeon RX 7600M XT,16000,1,8,PassMark G3D Mark - videocardbenchmark.net (tham chieu 2025-01)

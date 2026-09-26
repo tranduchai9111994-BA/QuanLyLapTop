@@ -14,7 +14,10 @@ NUMERIC_LOG = ["ram_gb", "ssd_gb"]
 NUMERIC = ["cpu_score", "gpu_score", "screen_inch", "ppi", "refresh_hz", "weight_kg", "battery_wh"]
 BINARY = ["gpu_dedicated", "srgb_100"]
 MODEL_A_FEATURES = NUMERIC_LOG + NUMERIC + BINARY  # price_vnd KHONG duoc dua vao (D-04)
-MODEL_B_FEATURES = MODEL_A_FEATURES + ["price_vnd"]
+# Mo hinh B (truy hoi) CO dung gia, uy tin thuong hieu va value_index (hieu nang tren moi trieu
+# dong) - dung ten de tai "hieu nang va gia thanh". value_index giup mo hinh danh gia duoc
+# "dang tien hay khong" ngay trong metric, thay vi chi la huy hieu hien thi nhu truoc.
+MODEL_B_FEATURES = MODEL_A_FEATURES + ["price_vnd", "brand_tier", "value_index"]
 
 DEDICATED_GPU_MARKERS = ("geforce", "radeon rx", "rtx", "quadro", "arc a")
 
@@ -83,7 +86,19 @@ def enrich_catalog(catalog: pd.DataFrame, cpu_bench: pd.DataFrame, gpu_bench: pd
 
     df["cpu_score"] = cpu_scores
     df["gpu_score"] = gpu_scores
-    df["gpu_dedicated"] = df["gpu_model"].apply(is_gpu_dedicated)
+
+    # Uu tien cot `dedicated` that trong bang benchmark; chi suy tu ten khi bang khong co cot do
+    if "dedicated" in gpu_bench.columns:
+        ded_map = {normalize_name(r["display_name"]): int(r["dedicated"]) for _, r in gpu_bench.iterrows()}
+        df["gpu_dedicated"] = df["gpu_model"].apply(
+            lambda g: ded_map.get(normalize_name(g), is_gpu_dedicated(g))
+        )
+    else:
+        df["gpu_dedicated"] = df["gpu_model"].apply(is_gpu_dedicated)
+
+    if "brand_tier" not in df.columns:
+        df["brand_tier"] = 3  # mac dinh trung binh neu catalog cu chua co cot nay
+
     df["ppi"] = df.apply(lambda r: compute_ppi(r["resolution"], r["screen_inch"]), axis=1)
     df["refresh_hz"] = df["refresh_hz"].fillna(60)
     df["battery_wh"] = df.groupby("segment")["battery_wh"].transform(

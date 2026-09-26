@@ -19,6 +19,7 @@ from sklearn.model_selection import train_test_split
 
 from app.classifier import RANDOM_STATE, dummy_baseline, grid_search, k_curve, rule_based_baseline
 from app.features import MODEL_A_FEATURES, enrich_catalog
+from app.text_classifier import NeedTextModel, build_text_pipeline, normalize_text
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "data"
@@ -119,14 +120,51 @@ def main() -> int:
     plt.savefig(out_dir / "k_curve.png", dpi=150)
     plt.close()
 
+    # --- Mo hinh C: phan loai cau nhu cau tu do (TF-IDF + kNN) ---
+    text_meta = train_text_model(out_dir)
+    metadata["text_model"] = text_meta
+    (out_dir / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
+
     latest_path = ARTIFACTS_DIR / "LATEST"
     latest_path.write_text(version, encoding="utf-8")
 
     print(f"Test macro-F1={test_f1_macro:.4f} (muc tieu >= 0.75)")
     print(f"Vuot dummy: +{test_f1_macro - dummy_f1:.4f} (muc tieu >= 0.30)")
     print(f"Vuot luat: +{test_f1_macro - rule_f1:.4f} (muc tieu >= 0.05)")
+    print(f"Mo hinh C (cau tu do): k={text_meta['best_k']}, CV macro-F1={text_meta['cv_f1_macro']:.4f}, "
+          f"{text_meta['n_samples']} cau")
     print(f"Da luu artifact -> {out_dir}")
     return 0
+
+
+def train_text_model(out_dir: Path) -> dict:
+    """Huan luyen Mo hinh C tren tap cau nhu cau, chon k bang cross-validation, luu joblib."""
+    from sklearn.model_selection import StratifiedKFold, cross_val_score
+
+    model = NeedTextModel()
+    samples = model.load_samples()
+    X = [normalize_text(s["text"]) for s in samples]
+    y = [s["label"] for s in samples]
+
+    cv = StratifiedKFold(5, shuffle=True, random_state=RANDOM_STATE)
+    scores_by_k = {}
+    for k in (1, 3, 5, 7):
+        scores = cross_val_score(build_text_pipeline(k), X, y, cv=cv, scoring="f1_macro")
+        scores_by_k[k] = float(scores.mean())
+    best_k = max(scores_by_k, key=scores_by_k.get)
+
+    final = NeedTextModel(n_neighbors=best_k).fit()
+    joblib.dump(final.pipeline, out_dir / "text_model.joblib")
+
+    return {
+        "type": "text_need_classifier",
+        "algorithm": "TF-IDF (word 1-2gram + char_wb 3-5gram) + kNN cosine",
+        "n_samples": len(X),
+        "labels": sorted(set(y)),
+        "f1_macro_by_k": {str(k): round(v, 4) for k, v in scores_by_k.items()},
+        "best_k": best_k,
+        "cv_f1_macro": round(scores_by_k[best_k], 4),
+    }
 
 
 if __name__ == "__main__":

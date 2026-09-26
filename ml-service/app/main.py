@@ -13,15 +13,18 @@ from app.registry import registry
 from app.retriever import build_ideal_vector, build_weights, fit_scaler, match_pct, recommend, similar_items
 from app.schemas import CatalogSyncRequest, PredictSegmentRequest, RecommendRequest, SimilarRequest, TrainRequest
 from app.segment_inference import infer_segment
+from app.text_classifier import NeedTextModel
 
 app = FastAPI(title="SmartLap ML service")
 
-_state: dict = {"catalog": None, "scaler": None, "index_built_at": None}
+_state: dict = {"catalog": None, "scaler": None, "index_built_at": None, "text_model": None}
 
 
 @app.on_event("startup")
 def on_startup() -> None:
     registry.activate_latest()
+    # Mo hinh C nhe (132 cau) nen huan luyen ngay luc khoi dong, khong can nap tu artifact
+    _state["text_model"] = NeedTextModel(n_neighbors=7).fit()
 
 
 @app.get("/health")
@@ -72,6 +75,23 @@ def predict_segment(req: PredictSegmentRequest) -> dict:
     return {"items": results, "modelVersion": registry.version}
 
 
+@app.post("/parse-need")
+def parse_need_endpoint(payload: dict) -> dict:
+    """{text: "con hoc ke toan, can may ben, re"} -> ho so nhu cau day du (Mo hinh C).
+
+    Day la duong vao "thong minh" thay cho viec nguoi dung tu keo thanh truot: he thong doc
+    cau noi tu nhien roi TU suy ra nhom nhu cau, muc uu tien, ngan sach va rang buoc.
+    """
+    text = (payload.get("text") or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Thieu noi dung cau mo ta nhu cau")
+    model: NeedTextModel = _state.get("text_model")
+    if model is None:
+        model = NeedTextModel(n_neighbors=7).fit()
+        _state["text_model"] = model
+    return model.parse_need(text)
+
+
 @app.post("/infer-segment")
 def infer_segment_endpoint(payload: dict) -> dict:
     """{activities: [...]}. -> suy phan khuc tu hoat dong khi nguoi dung chon 'Chua ro'."""
@@ -94,8 +114,11 @@ def recommend_endpoint(req: RecommendRequest) -> dict:
     ideal = build_ideal_vector(
         candidates, req.priorities.model_dump(), req.must, req.budget.model_dump(), req.segment
     )
-    weights = build_weights(req.priorities.model_dump(), req.segment)
-    dist, idx = recommend(candidates, _state["scaler"], ideal, weights, req.topN)
+    weights = build_weights(req.priorities.model_dump(), req.segment, brand_weight=req.brandWeight)
+    # Loc MEM phan khuc: phan khuc mong muon la mot dac trung trong metric, khong loai bo ung vien
+    dist, idx = recommend(
+        candidates, _state["scaler"], ideal, weights, req.topN, preferred_segment=req.segment
+    )
     pct = match_pct(dist)
 
     picked = candidates.iloc[idx]

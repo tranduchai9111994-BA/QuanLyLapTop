@@ -1,16 +1,17 @@
 [
   {
     "id": "P01",
-    "mo_ta": "Sinh vien nam nhat, chi hoc va luot web, ngan sach thap",
+    "mo_ta": "Sinh vien nam nhat, hoc online, ngan sach thap",
+    "text": "em là sinh viên năm nhất cần laptop học online giá rẻ",
+    "need_label_expect": "HOC_TAP",
     "input": {
       "segment": null,
       "activities": [
-        "hoc_tap",
-        "van_phong"
+        "hoc_tap"
       ],
       "budget": [
-        9000000,
-        13000000
+        11000000,
+        14150000
       ],
       "priorities": {
         "performance": 1,
@@ -24,12 +25,43 @@
       "segment_in": [
         "OFFICE"
       ],
-      "all_price_lte": 14300000
+      "all_price_lte": 15565000
     }
   },
   {
     "id": "P02",
-    "mo_ta": "Nhan vien van phong can may nhe di lai nhieu",
+    "mo_ta": "Ke toan can may ben, re",
+    "text": "con học kế toán, cần máy bền, rẻ",
+    "need_label_expect": "VAN_PHONG",
+    "input": {
+      "segment": null,
+      "activities": [
+        "van_phong"
+      ],
+      "budget": [
+        11000000,
+        14150000
+      ],
+      "priorities": {
+        "performance": 2,
+        "mobility": 3,
+        "display": 2,
+        "price": 5
+      },
+      "must": {}
+    },
+    "expect": {
+      "segment_in": [
+        "OFFICE"
+      ],
+      "all_price_lte": 15565000
+    }
+  },
+  {
+    "id": "P03",
+    "mo_ta": "Nhan vien van phong di lai nhieu",
+    "text": "cần máy nhẹ đi công tác nhiều, pin trâu",
+    "need_label_expect": "DI_DONG",
     "input": {
       "segment": null,
       "activities": [
@@ -38,7 +70,7 @@
       ],
       "budget": [
         15000000,
-        22000000
+        27000000
       ],
       "priorities": {
         "performance": 2,
@@ -50,15 +82,16 @@
     },
     "expect": {
       "segment_in": [
-        "OFFICE",
         "ULTRABOOK"
       ],
-      "all_price_lte": 24200000
+      "all_price_lte": 29700000
     }
   },
   {
-    "id": "P03",
-    "mo_ta": "Freelancer thiet ke can man hinh mau chuan",
+    "id": "P04",
+    "mo_ta": "Freelancer thiet ke can man mau chuan",
+    "text": "mình làm thiết kế đồ họa cần laptop màn hình màu chuẩn",
+    "need_label_expect": "DO_HOA",
     "input": {
       "segment": null,
       "activities": [
@@ -66,7 +99,7 @@
         "do_hoa"
       ],
       "budget": [
-        30000000,
+        32000000,
         45000000
       ],
       "priorities": {
@@ -75,9 +108,7 @@
         "display": 5,
         "price": 2
       },
-      "must": {
-        "srgb_100": 1
-      }
+      "must": {}
     },
     "expect": {
       "segment_in": [
@@ -87,16 +118,18 @@
     }
   },
   {
-    "id": "P04",
-    "mo_ta": "Game thu FPS ngan sach tam trung",
+    "id": "P05",
+    "mo_ta": "Game thu FPS tam trung",
+    "text": "cần laptop chơi game fps mượt, card rời",
+    "need_label_expect": "GAMING",
     "input": {
       "segment": null,
       "activities": [
         "choi_game"
       ],
       "budget": [
-        20000000,
-        28000000
+        28000000,
+        45000000
       ],
       "priorities": {
         "performance": 5,
@@ -112,153 +145,28 @@
       "segment_in": [
         "GAMING"
       ],
-      "all_price_lte": 30800000,
-      "top1_gpu_dedicated": true
-    }
-  },
-  {
-    "id": "P05",
-    "mo_ta": "Sinh vien CNTT lap trinh va choi game nhe",
-    "input": {
-      "segment": null,
-      "activities": [
-        "lap_trinh",
-        "choi_game"
-      ],
-      "budget": [
-        18000000,
-        22000000
-      ],
-      "priorities": {
-        "performance": 4,
-        "mobility": 3,
-        "display": 2,
-        "price": 3
-      },
-      "must": {
-        "ram_min": 16
-      }
-    },
-    "expect": {
-      "segment_in": [
-        "GAMING",
-        "OFFICE"
-      ],
-      "all_price_lte": 24200000,
-      "all_ram_gte": 16,
+      "all_price_lte": 49500000,
       "top1_gpu_dedicated": true
     }
   },
   {
     "id": "P06",
-    "mo_ta": "Nhan vien ke toan can may on dinh",
-    "input": {
-      "segment": null,
-      "activities": [
-        "choi_game",
-        "van_phong"
-      ],
-      "budget": [
-        16200000,
-        57700000
-      ],
-      "priorities": {
-        "performance": 1,
-        "mobility": 2,
-        "display": 2,
-        "price": 3
-      },
-      "must": {
-        "ram_min": 16,
-        "gpu_dedicated": 1
-      }
-    },
-    "expect": {
-      "segment_in": [
-        "GAMING"
-      ],
-      "all_price_lte": 59900000,
-      "all_ram_gte": 16,
-      "top1_gpu_dedicated": true
-    }
-  },
-  {
-    "id": "P07",
-    "mo_ta": "Sinh vien thiet ke do hoa ngan sach vua",
-    "input": {
-      "segment": null,
-      "activities": [
-        "do_hoa",
-        "dung_video"
-      ],
-      "budget": [
-        25200000,
-        73500000
-      ],
-      "priorities": {
-        "performance": 5,
-        "mobility": 5,
-        "display": 3,
-        "price": 2
-      },
-      "must": {
-        "ram_min": 8,
-        "gpu_dedicated": 1
-      }
-    },
-    "expect": {
-      "segment_in": [
-        "CREATOR"
-      ],
-      "all_price_lte": 75700000,
-      "all_ram_gte": 8,
-      "top1_gpu_dedicated": true
-    }
-  },
-  {
-    "id": "P08",
-    "mo_ta": "Kien truc su can render 3D nhe",
-    "input": {
-      "segment": null,
-      "activities": [
-        "van_phong",
-        "hoc_tap"
-      ],
-      "budget": [
-        8100000,
-        18900000
-      ],
-      "priorities": {
-        "performance": 3,
-        "mobility": 3,
-        "display": 4,
-        "price": 5
-      },
-      "must": {}
-    },
-    "expect": {
-      "segment_in": [
-        "OFFICE"
-      ],
-      "all_price_lte": 21100000
-    }
-  },
-  {
-    "id": "P09",
-    "mo_ta": "Streamer can cau hinh manh, man hinh tan so cao",
+    "mo_ta": "Sinh vien CNTT lap trinh + game nhe",
+    "text": "em học công nghệ thông tin cần máy code, ram 16gb",
+    "need_label_expect": "LAP_TRINH",
     "input": {
       "segment": null,
       "activities": [
         "lap_trinh",
-        "di_chuyen_nhieu"
+        "choi_game"
       ],
       "budget": [
-        16200000,
-        36700000
+        28000000,
+        45000000
       ],
       "priorities": {
-        "performance": 3,
-        "mobility": 4,
+        "performance": 4,
+        "mobility": 3,
         "display": 2,
         "price": 3
       },
@@ -268,33 +176,96 @@
     },
     "expect": {
       "segment_in": [
-        "ULTRABOOK"
+        "GAMING"
       ],
-      "all_price_lte": 38900000,
+      "all_price_lte": 49500000,
       "all_ram_gte": 16
     }
   },
   {
-    "id": "P10",
-    "mo_ta": "Giao vien can may nhe mang di day hoc",
+    "id": "P07",
+    "mo_ta": "Nhan vien kinh doanh hay gap khach",
+    "text": "máy cho nhân viên kinh doanh đi gặp khách, mỏng nhẹ",
+    "need_label_expect": "DI_DONG",
     "input": {
       "segment": null,
       "activities": [
-        "choi_game",
-        "lap_trinh"
+        "van_phong",
+        "di_chuyen_nhieu"
       ],
       "budget": [
-        16200000,
-        57700000
+        15000000,
+        27000000
       ],
       "priorities": {
         "performance": 2,
-        "mobility": 4,
-        "display": 1,
+        "mobility": 5,
+        "display": 3,
+        "price": 3
+      },
+      "must": {}
+    },
+    "expect": {
+      "segment_in": [
+        "ULTRABOOK"
+      ],
+      "all_price_lte": 29700000
+    }
+  },
+  {
+    "id": "P08",
+    "mo_ta": "Kien truc su chay autocad",
+    "text": "laptop cho kiến trúc sư chạy autocad và sketchup",
+    "need_label_expect": "DO_HOA",
+    "input": {
+      "segment": null,
+      "activities": [
+        "do_hoa",
+        "thiet_ke"
+      ],
+      "budget": [
+        32000000,
+        45000000
+      ],
+      "priorities": {
+        "performance": 5,
+        "mobility": 2,
+        "display": 4,
         "price": 2
       },
       "must": {
-        "ram_min": 8,
+        "ram_min": 16
+      }
+    },
+    "expect": {
+      "segment_in": [
+        "CREATOR"
+      ],
+      "all_price_lte": 49500000,
+      "all_ram_gte": 16
+    }
+  },
+  {
+    "id": "P09",
+    "mo_ta": "Streamer can cau hinh manh",
+    "text": "mình stream game cần máy cấu hình khủng màn 144hz",
+    "need_label_expect": "GAMING",
+    "input": {
+      "segment": null,
+      "activities": [
+        "choi_game"
+      ],
+      "budget": [
+        33950000,
+        45000000
+      ],
+      "priorities": {
+        "performance": 5,
+        "mobility": 1,
+        "display": 5,
+        "price": 2
+      },
+      "must": {
         "gpu_dedicated": 1
       }
     },
@@ -302,57 +273,92 @@
       "segment_in": [
         "GAMING"
       ],
-      "all_price_lte": 59900000,
-      "all_ram_gte": 8,
+      "all_price_lte": 49500000,
       "top1_gpu_dedicated": true
     }
   },
   {
-    "id": "P11",
-    "mo_ta": "Lap trinh vien backend can RAM lon",
+    "id": "P10",
+    "mo_ta": "Giao vien mang may di day",
+    "text": "cần máy nhỏ gọn pin lâu để đi dạy",
+    "need_label_expect": "DI_DONG",
     "input": {
       "segment": null,
       "activities": [
-        "thiet_ke",
-        "do_hoa"
+        "van_phong",
+        "di_chuyen_nhieu"
       ],
       "budget": [
-        25200000,
-        73500000
+        15000000,
+        27000000
       ],
       "priorities": {
         "performance": 2,
-        "mobility": 1,
-        "display": 5,
-        "price": 5
+        "mobility": 5,
+        "display": 3,
+        "price": 4
       },
       "must": {}
     },
     "expect": {
       "segment_in": [
+        "ULTRABOOK"
+      ],
+      "all_price_lte": 29700000
+    }
+  },
+  {
+    "id": "P11",
+    "mo_ta": "Lap trinh vien backend ram lon",
+    "text": "mình là lập trình viên cần laptop chạy docker và máy ảo",
+    "need_label_expect": "LAP_TRINH",
+    "input": {
+      "segment": null,
+      "activities": [
+        "lap_trinh"
+      ],
+      "budget": [
+        25000000,
+        45000000
+      ],
+      "priorities": {
+        "performance": 5,
+        "mobility": 2,
+        "display": 3,
+        "price": 3
+      },
+      "must": {
+        "ram_min": 32
+      }
+    },
+    "expect": {
+      "segment_in": [
         "CREATOR"
       ],
-      "all_price_lte": 75700000
+      "all_price_lte": 49500000,
+      "all_ram_gte": 32
     }
   },
   {
     "id": "P12",
     "mo_ta": "Nguoi dung pho thong xem phim luot web",
+    "text": "chỉ cần lướt web, xem phim, gõ văn bản thôi",
+    "need_label_expect": "VAN_PHONG",
     "input": {
       "segment": null,
       "activities": [
         "van_phong",
-        "hoc_tap"
+        "xem_phim"
       ],
       "budget": [
-        8100000,
-        18900000
+        11000000,
+        14150000
       ],
       "priorities": {
-        "performance": 3,
-        "mobility": 1,
-        "display": 4,
-        "price": 3
+        "performance": 1,
+        "mobility": 3,
+        "display": 3,
+        "price": 5
       },
       "must": {}
     },
@@ -360,27 +366,28 @@
       "segment_in": [
         "OFFICE"
       ],
-      "all_price_lte": 21100000
+      "all_price_lte": 15565000
     }
   },
   {
     "id": "P13",
-    "mo_ta": "Nhiep anh gia chinh sua anh mau chuan",
+    "mo_ta": "Nhiep anh gia chinh anh",
+    "text": "máy cho nhiếp ảnh gia chỉnh ảnh lightroom, màu chính xác",
+    "need_label_expect": "DO_HOA",
     "input": {
       "segment": null,
       "activities": [
-        "lap_trinh",
-        "di_chuyen_nhieu"
+        "do_hoa"
       ],
       "budget": [
-        16200000,
-        36700000
+        32000000,
+        45000000
       ],
       "priorities": {
-        "performance": 1,
-        "mobility": 5,
-        "display": 1,
-        "price": 1
+        "performance": 4,
+        "mobility": 3,
+        "display": 5,
+        "price": 2
       },
       "must": {
         "ram_min": 16
@@ -388,30 +395,60 @@
     },
     "expect": {
       "segment_in": [
-        "ULTRABOOK"
+        "CREATOR"
       ],
-      "all_price_lte": 38900000,
+      "all_price_lte": 49500000,
       "all_ram_gte": 16
     }
   },
   {
     "id": "P14",
-    "mo_ta": "Sinh vien nganh y hoc lieu tuc",
+    "mo_ta": "Sinh vien y khoa doc tai lieu",
+    "text": "sinh viên y khoa cần máy đọc tài liệu và ghi chép",
+    "need_label_expect": "HOC_TAP",
     "input": {
       "segment": null,
       "activities": [
-        "choi_game",
-        "lap_trinh"
+        "hoc_tap"
       ],
       "budget": [
-        16200000,
-        57700000
+        11000000,
+        18000000
       ],
       "priorities": {
-        "performance": 1,
+        "performance": 2,
         "mobility": 4,
-        "display": 4,
+        "display": 3,
         "price": 4
+      },
+      "must": {}
+    },
+    "expect": {
+      "segment_in": [
+        "OFFICE"
+      ],
+      "all_price_lte": 19800000
+    }
+  },
+  {
+    "id": "P15",
+    "mo_ta": "Ky su xay dung dung revit",
+    "text": "máy cho kỹ sư xây dựng chạy revit và render",
+    "need_label_expect": "DO_HOA",
+    "input": {
+      "segment": null,
+      "activities": [
+        "do_hoa"
+      ],
+      "budget": [
+        32000000,
+        45000000
+      ],
+      "priorities": {
+        "performance": 5,
+        "mobility": 2,
+        "display": 4,
+        "price": 2
       },
       "must": {
         "ram_min": 16
@@ -419,15 +456,47 @@
     },
     "expect": {
       "segment_in": [
-        "GAMING"
+        "CREATOR"
       ],
-      "all_price_lte": 59900000,
+      "all_price_lte": 49500000,
       "all_ram_gte": 16
     }
   },
   {
-    "id": "P15",
-    "mo_ta": "Nhan su marketing di cong tac nhieu",
+    "id": "P16",
+    "mo_ta": "Nguoi moi hoc lap trinh",
+    "text": "em cần laptop học lập trình cơ bản, tầm trung",
+    "need_label_expect": "LAP_TRINH",
+    "input": {
+      "segment": null,
+      "activities": [
+        "lap_trinh",
+        "hoc_tap"
+      ],
+      "budget": [
+        11000000,
+        18000000
+      ],
+      "priorities": {
+        "performance": 3,
+        "mobility": 3,
+        "display": 3,
+        "price": 4
+      },
+      "must": {}
+    },
+    "expect": {
+      "segment_in": [
+        "OFFICE"
+      ],
+      "all_price_lte": 19800000
+    }
+  },
+  {
+    "id": "P17",
+    "mo_ta": "Content creator dung premiere",
+    "text": "em làm content cần máy dựng video youtube 4k",
+    "need_label_expect": "DO_HOA",
     "input": {
       "segment": null,
       "activities": [
@@ -435,76 +504,14 @@
         "dung_video"
       ],
       "budget": [
-        25200000,
-        73500000
+        32000000,
+        45000000
       ],
       "priorities": {
-        "performance": 2,
+        "performance": 5,
         "mobility": 2,
-        "display": 1,
-        "price": 3
-      },
-      "must": {
-        "gpu_dedicated": 1
-      }
-    },
-    "expect": {
-      "segment_in": [
-        "CREATOR"
-      ],
-      "all_price_lte": 75700000,
-      "top1_gpu_dedicated": true
-    }
-  },
-  {
-    "id": "P16",
-    "mo_ta": "Ky su xay dung dung phan mem CAD nhe",
-    "input": {
-      "segment": null,
-      "activities": [
-        "van_phong",
-        "xem_phim"
-      ],
-      "budget": [
-        8100000,
-        18900000
-      ],
-      "priorities": {
-        "performance": 1,
-        "mobility": 5,
-        "display": 3,
-        "price": 5
-      },
-      "must": {
-        "ram_min": 8
-      }
-    },
-    "expect": {
-      "segment_in": [
-        "OFFICE"
-      ],
-      "all_price_lte": 21100000,
-      "all_ram_gte": 8
-    }
-  },
-  {
-    "id": "P17",
-    "mo_ta": "Nguoi moi bat dau hoc lap trinh",
-    "input": {
-      "segment": null,
-      "activities": [
-        "lap_trinh",
-        "di_chuyen_nhieu"
-      ],
-      "budget": [
-        16200000,
-        36700000
-      ],
-      "priorities": {
-        "performance": 2,
-        "mobility": 4,
-        "display": 1,
-        "price": 5
+        "display": 5,
+        "price": 2
       },
       "must": {
         "ram_min": 16
@@ -512,125 +519,123 @@
     },
     "expect": {
       "segment_in": [
-        "ULTRABOOK"
+        "CREATOR"
       ],
-      "all_price_lte": 38900000,
+      "all_price_lte": 49500000,
       "all_ram_gte": 16
     }
   },
   {
     "id": "P18",
-    "mo_ta": "Content creator dung phong dung premiere",
+    "mo_ta": "Nhan vien IT ho tro",
+    "text": "laptop cho nhân viên IT hỗ trợ, bền và chạy nhiều phần mềm",
+    "need_label_expect": "LAP_TRINH",
     "input": {
       "segment": null,
       "activities": [
-        "choi_game",
-        "xem_phim"
+        "lap_trinh",
+        "van_phong"
       ],
       "budget": [
-        16200000,
-        57700000
+        11000000,
+        18000000
       ],
       "priorities": {
-        "performance": 1,
-        "mobility": 1,
-        "display": 4,
-        "price": 2
+        "performance": 3,
+        "mobility": 3,
+        "display": 2,
+        "price": 4
       },
-      "must": {
-        "ram_min": 16
-      }
+      "must": {}
     },
     "expect": {
       "segment_in": [
-        "GAMING"
+        "OFFICE"
       ],
-      "all_price_lte": 59900000,
-      "all_ram_gte": 16
+      "all_price_lte": 19800000
     }
   },
   {
     "id": "P19",
-    "mo_ta": "Nhan vien IT ho tro can may ben",
+    "mo_ta": "Hoc vien cao hoc phan tich du lieu",
+    "text": "laptop để học data science chạy python, ram nhiều",
+    "need_label_expect": "LAP_TRINH",
     "input": {
       "segment": null,
       "activities": [
-        "do_hoa",
-        "dung_video"
+        "lap_trinh"
       ],
       "budget": [
-        25200000,
-        73500000
+        25000000,
+        45000000
       ],
       "priorities": {
-        "performance": 5,
-        "mobility": 2,
+        "performance": 4,
+        "mobility": 3,
         "display": 3,
-        "price": 4
+        "price": 3
       },
       "must": {
-        "ram_min": 16,
-        "gpu_dedicated": 1
+        "ram_min": 16
       }
     },
     "expect": {
       "segment_in": [
         "CREATOR"
       ],
-      "all_price_lte": 75700000,
-      "all_ram_gte": 16,
-      "top1_gpu_dedicated": true
+      "all_price_lte": 49500000,
+      "all_ram_gte": 16
     }
   },
   {
     "id": "P20",
-    "mo_ta": "Sinh vien cao hoc phan tich du lieu",
+    "mo_ta": "Gia dinh dung chung",
+    "text": "mua laptop cho cả nhà dùng chung, giá rẻ bền",
+    "need_label_expect": "VAN_PHONG",
     "input": {
       "segment": null,
       "activities": [
         "van_phong",
-        "hoc_tap"
+        "xem_phim"
       ],
       "budget": [
-        8100000,
-        18900000
+        11000000,
+        14150000
       ],
       "priorities": {
-        "performance": 1,
-        "mobility": 5,
-        "display": 4,
-        "price": 2
+        "performance": 2,
+        "mobility": 2,
+        "display": 3,
+        "price": 5
       },
-      "must": {
-        "ram_min": 8
-      }
+      "must": {}
     },
     "expect": {
       "segment_in": [
         "OFFICE"
       ],
-      "all_price_lte": 21100000,
-      "all_ram_gte": 8
+      "all_price_lte": 15565000
     }
   },
   {
     "id": "P21",
-    "mo_ta": "Nguoi dung gia dinh dung chung ca nha",
+    "mo_ta": "Chuyen vien tai chinh excel nang",
+    "text": "mình làm kế toán cần laptop chạy excel file lớn mượt",
+    "need_label_expect": "VAN_PHONG",
     "input": {
       "segment": null,
       "activities": [
-        "hoc_tap",
-        "di_chuyen_nhieu"
+        "van_phong"
       ],
       "budget": [
-        16200000,
-        36700000
+        11000000,
+        18000000
       ],
       "priorities": {
         "performance": 3,
-        "mobility": 2,
-        "display": 1,
-        "price": 1
+        "mobility": 3,
+        "display": 3,
+        "price": 4
       },
       "must": {
         "ram_min": 16
@@ -638,227 +643,50 @@
     },
     "expect": {
       "segment_in": [
-        "ULTRABOOK"
+        "OFFICE"
       ],
-      "all_price_lte": 38900000,
+      "all_price_lte": 19800000,
       "all_ram_gte": 16
     }
   },
   {
     "id": "P22",
-    "mo_ta": "Chuyen vien tai chinh dung Excel nang",
+    "mo_ta": "Sinh vien kien truc dung sketchup",
+    "text": "sinh viên kiến trúc cần máy dựng mô hình 3d",
+    "need_label_expect": "DO_HOA",
     "input": {
       "segment": null,
       "activities": [
-        "choi_game",
-        "lap_trinh"
+        "do_hoa",
+        "hoc_tap"
       ],
       "budget": [
-        16200000,
-        57700000
+        25000000,
+        45000000
       ],
       "priorities": {
-        "performance": 5,
-        "mobility": 4,
-        "display": 2,
-        "price": 1
+        "performance": 4,
+        "mobility": 3,
+        "display": 4,
+        "price": 3
       },
       "must": {
-        "ram_min": 16,
-        "gpu_dedicated": 1
+        "ram_min": 16
       }
     },
     "expect": {
       "segment_in": [
-        "GAMING"
+        "CREATOR"
       ],
-      "all_price_lte": 59900000,
-      "all_ram_gte": 16,
-      "top1_gpu_dedicated": true
+      "all_price_lte": 49500000,
+      "all_ram_gte": 16
     }
   },
   {
     "id": "P23",
-    "mo_ta": "Sinh vien kien truc dung Sketchup/3ds Max",
-    "input": {
-      "segment": null,
-      "activities": [
-        "thiet_ke",
-        "dung_video"
-      ],
-      "budget": [
-        25200000,
-        73500000
-      ],
-      "priorities": {
-        "performance": 1,
-        "mobility": 3,
-        "display": 2,
-        "price": 4
-      },
-      "must": {
-        "ram_min": 16,
-        "gpu_dedicated": 1
-      }
-    },
-    "expect": {
-      "segment_in": [
-        "CREATOR"
-      ],
-      "all_price_lte": 75700000,
-      "all_ram_gte": 16,
-      "top1_gpu_dedicated": true
-    }
-  },
-  {
-    "id": "P24",
     "mo_ta": "Dev mobile can may nhe pin trau",
-    "input": {
-      "segment": null,
-      "activities": [
-        "hoc_tap",
-        "xem_phim"
-      ],
-      "budget": [
-        8100000,
-        18900000
-      ],
-      "priorities": {
-        "performance": 4,
-        "mobility": 1,
-        "display": 1,
-        "price": 2
-      },
-      "must": {
-        "ram_min": 8
-      }
-    },
-    "expect": {
-      "segment_in": [
-        "OFFICE"
-      ],
-      "all_price_lte": 21100000,
-      "all_ram_gte": 8
-    }
-  },
-  {
-    "id": "P25",
-    "mo_ta": "Game thu MOBA ngan sach thap",
-    "input": {
-      "segment": null,
-      "activities": [
-        "hoc_tap",
-        "di_chuyen_nhieu"
-      ],
-      "budget": [
-        16200000,
-        36700000
-      ],
-      "priorities": {
-        "performance": 3,
-        "mobility": 3,
-        "display": 4,
-        "price": 1
-      },
-      "must": {}
-    },
-    "expect": {
-      "segment_in": [
-        "ULTRABOOK"
-      ],
-      "all_price_lte": 38900000
-    }
-  },
-  {
-    "id": "P26",
-    "mo_ta": "Nguoi dung cao cap can hieu nang toi da",
-    "input": {
-      "segment": null,
-      "activities": [
-        "choi_game",
-        "lap_trinh"
-      ],
-      "budget": [
-        16200000,
-        57700000
-      ],
-      "priorities": {
-        "performance": 1,
-        "mobility": 2,
-        "display": 2,
-        "price": 3
-      },
-      "must": {}
-    },
-    "expect": {
-      "segment_in": [
-        "GAMING"
-      ],
-      "all_price_lte": 59900000
-    }
-  },
-  {
-    "id": "P27",
-    "mo_ta": "Nhan vien kinh doanh dung Powerpoint thuong xuyen",
-    "input": {
-      "segment": null,
-      "activities": [
-        "thiet_ke",
-        "dung_video"
-      ],
-      "budget": [
-        25200000,
-        73500000
-      ],
-      "priorities": {
-        "performance": 3,
-        "mobility": 1,
-        "display": 3,
-        "price": 3
-      },
-      "must": {
-        "ram_min": 8
-      }
-    },
-    "expect": {
-      "segment_in": [
-        "CREATOR"
-      ],
-      "all_price_lte": 75700000,
-      "all_ram_gte": 8
-    }
-  },
-  {
-    "id": "P28",
-    "mo_ta": "Sinh vien ngoai ngu hoc online",
-    "input": {
-      "segment": null,
-      "activities": [
-        "van_phong",
-        "hoc_tap"
-      ],
-      "budget": [
-        8100000,
-        18900000
-      ],
-      "priorities": {
-        "performance": 4,
-        "mobility": 4,
-        "display": 4,
-        "price": 3
-      },
-      "must": {}
-    },
-    "expect": {
-      "segment_in": [
-        "OFFICE"
-      ],
-      "all_price_lte": 21100000
-    }
-  },
-  {
-    "id": "P29",
-    "mo_ta": "Chuyen gia du lieu chay model nho tren may",
+    "text": "cần laptop lập trình android nhẹ mang đi lại, pin lâu",
+    "need_label_expect": "LAP_TRINH",
     "input": {
       "segment": null,
       "activities": [
@@ -866,43 +694,44 @@
         "di_chuyen_nhieu"
       ],
       "budget": [
-        16200000,
-        36700000
+        15000000,
+        27000000
       ],
       "priorities": {
-        "performance": 4,
-        "mobility": 4,
-        "display": 2,
-        "price": 1
+        "performance": 3,
+        "mobility": 5,
+        "display": 3,
+        "price": 3
       },
       "must": {
-        "ram_min": 8
+        "ram_min": 16
       }
     },
     "expect": {
       "segment_in": [
         "ULTRABOOK"
       ],
-      "all_price_lte": 38900000,
-      "all_ram_gte": 8
+      "all_price_lte": 29700000,
+      "all_ram_gte": 16
     }
   },
   {
-    "id": "P30",
-    "mo_ta": "Nguoi dung phong thu do hoa 2D",
+    "id": "P24",
+    "mo_ta": "Game thu MOBA ngan sach thap",
+    "text": "máy chơi liên minh mượt, giá rẻ thôi",
+    "need_label_expect": "GAMING",
     "input": {
       "segment": null,
       "activities": [
-        "choi_game",
-        "lap_trinh"
+        "choi_game"
       ],
       "budget": [
-        16200000,
-        57700000
+        28000000,
+        35650000
       ],
       "priorities": {
-        "performance": 2,
-        "mobility": 1,
+        "performance": 4,
+        "mobility": 2,
         "display": 4,
         "price": 5
       },
@@ -912,7 +741,190 @@
       "segment_in": [
         "GAMING"
       ],
-      "all_price_lte": 59900000
+      "all_price_lte": 39215000
+    }
+  },
+  {
+    "id": "P25",
+    "mo_ta": "Nguoi dung cao cap hieu nang toi da",
+    "text": "cần máy cấu hình cao nhất, không quan trọng giá",
+    "need_label_expect": "GAMING",
+    "input": {
+      "segment": null,
+      "activities": [
+        "choi_game",
+        "do_hoa"
+      ],
+      "budget": [
+        33950000,
+        45000000
+      ],
+      "priorities": {
+        "performance": 5,
+        "mobility": 2,
+        "display": 5,
+        "price": 1
+      },
+      "must": {
+        "gpu_dedicated": 1
+      }
+    },
+    "expect": {
+      "segment_in": [
+        "GAMING"
+      ],
+      "all_price_lte": 49500000,
+      "top1_gpu_dedicated": true
+    }
+  },
+  {
+    "id": "P26",
+    "mo_ta": "Nhan vien marketing di cong tac",
+    "text": "laptop mỏng nhẹ sang trọng đi họp với khách hàng",
+    "need_label_expect": "DI_DONG",
+    "input": {
+      "segment": null,
+      "activities": [
+        "van_phong",
+        "di_chuyen_nhieu"
+      ],
+      "budget": [
+        19200000,
+        27000000
+      ],
+      "priorities": {
+        "performance": 3,
+        "mobility": 5,
+        "display": 4,
+        "price": 2
+      },
+      "must": {}
+    },
+    "expect": {
+      "segment_in": [
+        "ULTRABOOK"
+      ],
+      "all_price_lte": 29700000
+    }
+  },
+  {
+    "id": "P27",
+    "mo_ta": "Hoc sinh cap 3 hoc online",
+    "text": "mua máy cho con vào lớp 10 học online",
+    "need_label_expect": "HOC_TAP",
+    "input": {
+      "segment": null,
+      "activities": [
+        "hoc_tap"
+      ],
+      "budget": [
+        11000000,
+        14150000
+      ],
+      "priorities": {
+        "performance": 1,
+        "mobility": 3,
+        "display": 2,
+        "price": 5
+      },
+      "must": {}
+    },
+    "expect": {
+      "segment_in": [
+        "OFFICE"
+      ],
+      "all_price_lte": 15565000
+    }
+  },
+  {
+    "id": "P28",
+    "mo_ta": "Designer 2D in an",
+    "text": "cần máy làm đồ họa 2d và in ấn, màn đẹp",
+    "need_label_expect": "DO_HOA",
+    "input": {
+      "segment": null,
+      "activities": [
+        "thiet_ke"
+      ],
+      "budget": [
+        25000000,
+        45000000
+      ],
+      "priorities": {
+        "performance": 4,
+        "mobility": 3,
+        "display": 5,
+        "price": 3
+      },
+      "must": {}
+    },
+    "expect": {
+      "segment_in": [
+        "CREATOR"
+      ],
+      "all_price_lte": 49500000
+    }
+  },
+  {
+    "id": "P29",
+    "mo_ta": "Game thu the loai AAA",
+    "text": "cần máy chiến game aaa mượt ở mức cao",
+    "need_label_expect": "GAMING",
+    "input": {
+      "segment": null,
+      "activities": [
+        "choi_game"
+      ],
+      "budget": [
+        28000000,
+        45000000
+      ],
+      "priorities": {
+        "performance": 5,
+        "mobility": 1,
+        "display": 4,
+        "price": 3
+      },
+      "must": {
+        "gpu_dedicated": 1
+      }
+    },
+    "expect": {
+      "segment_in": [
+        "GAMING"
+      ],
+      "all_price_lte": 49500000,
+      "top1_gpu_dedicated": true
+    }
+  },
+  {
+    "id": "P30",
+    "mo_ta": "Nguoi hay lam viec o quan ca phe",
+    "text": "laptop nhẹ cho người hay làm việc ở quán cà phê, pin trâu",
+    "need_label_expect": "DI_DONG",
+    "input": {
+      "segment": null,
+      "activities": [
+        "van_phong",
+        "di_chuyen_nhieu"
+      ],
+      "budget": [
+        15000000,
+        27000000
+      ],
+      "priorities": {
+        "performance": 2,
+        "mobility": 5,
+        "display": 3,
+        "price": 3
+      },
+      "must": {}
+    },
+    "expect": {
+      "segment_in": [
+        "ULTRABOOK"
+      ],
+      "all_price_lte": 29700000
     }
   }
 ]

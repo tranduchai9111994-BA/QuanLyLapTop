@@ -35,6 +35,8 @@ class RecommendRequest(BaseModel):
     priorities: Priorities
     must: dict[str, Any] = Field(default_factory=dict)
     topN: int = 5
+    # Trong so uy tin thuong hieu (tang len khi nguoi dung nhac den "ben", "bao hanh tot")
+    brandWeight: float = 1.0
 
 
 class SimilarRequest(BaseModel):

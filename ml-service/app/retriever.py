@@ -1,4 +1,14 @@
-"""Mo hinh B: kNN truy hoi co trong so (docs/04 SS4)."""
+"""Mo hinh B: kNN truy hoi co trong so, dung KHOANG CACH MOT PHIA (one-sided).
+
+Thay doi quan trong so voi ban dau (theo gop y cua giang vien):
+ - Khoang cach MOT PHIA: khong phat may MANH HON hoac RE HON muc mong muon. Truoc day dung
+   Euclidean hai phia nen may cau hinh cao hon ho so ly tuong bi coi la "xa" => bi tru diem oan.
+ - Ham khoang cach nay duoc dua THANG vao metric cua kNN (NearestNeighbors(metric=callable)),
+   khong phai xep hang lai o ngoai => kNN van la loi thuat toan.
+ - GIA nam trong metric xep hang (truoc day chi la huy hieu hien thi "dang tien").
+ - brand_tier (uy tin thuong hieu) la mot dac trung, quy doi hang 1..5.
+ - match% dung MOC CO DINH, khong chuan hoa theo top-N (truoc day hang 1 luon ~cao nhat).
+"""
 from __future__ import annotations
 
 import numpy as np
@@ -14,20 +24,54 @@ GROUPS = {
     "performance": ["cpu_score", "gpu_score", "ram_gb", "ssd_gb"],
     "mobility": ["weight_kg", "battery_wh"],
     "display": ["ppi", "refresh_hz", "srgb_100"],
-    "price": ["price_vnd"],
+    # Nhom "gia" gom ca gia tuyet doi lan value_index (hieu nang/trieu dong): nguoi uu tien
+    # tiet kiem vua muon re, vua muon dang tien - hai mat cua cung mot nhu cau.
+    "price": ["price_vnd", "value_index"],
+    "brand": ["brand_tier"],
 }
 
 BASE_WEIGHT_BY_SEGMENT = {
-    "GAMING": {"performance": 1.3, "mobility": 0.7, "display": 1.0, "price": 1.0},
-    "ULTRABOOK": {"performance": 0.8, "mobility": 1.4, "display": 1.0, "price": 1.0},
-    "CREATOR": {"performance": 1.2, "mobility": 0.8, "display": 1.3, "price": 0.8},
-    "OFFICE": {"performance": 0.8, "mobility": 1.0, "display": 0.8, "price": 1.3},
+    "GAMING": {"performance": 1.3, "mobility": 0.7, "display": 1.0, "price": 1.0, "brand": 0.5},
+    "ULTRABOOK": {"performance": 0.8, "mobility": 1.4, "display": 1.0, "price": 1.0, "brand": 0.7},
+    "CREATOR": {"performance": 1.2, "mobility": 0.8, "display": 1.3, "price": 0.8, "brand": 0.6},
+    "OFFICE": {"performance": 0.8, "mobility": 1.0, "display": 0.8, "price": 1.3, "brand": 0.6},
 }
 SCREEN_INCH_WEIGHT = 0.05
 
+# Huong "tot" cua tung dac trung:
+#  +1 = cang CAO cang tot  -> chi phat khi may THAP hon nhu cau (thua thi khong phat)
+#  -1 = cang THAP cang tot -> chi phat khi may CAO hon nhu cau (re/nhe hon thi khong phat)
+#   0 = hai phia (lech huong nao cung tinh la khac biet)
+FEATURE_DIRECTION: dict[str, int] = {
+    "cpu_score": +1,
+    "gpu_score": +1,
+    "ram_gb": +1,
+    "ssd_gb": +1,
+    "ppi": +1,
+    "refresh_hz": +1,
+    "srgb_100": +1,
+    "battery_wh": +1,
+    "brand_tier": +1,
+    "gpu_dedicated": +1,
+    "value_index": +1,  # cang dang tien cang tot; dang tien hon muc mong muon khong bi phat
+    "weight_kg": -1,
+    "price_vnd": -1,
+    "screen_inch": 0,
+}
+
+# He so phat khi may VUOT nhu cau theo huong tot (manh hon / re hon / nhe hon).
+# Dat = 0 dung theo yeu cau "khong phat may manh hon hoac re hon muc mong muon".
+#
+# Luu y quan trong (da kiem chung bang thuc nghiem): viec "khong phat" phai di doi voi cach dat
+# vector ly tuong q. Neu q_gia nam giua khoang ngan sach thi MOI may re hon deu co phat = 0,
+# gia mat kha nang phan biet => nguoi uu tien tiet kiem lai bi goi y may dat hon. Vi vay q cua
+# cac dac trung mot phia duoc dat o BIEN mong muon (xem build_ideal_vector): uu tien gia toi da
+# => q = ngan sach toi thieu, uu tien hieu nang toi da => q = phan vi 90.
+OVERSHOOT_PENALTY = 0.0
+
 
 def fit_scaler(catalog: pd.DataFrame) -> StandardScaler:
-    """z-score fit tren toan catalog (docs/04 SS4.3)."""
+    """z-score fit tren toan catalog de moi dac trung cung thang do truoc khi tinh khoang cach."""
     scaler = StandardScaler()
     scaler.fit(catalog[MODEL_B_FEATURES])
     return scaler
@@ -36,6 +80,7 @@ def fit_scaler(catalog: pd.DataFrame) -> StandardScaler:
 def build_ideal_vector(
     candidates: pd.DataFrame, priorities: dict, must: dict, budget: dict, segment: str
 ) -> dict:
+    """Ho so 'ly tuong' q: moi muc uu tien 1..5 -> mot phan vi trong tap ung vien."""
     q: dict[str, float] = {}
     for feat in ["cpu_score", "gpu_score", "ram_gb", "ssd_gb"]:
         p = priorities.get("performance", 3)
@@ -50,31 +95,88 @@ def build_ideal_vector(
         q[feat] = float(candidates[feat].quantile(PERCENTILE_BY_PRIORITY[p_disp] / 100))
     q["srgb_100"] = 1 if p_disp >= 4 else 0
 
+    # Gia: voi khoang cach MOT PHIA, may re hon q khong bi phat => q phai dat o BIEN mong muon
+    # thi gia moi phan biet duoc. p=5 (rat quan trong tiet kiem) -> q = ngan sach toi thieu
+    # (moi dong dat them deu bi phat); p=1 (khong quan tam gia) -> q = ngan sach toi da.
     p_price = priorities.get("price", 3)
     b_min, b_max = budget["min"], budget["max"]
-    q["price_vnd"] = b_min + (1 - (p_price - 1) / 4 * 0.7) * (b_max - b_min)
+    q["price_vnd"] = b_min + (1 - (p_price - 1) / 4) * (b_max - b_min)
+    # Cang uu tien tiet kiem -> cang doi hoi may "dang tien" (value_index cao)
+    q["value_index"] = float(candidates["value_index"].quantile(PERCENTILE_BY_PRIORITY[p_price] / 100))
 
     q["screen_inch"] = float(candidates["screen_inch"].median())
     q["gpu_dedicated"] = 1 if segment == "GAMING" else int(candidates["gpu_dedicated"].median())
+    q["brand_tier"] = float(candidates["brand_tier"].quantile(0.5))
 
     ram_min = must.get("ramMin")
     if ram_min:
         q["ram_gb"] = max(q["ram_gb"], ram_min)
-
     return q
 
 
-def build_weights(priorities: dict, segment: str) -> dict:
+def build_weights(priorities: dict, segment: str, brand_weight: float = 1.0) -> dict:
     base = BASE_WEIGHT_BY_SEGMENT.get(segment, BASE_WEIGHT_BY_SEGMENT["OFFICE"])
-    raw: dict[str, float] = {"screen_inch": SCREEN_INCH_WEIGHT}
+    raw: dict[str, float] = {"screen_inch": SCREEN_INCH_WEIGHT, "gpu_dedicated": 0.06}
     for group, feats in GROUPS.items():
-        p = priorities.get(group, 3)
-        w_group = p * base[group]
+        if group == "brand":
+            w_group = base[group] * brand_weight
+        else:
+            p = priorities.get(group, 3)
+            w_group = p * base[group]
         per_feat = w_group / len(feats)
         for f in feats:
             raw[f] = per_feat
     total = sum(raw.values())
     return {k: v / total for k, v in raw.items()}
+
+
+def one_sided_distance(x: np.ndarray, q: np.ndarray, weights_vec: np.ndarray, directions: np.ndarray) -> float:
+    """Khoang cach MOT PHIA giua may `x` va ho so nhu cau `q`.
+
+        d(x, q) = sqrt( sum_j w_j * pen_j^2 )
+        huong +1 (cang cao cang tot):  pen = max(0, q_j - x_j) + OVERSHOOT * max(0, x_j - q_j)
+        huong -1 (cang thap cang tot): pen = max(0, x_j - q_j) + OVERSHOOT * max(0, q_j - x_j)
+        huong  0 (hai phia):           pen = |x_j - q_j|
+
+    Voi OVERSHOOT = 0, may MANH HON / RE HON / NHE HON muc mong muon khong bi phat chut nao.
+    """
+    diff = np.asarray(x, dtype=float) - np.asarray(q, dtype=float)  # duong = may "nhieu hon" q
+    pen = np.empty_like(diff)
+
+    up = directions > 0
+    pen[up] = np.maximum(0.0, -diff[up]) + OVERSHOOT_PENALTY * np.maximum(0.0, diff[up])
+
+    down = directions < 0
+    pen[down] = np.maximum(0.0, diff[down]) + OVERSHOOT_PENALTY * np.maximum(0.0, -diff[down])
+
+    both = directions == 0
+    pen[both] = np.abs(diff[both])
+
+    return float(np.sqrt(np.sum(weights_vec * pen**2)))
+
+
+def make_one_sided_metric(weights_vec: np.ndarray, directions: np.ndarray):
+    """Boc `one_sided_distance` thanh `metric` cho NearestNeighbors.
+
+    CHU Y QUAN TRONG: khi goi `nn.fit(X_may).kneighbors(q)`, scikit-learn tinh
+    pairwise_distances(q, X_may) nen ham metric duoc goi theo thu tu (q, x) - NGUOC voi
+    thu tu (x, q) ma cong thuc mot phia can. Ham nay KHONG DOI XUNG nen dao thu tu se lam
+    lat dau: he thong se phat may MANH HON thay vi may YEU HON (loi that da tung gap).
+    Vi vay o day phai doi lai cho dung: sklearn truyen (q, x) -> goi distance(x=b, q=a).
+    Test `test_one_sided_metric_argument_order` chan loi nay tai phat.
+    """
+
+    def metric(a: np.ndarray, b: np.ndarray) -> float:
+        # a = diem truy van (q), b = may trong catalog (x)
+        return one_sided_distance(b, a, weights_vec, directions)
+
+    return metric
+
+
+# Trong so cho "do khop phan khuc" khi dung LOC MEM. Gia tri vua phai: may khac phan khuc
+# bi tru diem nhung VAN CO CO HOI lot top neu thuc su phu hop (vd may Creator rat hop nguoi
+# can do hoa du duoc gan nhan Gaming). Loc cung truoc day loai thang => mat may tot.
+SEGMENT_SOFT_WEIGHT = 0.18
 
 
 def recommend(
@@ -83,34 +185,59 @@ def recommend(
     ideal: dict,
     weights: dict,
     top_n: int,
+    preferred_segment: str | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
+    """kNN truy hoi voi metric mot phia (metric nam TRONG NearestNeighbors).
+
+    `preferred_segment`: neu co, do khop phan khuc duoc dua vao METRIC duoi dang mot dac trung
+    (LOC MEM) thay vi loc bo ung vien khac phan khuc (loc cung).
+    """
     feats = MODEL_B_FEATURES
     Xs = scaler.transform(candidates[feats])
     q_df = pd.DataFrame([{f: ideal.get(f, 0) for f in feats}])
     qs = scaler.transform(q_df)
 
-    w = np.array([weights.get(f, 0.0) for f in feats])
-    sqrt_w = np.sqrt(w)
+    w = [weights.get(f, 0.0) for f in feats]
+    directions = [FEATURE_DIRECTION.get(f, 0) for f in feats]
+
+    if preferred_segment is not None and "segment" in candidates.columns:
+        seg_match = (candidates["segment"] == preferred_segment).astype(float).to_numpy().reshape(-1, 1)
+        Xs = np.hstack([Xs, seg_match])
+        qs = np.hstack([qs, np.array([[1.0]])])  # mong muon: khop phan khuc
+        w.append(SEGMENT_SOFT_WEIGHT)
+        directions.append(+1)  # khop cang cao cang tot; khong khop chi bi phat, khong bi loai
+
+    w_arr = np.array(w, dtype=float)
+    w_arr = w_arr / w_arr.sum() if w_arr.sum() > 0 else w_arr
+    dir_arr = np.array(directions, dtype=float)
 
     n_neighbors = min(top_n, len(candidates))
-    nn = NearestNeighbors(n_neighbors=n_neighbors, metric="euclidean")
-    nn.fit(Xs * sqrt_w)
-    dist, idx = nn.kneighbors(qs * sqrt_w)
+    nn = NearestNeighbors(
+        n_neighbors=n_neighbors,
+        algorithm="brute",
+        metric=make_one_sided_metric(w_arr, dir_arr),
+    )
+    nn.fit(Xs)
+    dist, idx = nn.kneighbors(qs)
     return dist[0], idx[0]
 
 
-def match_pct(distances: np.ndarray, tau: float | None = None) -> np.ndarray:
-    if tau is None:
-        tau = float(np.median(distances)) if len(distances) else 1.0
-        tau = max(tau, 1e-6)
-    return 100 * np.exp(-distances / tau)
+# Moc co dinh doi khoang cach -> % phu hop. Khong chuan hoa theo top-N nua, nen hai lan
+# truy van khac nhau co the deu cho diem thap (khi catalog khong co may nao hop nhu cau).
+MATCH_TAU = 0.9
+
+
+def match_pct(distances: np.ndarray, tau: float = MATCH_TAU) -> np.ndarray:
+    """100 * exp(-d / tau) voi tau CO DINH => diem so so sanh duoc giua cac lan truy van."""
+    return 100 * np.exp(-np.asarray(distances, dtype=float) / tau)
 
 
 def similar_items(candidates: pd.DataFrame, scaler: StandardScaler, laptop_idx: int, k: int = 7) -> tuple[np.ndarray, np.ndarray]:
+    """May tuong tu (item-item): dung Euclidean HAI PHIA vi o day ta tim may GIONG NHAU,
+    khong phai may 'thoa man nhu cau' - manh hon hay yeu hon deu la khac biet."""
     feats = MODEL_B_FEATURES
     Xs = scaler.transform(candidates[feats])
     nn = NearestNeighbors(n_neighbors=min(k, len(candidates)), metric="euclidean")
     nn.fit(Xs)
     dist, idx = nn.kneighbors(Xs[laptop_idx : laptop_idx + 1])
-    # bo phan tu dau (chinh no)
-    return dist[0][1:], idx[0][1:]
+    return dist[0][1:], idx[0][1:]  # bo phan tu dau (chinh no)
