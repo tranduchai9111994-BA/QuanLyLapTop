@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Empty, Pagination, Select, Skeleton, Space } from 'antd';
+import { Card, Empty, Pagination, Segmented, Select, Skeleton } from 'antd';
 import { api } from '../lib/api';
 import type { Laptop, Segment } from '../types';
 import { SegmentTag } from '../components/smart/SegmentTag';
+import { LaptopThumbnail } from '../components/smart/LaptopThumbnail';
 import { formatVnd, formatKg } from '../utils/format';
 import { t } from '../theme/tokens';
 
-const SEGMENT_OPTIONS: { label: string; value: Segment }[] = [
+const SEGMENTS: { label: string; value: Segment }[] = [
   { label: 'Văn phòng – Học tập', value: 'OFFICE' },
   { label: 'Mỏng nhẹ – Di động', value: 'ULTRABOOK' },
   { label: 'Gaming', value: 'GAMING' },
@@ -21,6 +22,8 @@ const SORT_OPTIONS = [
   { label: 'Đáng tiền nhất', value: 'value_desc' },
 ];
 
+const ALL = 'Tất cả';
+
 export function Catalog() {
   const navigate = useNavigate();
   const [segment, setSegment] = useState<Segment | undefined>(undefined);
@@ -31,6 +34,21 @@ export function Catalog() {
   const [items, setItems] = useState<Laptop[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+
+  // Dem so luong tung phan khuc 1 lan de hien "Gaming (85)" tren tab - giup thay ngay
+  // he thong co du 4 loai, khong chi Van phong/Hoc tap (phan hoi UX da nhan duoc).
+  useEffect(() => {
+    Promise.all(
+      SEGMENTS.map((s) => api.get('/laptops', { params: { segment: s.value, pageSize: 1 } }))
+    ).then((results) => {
+      const next: Record<string, number> = {};
+      results.forEach((r, i) => {
+        next[SEGMENTS[i].value] = r.data.meta?.total ?? 0;
+      });
+      setCounts(next);
+    });
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -43,22 +61,28 @@ export function Catalog() {
       .finally(() => setLoading(false));
   }, [segment, sort, page]);
 
+  const totalAll = Object.values(counts).reduce((a, b) => a + b, 0);
+  const segmentedOptions = [
+    { label: `${ALL} (${totalAll})`, value: ALL },
+    ...SEGMENTS.map((s) => ({ label: `${s.label} (${counts[s.value] ?? 0})`, value: s.value })),
+  ];
+
   return (
     <div style={{ maxWidth: 1100, margin: '32px auto', padding: '0 16px' }}>
       <h1>Danh mục laptop</h1>
 
-      <Space style={{ marginBottom: 20 }} wrap>
-        <Select
-          style={{ width: 220 }}
-          placeholder="Tất cả phân khúc"
-          allowClear
-          value={segment}
-          options={SEGMENT_OPTIONS}
+      <div style={{ marginBottom: 12, overflowX: 'auto' }}>
+        <Segmented
+          size="large"
+          value={segment ?? ALL}
+          options={segmentedOptions}
           onChange={(v) => {
-            setSegment(v);
+            setSegment(v === ALL ? undefined : (v as Segment));
             setPage(1);
           }}
         />
+      </div>
+      <div style={{ marginBottom: 20 }}>
         <Select
           style={{ width: 200 }}
           value={sort}
@@ -68,7 +92,7 @@ export function Catalog() {
             setPage(1);
           }}
         />
-      </Space>
+      </div>
 
       {loading ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
@@ -85,6 +109,7 @@ export function Catalog() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
             {items.map((l) => (
               <Card key={l.id} hoverable onClick={() => navigate(`/laptop/${l.id}`)}>
+                <LaptopThumbnail imageUrl={l.imageUrl} segment={l.segmentLabel?.segment} name={l.name} />
                 <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
                   {l.segmentLabel && <SegmentTag segment={l.segmentLabel.segment} />}
                 </div>

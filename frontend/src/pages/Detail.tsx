@@ -4,6 +4,7 @@ import { Button, Skeleton, Result, Card, Tag } from 'antd';
 import { api } from '../lib/api';
 import type { Laptop } from '../types';
 import { SegmentTag } from '../components/smart/SegmentTag';
+import { LaptopThumbnail } from '../components/smart/LaptopThumbnail';
 import { formatVnd, formatKg, formatInch } from '../utils/format';
 import { t } from '../theme/tokens';
 
@@ -49,6 +50,7 @@ export function Detail() {
 
   return (
     <div style={{ maxWidth: 900, margin: '32px auto', padding: '0 16px' }}>
+      <LaptopThumbnail imageUrl={laptop.imageUrl} segment={laptop.segmentLabel?.segment} name={laptop.name} height={220} />
       <h1>{laptop.name}</h1>
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         {laptop.segmentLabel && <SegmentTag segment={laptop.segmentLabel.segment} />}
@@ -79,6 +81,7 @@ export function Detail() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
           {similar.map((s) => (
             <Card key={s.laptopId} hoverable onClick={() => navigate(`/laptop/${s.laptopId}`)} size="small">
+              <LaptopThumbnail imageUrl={s.laptop?.imageUrl} segment={s.laptop?.segmentLabel?.segment} name={s.laptop?.name ?? ''} height={70} />
               <div style={{ fontWeight: 600 }}>{s.laptop?.name}</div>
               <div className="tabular-nums">{formatVnd(s.laptop?.priceVnd)}</div>
             </Card>

@@ -6,6 +6,7 @@ import type { RecommendationItemDto } from '../../types';
 import { AiBadge } from './AiBadge';
 import { MatchScore } from './MatchScore';
 import { SegmentTag } from './SegmentTag';
+import { LaptopThumbnail } from './LaptopThumbnail';
 import { t } from '../../theme/tokens';
 import { formatVnd, formatKg } from '../../utils/format';
 import { explainText } from '../../utils/explainText';
@@ -61,6 +62,7 @@ export function RecommendationCard({
         <MatchScore pct={item.matchPct} />
       </div>
 
+      <LaptopThumbnail imageUrl={laptop.imageUrl} segment={laptop.segmentLabel?.segment} name={laptop.name} height={100} />
       <h3 style={{ margin: '4px 0' }}>{laptop.name}</h3>
       <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
         {laptop.segmentLabel && <SegmentTag segment={laptop.segmentLabel.segment} />}
