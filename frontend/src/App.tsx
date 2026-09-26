@@ -1,6 +1,7 @@
 import { Layout, Menu } from 'antd';
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Home } from './pages/Home';
+import { Catalog } from './pages/Catalog';
 import { Wizard } from './pages/Wizard';
 import { Results } from './pages/Results';
 import { Detail } from './pages/Detail';
@@ -41,6 +42,7 @@ function CustomerApp() {
       <Content>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/laptops" element={<Catalog />} />
           <Route path="/wizard" element={<Wizard />} />
           <Route path="/results" element={<Results />} />
           <Route path="/laptop/:id" element={<Detail />} />
