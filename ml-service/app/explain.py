@@ -1,22 +1,6 @@
 """build_explanation() - sinh diem manh/canh bao tieng Viet (docs/04 SS7.2)."""
 from __future__ import annotations
 
-import numpy as np
-
-STRENGTH_TEMPLATES = {
-    "perf_above": "Hieu nang CPU cao hon muc ban can ({pct}% so voi ho so ly tuong)",
-    "gpu_dedicated": "Co card do hoa roi {gpu} - choi game va dung hinh tot",
-    "price_under": "Re hon ngan sach toi da {money}",
-    "display_good": "Man {refresh} Hz, {srgb}",
-    "battery_good": "Pin {battery} Wh, dung duoc lau hon muc ban can",
-}
-WARNING_TEMPLATES = {
-    "weight_over": "Nang {x} kg, hon muc mong muon {d} kg",
-    "ram_low": "RAM {x} GB, thap hon muc de xuat {y} GB",
-    "price_over": "Vuot ngan sach mong muon {money}",
-}
-
-
 def format_vnd(amount: float) -> str:
     return f"{int(round(amount)):,}".replace(",", ".") + " VND"
 
@@ -55,7 +39,7 @@ def build_explanation(
         })
 
     if row.get("refresh_hz", 60) >= ideal.get("refresh_hz", 60) and row.get("refresh_hz", 60) >= 120:
-        srgb_text = "mau chuan sRGB" if row.get("srgb_100") else "mau pho thong"
+        srgb_text = "màu chuẩn sRGB" if row.get("srgb_100") else "màu phổ thông"
         strengths.append({
             "code": "display_good",
             "params": {"refresh": int(row["refresh_hz"]), "srgb": srgb_text},

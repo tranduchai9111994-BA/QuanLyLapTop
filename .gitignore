@@ -14,3 +14,6 @@ frontend/dist/
 *.log
 .DS_Store
 frontend/.env
+backend/backend.log
+backend/backend.err.log
+ml-service/uvicorn.log
