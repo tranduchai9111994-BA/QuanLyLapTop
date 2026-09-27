@@ -53,6 +53,12 @@ export function AdminLayout() {
           mode="inline"
           selectedKeys={[location.pathname]}
           items={[
+            // Dashboard/Mo hinh/Tri thuc/Phan hoi CHI danh cho ADMIN o phia backend
+            // (requireRole('ADMIN') - khong nhan STAFF) - an luon o menu voi STAFF de tranh
+            // nhan vien bam vao roi gap loi 403 kho hieu.
+            ...(user?.role === 'ADMIN'
+              ? [{ key: '/admin/dashboard', label: <Link to="/admin/dashboard">Dashboard</Link> }]
+              : []),
             { key: '/admin/brands', label: <Link to="/admin/brands">Hãng máy</Link> },
             { key: '/admin/benchmarks/cpu', label: <Link to="/admin/benchmarks/cpu">Benchmark CPU</Link> },
             { key: '/admin/benchmarks/gpu', label: <Link to="/admin/benchmarks/gpu">Benchmark GPU</Link> },
@@ -67,6 +73,13 @@ export function AdminLayout() {
                 </Link>
               ),
             },
+            ...(user?.role === 'ADMIN'
+              ? [
+                  { key: '/admin/models', label: <Link to="/admin/models">Quản lý mô hình</Link> },
+                  { key: '/admin/knowledge', label: <Link to="/admin/knowledge">Cấu hình tri thức</Link> },
+                  { key: '/admin/feedback', label: <Link to="/admin/feedback">Phân tích phản hồi</Link> },
+                ]
+              : []),
           ]}
         />
       </Sider>

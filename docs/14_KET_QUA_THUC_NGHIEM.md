@@ -245,6 +245,59 @@ hiển thị không lỗi, biểu đồ radar hiện trong Drawer, modal lý do 
 sánh không lỗi, và trang Chi tiết hiện đúng nhãn chênh lệch giá. `tsc --noEmit` sạch ở cả
 frontend/backend, `pytest` ml-service 35/35 pass (không đổi mô hình ở giai đoạn này).
 
+### 5.5 Bốn màn quản trị "thông minh" — FR-12, FR-13, FR-14, UC-15
+
+Trước Giai đoạn 4, backend đã có đủ API cho 4 nghiệp vụ này (`/models`, `/knowledge`, `/dashboard`,
+`/feedback`) nhưng **không có giao diện quản trị nào** để dùng — quản trị viên phải gọi API thủ
+công. Đã thêm 4 màn mới (`frontend/src/pages/admin/`) và 1 tác vụ nền chưa từng tồn tại
+(`alertScan`):
+
+- **`AdminModels.tsx` (FR-12 Quản lý mô hình)**: danh sách các lần huấn luyện Mô hình A kèm
+  macro-F1, nút "Huấn luyện mô hình mới" (tạo "ứng viên", không tự thay mô hình đang chạy), Drawer
+  chi tiết hiện bảng so với 2 đường cơ sở (đoán ngẫu nhiên, luật đơn giản), biểu đồ đường cong chọn
+  k (Recharts, có đường tham chiếu đánh dấu k đã chọn), và ma trận nhầm lẫn (đường chéo in đậm).
+  Nút "Đưa vào sử dụng" gọi thẳng API promote đã có sẵn quy tắc an toàn (backend từ chối nếu tệ hơn
+  bản đang dùng > 2% macro-F1 hoặc có lớp nào < 0,5 F1); nút "Quay lại phiên bản này" cho bản đã
+  lưu trữ.
+- **`AdminKnowledge.tsx` (FR-13 Cấu hình tri thức)**: 4 tab — (1) Ghim/Cấm máy theo phân khúc kèm
+  lý do + ngày hết hạn; (2) Ngưỡng tin cậy, số kết quả mặc định, tỷ lệ nới ngân sách; (3) Trọng số
+  mặc định 5 nhóm đặc trưng (hiệu năng/di động/màn hình/giá/thương hiệu) cho từng phân khúc; (4)
+  5 ngưỡng cảnh báo (docs/09 §6). **Đây là thay đổi chạm tới cả 2 tầng dưới**: trước đây
+  `BASE_WEIGHT_BY_SEGMENT` là hằng số cứng trong `ml-service/app/retriever.py`, và
+  `budget_relax_ratio`/`default_top_n` là hằng số cứng trong `recommend.service.ts` — đã thêm
+  tham số `baseWeightsOverride` xuyên suốt `schemas.py` → `main.py` → `build_weights()` (ghi đè
+  MỀM: chỉ áp dụng phân khúc có trong cấu hình, phân khúc khác vẫn dùng mặc định trong code), và
+  `recommend.service.ts` đọc `KnowledgeConfig` ở **mỗi lần gọi** (không cache) nên sửa xong có hiệu
+  lực ngay từ lượt tư vấn tiếp theo, không cần khởi động lại backend.
+- **`AdminDashboard.tsx` (FR-14 Dashboard)**: 6 KPI đúng theo tiêu chí thành công đề tài (lượt tư
+  vấn, tỷ lệ hài lòng, độ trễ trung bình, tỷ lệ dự phòng, số nhãn chờ duyệt, tổng phản hồi) + bảng
+  cảnh báo đang mở, nút "Quét cảnh báo ngay" gọi thủ công thay vì chờ lịch.
+- **`backend/src/modules/jobs/alertScan.ts` (MỚI)**: cài đặt đủ 6 luật cảnh báo trong
+  docs/09_VONG_DOI_TRI_TUE.md mục 6 (`LOW_SATISFACTION`, `FALLBACK_HIGH`, `LATENCY_HIGH`,
+  `LOW_CONFIDENCE_RATE`, `REVIEW_BACKLOG`, `RANK1_WEAK`) — trước đây chỉ có bảng `AlertLog` trong
+  schema nhưng không có tác vụ nào từng ghi vào đó. Chạy tự động mỗi giờ (`cron.schedule('0 * * *
+  *')` trong `server.ts`) và 1 lần lúc khởi động; không tạo cảnh báo trùng mã khi đã có cảnh báo
+  cùng mã chưa xử lý (tránh spam). Ngưỡng đọc từ `KnowledgeConfig.alert_thresholds` (sửa được ở
+  `AdminKnowledge.tsx`).
+- **`AdminFeedback.tsx` (UC-15 Phân tích phản hồi)**: biểu đồ cột số lượt theo loại sự kiện
+  (Xem chi tiết/Thích/Không thích/Thêm so sánh), biểu đồ ngang xếp hạng lý do "Không thích" phổ
+  biến nhất (dữ liệu thật có từ modal chọn lý do thêm ở Giai đoạn 3), và bảng các câu nhu cầu tự do
+  đã được xác nhận hài lòng (nguồn học thêm cho Mô hình C).
+- **`AdminLayout.tsx`**: 3/4 màn mới (Dashboard, Quản lý mô hình, Cấu hình tri thức, Phân tích phản
+  hồi) chỉ hiện trên menu khi đăng nhập bằng vai trò `ADMIN` — `STAFF` không có quyền gọi các API
+  này ở backend nên ẩn hẳn khỏi menu, tránh nhấn vào rồi gặp lỗi 403 khó hiểu. Trang mặc định sau
+  đăng nhập cũng đổi theo vai trò: ADMIN vào Dashboard, STAFF vào Laptop.
+
+**Đã kiểm thử trên browser** (`scripts/capture_phase4_admin_smart.py`, ảnh
+`crud_test_screenshots/phase4_*.png`): Dashboard hiện đủ KPI và "Quét cảnh báo ngay" chạy không
+lỗi; đã huấn luyện thử 1 phiên bản mô hình qua API (`clf-2026.09.27-160831`, macro-F1 test 78,7%
+so với luật đơn giản 63,2% và đoán ngẫu nhiên 12,8%) rồi xác nhận màn Quản lý mô hình hiện đúng
+đường cong chọn k + ma trận nhầm lẫn; cả 4 tab của Cấu hình tri thức lưu được (đã kiểm thêm CRUD
+Ghim/Cấm qua API: tạo → hiện trong danh sách → xoá → danh sách rỗng lại); Phân tích phản hồi hiện
+đúng biểu đồ theo loại sự kiện và theo lý do "Không thích". `tsc --noEmit` sạch ở backend/frontend,
+`pytest` ml-service 35/35 pass (thêm `baseWeightsOverride` là tham số optional, không ảnh hưởng
+hành vi mặc định khi không truyền).
+
 ## 6. Độ đo thực tế — công sức tìm kiếm
 
 Đo bằng **số máy người dùng phải xem qua** trước khi gặp máy phù hợp (máy thuộc nhóm 20% hài lòng

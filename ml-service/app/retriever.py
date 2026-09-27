@@ -147,7 +147,12 @@ def build_ideal_vector(
     return q
 
 
-def build_weights(priorities: dict, segment: str, brand_weight: float = 1.0) -> dict:
+def build_weights(
+    priorities: dict,
+    segment: str,
+    brand_weight: float = 1.0,
+    base_weights_override: dict[str, dict[str, float]] | None = None,
+) -> dict:
     """Tinh trong so w_j cho tung dac trung, dung trong cong thuc khoang cach co trong so.
 
     Cach tinh (vi du de hieu): neu nguoi dung dat "hieu nang" = 5/5, va phan khuc GAMING co
@@ -159,9 +164,16 @@ def build_weights(priorities: dict, segment: str, brand_weight: float = 1.0) -> 
     => Ket qua: nguoi dung keo thanh truot cang cao, nhom dac trung do cang "nang ky" trong
     viec xep hang, dong thoi van giu duoc dac thu tung phan khuc (vd GAMING luon coi trong
     hieu nang hon OFFICE ngay ca khi ca hai nguoi dung deu chon muc 3/5).
+
+    `base_weights_override` (FR-13, Cau hinh tri thuc): quan tri vien co the sua trong so NEN
+    tung phan khuc qua man quan tri, thay vi phai sua code va deploy lai. Chi ghi de PHAN KHUC
+    nao thuc su co trong dict truyen vao (merge nong voi mac dinh), phan khuc khac van dung
+    BASE_WEIGHT_BY_SEGMENT nhu cu - tranh 1 cau hinh thieu du lieu lam sap toan bo he thong.
     """
     # base: trong so "nen" mac dinh cua tung phan khuc (vd GAMING coi trong hieu nang hon OFFICE)
-    base = BASE_WEIGHT_BY_SEGMENT.get(segment, BASE_WEIGHT_BY_SEGMENT["OFFICE"])
+    base = dict(BASE_WEIGHT_BY_SEGMENT.get(segment, BASE_WEIGHT_BY_SEGMENT["OFFICE"]))
+    if base_weights_override and segment in base_weights_override:
+        base.update(base_weights_override[segment])
 
     # man hinh (screen_inch) va gpu_dedicated luon co mot chut trong so co dinh, khong phu
     # thuoc muc uu tien nguoi dung chon (vd kich thuoc man hinh it lien quan den 4 nhom chinh)

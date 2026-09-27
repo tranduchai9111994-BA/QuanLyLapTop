@@ -1,6 +1,6 @@
 import { prisma } from '../../lib/prisma';
 import { mlClient } from '../../lib/mlClient';
-import { toJson } from '../../lib/json';
+import { toJson, fromJson } from '../../lib/json';
 import { logger } from '../../lib/logger';
 import { fallbackRank } from './fallback.service';
 import type { Segment } from '../../constants/enums';
@@ -23,7 +23,23 @@ export interface RecommendRequestBody {
 
 const DEFAULT_MIN_CANDIDATES = 3;
 const DEFAULT_BUDGET_RELAX_RATIO = 0.1;
-const DEFAULT_CONFIDENCE_THRESHOLD = 0.6;
+const DEFAULT_TOP_N = 5;
+
+/** FR-13 (Cau hinh tri thuc): 3 gia tri quan tri vien sua duoc qua man /admin/knowledge, luu
+ * trong KnowledgeConfig (key-value chung). Doc lai TUNG LAN goi de luon dung gia tri moi nhat
+ * (khong cache trong bien tinh - luu luong /recommend khong nhieu den muc can toi uu chuyen). */
+async function getKnowledgeNumber(key: string, fallback: number): Promise<number> {
+  const row = await prisma.knowledgeConfig.findUnique({ where: { key } });
+  if (!row) return fallback;
+  const v = fromJson<number>(row.valueJson, fallback);
+  return typeof v === 'number' && !Number.isNaN(v) ? v : fallback;
+}
+
+async function getDefaultWeights(): Promise<Record<string, Record<string, number>> | undefined> {
+  const row = await prisma.knowledgeConfig.findUnique({ where: { key: 'default_weights' } });
+  if (!row) return undefined;
+  return fromJson<Record<string, Record<string, number>>>(row.valueJson, undefined as any) ?? undefined;
+}
 
 async function inferSegment(activities: string[]) {
   try {
@@ -85,7 +101,16 @@ async function findPins(segment: Segment) {
  */
 export async function recommend(body: RecommendRequestBody) {
   const startedAt = Date.now(); // do thoi gian xu ly, luu vao latencyMs de theo doi hieu nang
-  const topN = body.topN ?? 5;
+
+  // FR-13: "so ket qua mac dinh" va "ty le noi ngan sach" sua duoc qua man Cau hinh tri thuc,
+  // khong con la hang so cung trong code - doc gia tri hien tai (hoac mac dinh neu chua tung
+  // cau hinh) song song voi buoc suy phan khuc de khong tang do tre.
+  const [defaultTopN, budgetRelaxRatio, defaultWeights] = await Promise.all([
+    getKnowledgeNumber('default_top_n', DEFAULT_TOP_N),
+    getKnowledgeNumber('budget_relax_ratio', DEFAULT_BUDGET_RELAX_RATIO),
+    getDefaultWeights(),
+  ]);
+  const topN = body.topN ?? defaultTopN;
 
   let usedSegment = body.segment;
   let inferredSegment: Segment | null = null;
@@ -107,7 +132,7 @@ export async function recommend(body: RecommendRequestBody) {
   const candidatesBeforeRelax = candidates.length;
   if (candidates.length < DEFAULT_MIN_CANDIDATES) {
     budgetRelaxed = true;
-    const relaxedMax = Math.round(body.budget.max * (1 + DEFAULT_BUDGET_RELAX_RATIO));
+    const relaxedMax = Math.round(body.budget.max * (1 + budgetRelaxRatio));
     candidates = await findCandidates(usedSegment, relaxedMax, body.must);
   }
 
@@ -130,6 +155,7 @@ export async function recommend(body: RecommendRequestBody) {
         must: body.must,
         topN,
         brandWeight: body.brandWeight ?? 1.0,
+        baseWeightsOverride: defaultWeights,
       });
       ideal = r.data.ideal; // vector "nhu cau ly tuong" q - dung de hien Drawer "Vi sao goi y?"
       weights = r.data.weights; // trong so tung dac trung - cung dung de giai thich

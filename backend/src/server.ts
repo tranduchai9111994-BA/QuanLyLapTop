@@ -2,6 +2,7 @@ import 'dotenv/config';
 import cron from 'node-cron';
 import { createApp } from './app';
 import { snapshotSync } from './modules/jobs/snapshotSync';
+import { alertScan } from './modules/jobs/alertScan';
 import { logger } from './lib/logger';
 
 const PORT = Number(process.env.PORT ?? 4000);
@@ -30,3 +31,9 @@ app.listen(PORT, () => {
 
 // dong bo lai catalog moi ngay 02:00 (docs/06 §5)
 cron.schedule('0 2 * * *', () => snapshotSync());
+
+// Quet canh bao (FR-14, docs/09 §6) moi gio - "REVIEW_BACKLOG"/"FALLBACK_HIGH" can phat hien
+// nhanh hon 1 lan/ngay; cac luat con lai tu bo qua neu chua du du lieu (< 30 phien/7 ngay).
+cron.schedule('0 * * * *', () => alertScan().catch((err) => logger.warn('alertScan that bai', err)));
+// Quet ngay 1 lan luc khoi dong de Dashboard co du lieu ma khong phai cho den dinh gio dau tien.
+alertScan().catch((err) => logger.warn('alertScan (khoi dong) that bai', err));

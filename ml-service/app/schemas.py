@@ -37,6 +37,11 @@ class RecommendRequest(BaseModel):
     topN: int = 5
     # Trong so uy tin thuong hieu (tang len khi nguoi dung nhac den "ben", "bao hanh tot")
     brandWeight: float = 1.0
+    # FR-13: quan tri vien sua duoc trong so NEN mac dinh tung nhom dac trung theo phan khuc
+    # (KnowledgeConfig key "default_weights") - None = dung BASE_WEIGHT_BY_SEGMENT co san trong
+    # retriever.py. Dang {"GAMING": {"performance": 1.3, ...}, ...}, chi ghi de phan khuc nao co
+    # mat trong dict, cac phan khuc con lai van dung gia tri mac dinh trong code.
+    baseWeightsOverride: Optional[dict[str, dict[str, float]]] = None
 
 
 class SimilarRequest(BaseModel):

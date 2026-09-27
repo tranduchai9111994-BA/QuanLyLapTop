@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../../lib/prisma';
 import { requireAuth, requireRole } from '../../middlewares/auth';
 import { fromJson } from '../../lib/json';
+import { alertScan } from '../jobs/alertScan';
 
 export const dashboardRouter = Router();
 
@@ -42,6 +43,28 @@ dashboardRouter.get('/kpis', requireAuth, requireRole('ADMIN'), async (req, res,
 dashboardRouter.get('/alerts', requireAuth, requireRole('ADMIN'), async (_req, res, next) => {
   try {
     const data = await prisma.alertLog.findMany({ where: { resolved: false }, orderBy: { createdAt: 'desc' }, take: 50 });
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Quet canh bao THU CONG - dung khi nhan vien muon kiem tra ngay thay vi cho lich chay hang gio
+ * (xem cron.schedule('0 * * * *') trong server.ts). Chay 6 luat trong docs/09_VONG_DOI_TRI_TUE.md
+ * muc 6, chi tao ban ghi AlertLog MOI neu chua co canh bao cung ma dang mo (tranh spam). */
+dashboardRouter.post('/alerts/scan', requireAuth, requireRole('ADMIN'), async (_req, res, next) => {
+  try {
+    await alertScan();
+    const data = await prisma.alertLog.findMany({ where: { resolved: false }, orderBy: { createdAt: 'desc' }, take: 50 });
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+dashboardRouter.patch('/alerts/:id/resolve', requireAuth, requireRole('ADMIN'), async (req, res, next) => {
+  try {
+    const data = await prisma.alertLog.update({ where: { id: Number(req.params.id) }, data: { resolved: true } });
     res.json({ success: true, data });
   } catch (err) {
     next(err);

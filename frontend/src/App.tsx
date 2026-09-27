@@ -13,6 +13,10 @@ import { AdminCpuBenchmark, AdminGpuBenchmark } from './pages/admin/AdminBenchma
 import { AdminLaptops } from './pages/admin/AdminLaptops';
 import { AdminPrices } from './pages/admin/AdminPrices';
 import { AdminReviewQueue } from './pages/admin/AdminReviewQueue';
+import { AdminModels } from './pages/admin/AdminModels';
+import { AdminKnowledge } from './pages/admin/AdminKnowledge';
+import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { AdminFeedback } from './pages/admin/AdminFeedback';
 import { t } from './theme/tokens';
 
 const { Header, Content } = Layout;
@@ -68,6 +72,15 @@ function CustomerApp() {
   );
 }
 
+/** Trang mac dinh khi vao "/admin" (chua chi ro trang con): ADMIN thay Dashboard (co day du KPI
+ * + canh bao); STAFF khong co quyen xem Dashboard (backend requireRole('ADMIN')) nen dua ve
+ * "Laptop" - man ho dung nhieu nhat hang ngay - tranh dieu huong toi trang roi lap tuc bao loi 403. */
+function AdminIndexRedirect() {
+  const userRaw = localStorage.getItem('smartlap_user');
+  const user = userRaw ? JSON.parse(userRaw) : null;
+  return <Navigate to={user?.role === 'ADMIN' ? 'dashboard' : 'laptops'} replace />;
+}
+
 export default function App() {
   const location = useLocation();
   if (location.pathname.startsWith('/admin')) {
@@ -75,13 +88,17 @@ export default function App() {
       <Routes>
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<Navigate to="brands" replace />} />
+          <Route index element={<AdminIndexRedirect />} />
           <Route path="brands" element={<AdminBrands />} />
           <Route path="benchmarks/cpu" element={<AdminCpuBenchmark />} />
           <Route path="benchmarks/gpu" element={<AdminGpuBenchmark />} />
           <Route path="laptops" element={<AdminLaptops />} />
           <Route path="prices" element={<AdminPrices />} />
           <Route path="review-queue" element={<AdminReviewQueue />} />
+          <Route path="models" element={<AdminModels />} />
+          <Route path="knowledge" element={<AdminKnowledge />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="feedback" element={<AdminFeedback />} />
         </Route>
       </Routes>
     );

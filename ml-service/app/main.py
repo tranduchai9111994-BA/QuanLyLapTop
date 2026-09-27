@@ -188,7 +188,12 @@ def recommend_endpoint(req: RecommendRequest) -> dict:
         candidates, req.priorities.model_dump(), req.must, req.budget.model_dump(), req.segment
     )
     # Buoc 2: tinh trong so tung dac trung theo muc uu tien + phan khuc (xem retriever.build_weights)
-    weights = build_weights(req.priorities.model_dump(), req.segment, brand_weight=req.brandWeight)
+    weights = build_weights(
+        req.priorities.model_dump(),
+        req.segment,
+        brand_weight=req.brandWeight,
+        base_weights_override=req.baseWeightsOverride,
+    )
     # Buoc 3: chay kNN that su voi metric mot phia. Loc MEM phan khuc: phan khuc mong muon la
     # mot dac trung trong metric, khong loai bo ung vien khac phan khuc (xem retriever.recommend)
     dist, idx = recommend(
