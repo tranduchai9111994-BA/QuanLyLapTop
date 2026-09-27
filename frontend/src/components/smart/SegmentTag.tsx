@@ -9,6 +9,8 @@ const ICONS: Record<string, ReactNode> = {
   CREATOR: <BgColorsOutlined />,
 };
 
+/** The mau + icon rieng cho 4 phan khuc (OFFICE/ULTRABOOK/GAMING/CREATOR) - dung chung o moi noi
+ * hien thi phan khuc (the san pham, Chi tiet, bo loc Danh muc) de mau sac nhat quan xuyen suot. */
 export function SegmentTag({ segment }: { segment: string }) {
   const cfg = segmentColors[segment] ?? segmentColors.OFFICE;
   return (

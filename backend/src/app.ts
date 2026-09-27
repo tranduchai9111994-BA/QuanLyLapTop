@@ -13,6 +13,9 @@ import { modelsRouter } from './modules/models/models.routes';
 import { knowledgeRouter } from './modules/knowledge/knowledge.routes';
 import { dashboardRouter, feedbackSummaryRouter } from './modules/dashboard/dashboard.routes';
 
+/** Dung 1 ham `createApp()` rieng (thay vi goi `app.listen` thang o day) de file nay TACH BIET
+ * khoi viec KHOI DONG that su (server.ts) - cho phep test tu dong (vd supertest) tao app roi
+ * goi API ma khong can mo cong mang that, va tranh vong lap import voi cron/logger o server.ts. */
 export function createApp() {
   const app = express();
   app.use(cors());

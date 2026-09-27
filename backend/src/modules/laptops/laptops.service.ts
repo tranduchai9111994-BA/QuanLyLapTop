@@ -3,10 +3,19 @@ import { AppError } from '../../middlewares/error';
 import { fromJson } from '../../lib/json';
 import { mlClient } from '../../lib/mlClient';
 
+/** Mat do diem anh (pixel per inch) tu do phan giai + kich thuoc man hinh - cong thuc hinh hoc
+ * chuan (duong cheo tinh bang Pythagoras, chia cho so inch man hinh). Dung lam 1 dac trung "man
+ * hinh sac net" cho Mo hinh B (kNN), khong the suy truc tiep tu resWidth/resHeight rieng le vi
+ * con phu thuoc kich thuoc man hinh vat ly. */
 export function computePpi(resWidth: number, resHeight: number, screenInch: number): number {
   return Math.sqrt(resWidth ** 2 + resHeight ** 2) / screenInch;
 }
 
+/** Tinh 2 CHI SO TONG HOP luu san trong DB (khong tinh lai moi lan truy van, vi CPU/GPU/gia it
+ * doi hon so voi so lan doc): `performanceIdx` (diem hieu nang tong hop, uu tien CPU 50% + GPU
+ * 35% + RAM/SSD chuan hoa theo may MANH NHAT dang co trong catalog), `valueIdx` (hieu nang tren
+ * MOI TRIEU DONG - cang cao cang "dang tien"). Dung o nhieu noi: hien thi the "Dang tien nhat",
+ * sap xep Danh muc theo `value_desc`/`perf_desc`, va lam dac trung dau vao cua Mo hinh B. */
 export function computeIndices(params: {
   cpuScore: number;
   gpuScore: number;
@@ -82,6 +91,8 @@ export async function listLaptops(filters: LaptopFilters) {
   return { items, meta: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) } };
 }
 
+/** Chi tiet 1 may kem LICH SU GIA day du (sap moi nhat truoc) - dung cho trang Chi tiet khach
+ * hang (khong hien lich su gia) va man Quan ly gia admin (hien bieu do). */
 export async function getLaptopDetail(id: number) {
   const laptop = await prisma.laptop.findUnique({
     where: { id },
@@ -91,6 +102,9 @@ export async function getLaptopDetail(id: number) {
   return laptop;
 }
 
+/** "May tuong tu" (item-item) tren trang Chi tiet - goi ML service de kNN tim k may GAN NHAT
+ * VE THONG SO (khong lien quan ho so nhu cau nguoi dung, xem retriever.similar_items), roi tra
+ * cuu lai thong tin day du (ten/gia/anh) tu DB theo id ML tra ve. */
 export async function getSimilarLaptops(id: number, k: number) {
   let similarItems: any[];
   try {
@@ -112,6 +126,8 @@ export async function getSimilarLaptops(id: number, k: number) {
     .filter((it: any) => it.laptop);
 }
 
+/** Lay day du thong tin cua NHIEU may cung luc theo danh sach id (dung cho trang So sanh -
+ * Compare.tsx) - khong loc `isActive` vi nguoi dung co the muon so sanh voi may da ngung ban. */
 export async function compareLaptops(ids: number[]) {
   return prisma.laptop.findMany({
     where: { id: { in: ids } },
@@ -119,6 +135,8 @@ export async function compareLaptops(ids: number[]) {
   });
 }
 
+/** Giai nen phan bo xac suat cua Mo hinh A (luu dang chuoi JSON trong SegmentLabel.probaJson,
+ * xem lib/json.ts) - dung khi hien "89% Gaming, 11% Do hoa" tren giao dien admin. */
 export function parseProba(probaJson: string | null | undefined) {
   return fromJson<Record<string, number>>(probaJson, {});
 }

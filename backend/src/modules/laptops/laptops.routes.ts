@@ -147,6 +147,7 @@ laptopsRouter.get('/price-changes', requireAuth, requireRole('STAFF', 'ADMIN'), 
   }
 });
 
+// Chi tiet 1 may - KHONG yeu cau dang nhap (trang Chi tiet la khach hang cong khai xem duoc)
 laptopsRouter.get('/:id', async (req, res, next) => {
   try {
     const data = await laptopsService.getLaptopDetail(Number(req.params.id));
@@ -178,6 +179,10 @@ laptopsRouter.put('/:id', requireAuth, requireRole('STAFF', 'ADMIN'), async (req
   }
 });
 
+// XOA MEM (chi dat isActive=false), KHONG xoa that ban ghi khoi DB - vi may da xoa co the van
+// duoc tham chieu boi PriceHistory/InteractionEvent/RecommendationSession cu (xoa that se vi
+// pham khoa ngoai hoac mat lich su). He qua CAN BIET: ma SKU cua may da "xoa" VAN CON bi chiem
+// trong DB, khong the tao lai may moi voi CUNG SKU do (da phat hien qua CRUD test tren browser).
 laptopsRouter.delete('/:id', requireAuth, requireRole('STAFF', 'ADMIN'), async (req, res, next) => {
   try {
     await prisma.laptop.update({ where: { id: Number(req.params.id) }, data: { isActive: false } });

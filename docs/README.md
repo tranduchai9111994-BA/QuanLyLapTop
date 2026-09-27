@@ -1,6 +1,6 @@
 # SmartLap — Hệ khuyến nghị laptop bằng kNN
 
-Repo triển khai theo bộ đặc tả trong [docs/](docs/00_README.md). Đây là đồ án tốt nghiệp: hệ thống
+Repo triển khai theo bộ đặc tả trong [docs/](00_README.md) (thư mục này). Đây là đồ án tốt nghiệp: hệ thống
 tư vấn/gợi ý laptop dùng **kNN làm thuật toán lõi** (không phải luật if-else), gồm 3 mô hình kNN
 khác nhau cho 3 việc: hiểu câu nhu cầu tự do, phân loại phân khúc máy mới, và xếp hạng gợi ý top-N.
 
@@ -96,13 +96,13 @@ npm run dev
      zod `.optional()` (chỉ chấp nhận `undefined`, không chấp nhận `null`).
   2. "AI gợi ý phân khúc" báo thiếu dữ liệu dù đã điền đủ khi TẠO MỚI laptop — do đọc nhầm field
      `resWidth`/`resHeight` (chỉ có giá trị lúc bấm Lưu) thay vì field `resolution` thật trên form.
-- Ảnh chức năng: [screenshots/](screenshots/) (16 ảnh, chụp lại bằng
+- Ảnh chức năng: [screenshots/](../screenshots/) (16 ảnh, chụp lại bằng
   `python scripts/capture_screenshots.py` mỗi khi giao diện đổi).
 
 ## Việc còn lại trước khi bảo vệ (trung thực, không giấu)
 
 1. Dữ liệu vẫn là **dữ liệu tổng hợp có logic**, không phải catalog thu thập thật từ thị trường —
-   xem [data/README.md](data/README.md).
+   xem [data/README.md](../data/README.md).
 2. Chạy thí nghiệm đối chứng Kaggle (`docs/04 §6.4`) — chưa có file `laptop_price.csv`.
 3. Ablation study tách bạch cho tính năng khuyến mãi/lượt bán (bật/tắt so sánh trên cùng 1 bộ dữ
    liệu) — hiện chưa chạy, xem [KET_QUA_THUC_NGHIEM.md](KET_QUA_THUC_NGHIEM.md) mục 4.1.
@@ -121,5 +121,6 @@ smartlap/ (repo root = D:\QL_Laptop)
 ├── screenshots/               # ảnh chức năng cho báo cáo
 ├── crud_test_screenshots/     # ảnh bằng chứng kiểm thử CRUD trên browser
 ├── scripts/                   # script tiện ích (chụp ảnh, tải ảnh brand, test CRUD)
-└── docs/                      # bộ đặc tả gốc (không sửa)
+└── docs/                      # bộ đặc tả gốc (00-12, không sửa) + báo cáo/tài liệu phiên làm
+                                # việc (README này, KET_QUA_THUC_NGHIEM.md, CHECKLIST...)
 ```

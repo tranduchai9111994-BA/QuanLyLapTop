@@ -3,6 +3,8 @@ import type { RecommendationItemDto } from '../../types';
 import { t } from '../../theme/tokens';
 import { explainText } from '../../utils/explainText';
 
+// Ten hien thi tieng Viet cho tung dac trung ky thuat (khoa tieng Anh khop voi ten cot trong
+// ml-service, xem MODEL_B_FEATURES o features.py) - dung de ve bang "so voi ho so ly tuong".
 const FEATURE_LABELS: Record<string, string> = {
   cpu_score: 'Điểm CPU',
   gpu_score: 'Điểm GPU',
@@ -16,6 +18,10 @@ const FEATURE_LABELS: Record<string, string> = {
   screen_inch: 'Kích thước màn hình',
 };
 
+/** Drawer "Vi sao goi y?" - phan giai thich CHI TIET NHAT cho 1 may trong ket qua: liet ke diem
+ * manh/diem can luu y (dang cau chu, tu explainText.ts) VA bang so sanh tung dac trung so hoc
+ * that voi ho so ly tuong `ideal` (dung de nguoi dung/hoi dong doi chieu truc tiep voi cong thuc
+ * khoang cach mot phia da hoc trong GIAI_THICH_THUAT_TOAN_KNN.md). */
 export function ExplainDrawer({
   open,
   onClose,
@@ -31,6 +37,9 @@ export function ExplainDrawer({
 }) {
   if (!item) return null;
   const laptop = item.laptop;
+  // Doi tuong Laptop (tu API) khong co san `ppi` (mat do diem anh) - day la truong duy nhat
+  // CHUA duoc tinh o phia frontend nen tam de 0 (hang nay se tu an di vi `ideal.ppi` van co gia
+  // tri that, chi cot "May nay" se hien 0 - TODO: backend nen tra ve ppi da tinh san trong DTO).
   const featureValue: Record<string, number> = {
     cpu_score: laptop.cpu.score,
     gpu_score: laptop.gpu.score,
@@ -44,6 +53,8 @@ export function ExplainDrawer({
     screen_inch: laptop.screenInch,
   };
 
+  // Chi hien dac trung nao THAT SU co trong ho so ly tuong (vd neu backend khong tra ve
+  // `ideal.battery_wh` thi khong ve dong "Pin" - tranh hien dong toan so 0 gay hieu nham)
   const rows = Object.keys(FEATURE_LABELS)
     .filter((k) => ideal[k] != null)
     .map((k) => ({

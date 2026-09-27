@@ -4,6 +4,9 @@ import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-d
 
 const { Sider, Content, Header } = Layout;
 
+/** Khung sidebar dung chung cho toan bo khu quan tri (Outlet render trang con tuong ung route).
+ * Tu kiem tra dang nhap ngay tai day (khong phai o tung trang con) - chua co token thi chuyen
+ * huong ve /admin/login LUON, dam bao khong trang quan tri nao lot qua duoc khi chua dang nhap. */
 export function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();

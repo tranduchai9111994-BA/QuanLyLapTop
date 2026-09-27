@@ -26,7 +26,7 @@ vẫn có thể sẽ được chọn nhiều hơn"*.
 - Thêm 2 cột dữ liệu: `originalPriceVnd` (giá gốc trước giảm) và `salesCount` (lượt bán) —
   schema Prisma, migrate, sinh lại 1000 dòng dữ liệu (35% máy đang giảm giá 5–25%).
 - Đưa vào **thẳng metric của kNN Mô hình B** (không phải chỉ hiển thị): nhóm đặc trưng mới
-  `"popularity"` trong [ml-service/app/retriever.py](ml-service/app/retriever.py), trọng số cố
+  `"popularity"` trong [ml-service/app/retriever.py](../ml-service/app/retriever.py), trọng số cố
   định 0,12, hướng "càng cao càng tốt, không phạt khi vượt" — đúng tinh thần khoảng cách một phía
   đã áp dụng cho các đặc trưng khác.
 - Toàn bộ chuỗi đồng bộ: schema → generator → seed → `features.py` → `retriever.py` →
@@ -55,8 +55,8 @@ vẫn có thể sẽ được chọn nhiều hơn"*.
 
 Theo yêu cầu "CRUD lại trên browser theo checklist để đảm bảo hệ thống đang chạy đúng", đã làm cả
 thủ công lẫn viết script Playwright tự động
-([scripts/capture_crud_test.py](scripts/capture_crud_test.py)) lưu ảnh bằng chứng từng thao tác
-chính vào [crud_test_screenshots/](crud_test_screenshots/) (16 ảnh). Quá trình này phát hiện và
+([scripts/capture_crud_test.py](../scripts/capture_crud_test.py)) lưu ảnh bằng chứng từng thao tác
+chính vào [crud_test_screenshots/](../crud_test_screenshots/) (16 ảnh). Quá trình này phát hiện và
 sửa được **3 lỗi thật đang tồn tại trong code**, không phải giả định:
 
 1. **Hãng máy thiếu trường `tier`** — xem mục 3 bảng trên.
@@ -87,10 +87,10 @@ khi tạo máy mới, sửa tên máy có `batteryWh=null` thành công, sửa l
   việc trong phiên, đối chiếu từng yêu cầu, dùng để tự kiểm trước khi báo hoàn tất.
 - **[KET_QUA_THUC_NGHIEM.md](KET_QUA_THUC_NGHIEM.md)** — đã cập nhật số liệu mới nhất (sau khi
   thêm khuyến mãi/lượt bán và retrain lần cuối).
-- **[scripts/fetch_brand_photos.py](scripts/fetch_brand_photos.py)** (mới) — tích hợp THẬT API
+- **[scripts/fetch_brand_photos.py](../scripts/fetch_brand_photos.py)** (mới) — tích hợp THẬT API
   DummyJSON để tải ảnh sản phẩm (bạn phát hiện 5 ảnh cũ chỉ được tải tay 1 lần, không có script
   tái tạo được). Đã chạy và xác nhận nội dung file trùng khớp 100% với bản cũ.
-- **[scripts/capture_crud_test.py](scripts/capture_crud_test.py)** (mới) — script Playwright tự
+- **[scripts/capture_crud_test.py](../scripts/capture_crud_test.py)** (mới) — script Playwright tự
   động CRUD toàn bộ màn quản trị, lưu ảnh bằng chứng từng thao tác vào `crud_test_screenshots/`.
 - Đã viết lại toàn bộ file `.md` khác trong repo để khớp thực tế hiện tại: **README.md** gốc (rất
   lỗi thời, còn ghi macro-F1 dữ liệu mô phỏng 315 mẫu cũ), **ml-service/README.md** (số liệu

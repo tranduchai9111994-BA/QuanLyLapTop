@@ -1,6 +1,10 @@
 import type { ExplanationItem } from '../types';
 import { formatVnd } from './format';
 
+/** Dich 1 "ma giai thich" (do backend/ML sinh ra, xem ml-service/app/explain.py) thanh CAU TIENG
+ * VIET hoan chinh de hien tren the goi y (RecommendationCard). Tach rieng khoi backend co chu
+ * dich: backend chi tra ve MA + tham so (so lieu tho), viec "dich thanh cau" nam o day - de sau
+ * nay doi ngon ngu/cach dien dat chi can sua 1 file frontend, khong dung den ML service. */
 export function explainText(item: ExplanationItem): string {
   const p = item.params as Record<string, any>;
   switch (item.code) {

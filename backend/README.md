@@ -12,7 +12,7 @@ npm run dev                  # http://localhost:4000
 
 `.env.example` liệt kê biến môi trường cần có. `DATABASE_URL` mặc định trỏ tới SQL Server cục bộ
 (database `SmartLap`, login `smartlap_app`) — đã kiểm thử thật trên máy phát triển, không phải giả lập.
-Tài khoản demo (admin/staff/khách): xem [`../TAI_KHOAN_DANG_NHAP.md`](../TAI_KHOAN_DANG_NHAP.md).
+Tài khoản demo (admin/staff/khách): xem [`../docs/TAI_KHOAN_DANG_NHAP.md`](../docs/TAI_KHOAN_DANG_NHAP.md).
 
 ## Đã kiểm thử thủ công (end-to-end với SQL Server + ML service thật)
 

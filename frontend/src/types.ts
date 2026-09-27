@@ -50,11 +50,18 @@ export interface RecommendationItemDto {
   laptop: Laptop;
 }
 
+/** Ket qua tra ve tu POST /recommendations - "goi" day du de hien Ket qua + Vi sao goi y. */
 export interface RecommendationResult {
   sessionId: string;
   segment: { used: Segment; inferred: Segment | null; confidence: number | null };
+  // 'ML' = kNN that su (goi ML service thanh cong); 'FALLBACK' = ML service loi/tat, xep hang
+  // tam theo performanceIdx/valueIdx co san trong DB (xem FallbackBanner.tsx)
   mode: 'ML' | 'FALLBACK';
+  // true neu loc cung ngan sach ban dau qua chat (khong con may nao) nen backend tu no rong
+  // them 10% de van co ket qua tra ve (xem BudgetRelaxedBanner.tsx)
   budgetRelaxed: boolean;
+  // "May trong mo" duoc suy tu muc uu tien (xem retriever.build_ideal_vector) - dung de ve
+  // bang so sanh trong ExplainDrawer.tsx
   ideal: Record<string, number>;
   weights: Record<string, number>;
   items: RecommendationItemDto[];

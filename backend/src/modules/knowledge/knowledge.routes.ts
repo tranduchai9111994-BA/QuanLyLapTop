@@ -4,6 +4,10 @@ import { requireAuth, requireRole } from '../../middlewares/auth';
 import { toJson } from '../../lib/json';
 import { AppError } from '../../middlewares/error';
 
+// 2 nhom API: "config" (cau hinh tri thuc dang key-value tuy y, vd nguong canh bao dashboard -
+// luu JSON trong `valueJson` vi SQL Server khong ho tro kieu Json cua Prisma, xem lib/json.ts)
+// va "pins" (CUA HANG chu dong GHIM/CAM 1 may cho 1 phan khuc - xem field `isPinned` o
+// recommend.service.ts, hien thi "De xuat tu cua hang" thay vi "AI goi y" tren giao dien).
 export const knowledgeRouter = Router();
 
 knowledgeRouter.get('/config/:key', requireAuth, requireRole('ADMIN'), async (req, res, next) => {

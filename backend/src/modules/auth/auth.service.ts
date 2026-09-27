@@ -4,6 +4,9 @@ import { signToken } from '../../middlewares/auth';
 import { AppError } from '../../middlewares/error';
 import type { Role } from '../../constants/enums';
 
+/** Kiem tra email + mat khau, tra ve JWT neu dung. Co tinh dung 1 THONG BAO LOI chung chung
+ * ("Email hoặc mật khẩu không đúng") cho ca 2 truong hop sai email VA sai mat khau - khong noi
+ * ro "email khong ton tai" de tranh lo lieu tai khoan nao co that trong he thong (bao mat co ban). */
 export async function login(email: string, password: string) {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user || !user.isActive) {

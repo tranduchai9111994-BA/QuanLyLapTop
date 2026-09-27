@@ -34,7 +34,7 @@ gán nhãn độc lập.
 ## Phân bố mẫu theo phân khúc (dữ liệu hiện tại, 1000 dòng)
 
 Xem số liệu cập nhật nhất (đổi mỗi lần `generate_catalog.py` chạy lại) tại
-[`../KET_QUA_THUC_NGHIEM.md`](../KET_QUA_THUC_NGHIEM.md) mục 1 — không chép số cố định ở đây để
+[`../docs/KET_QUA_THUC_NGHIEM.md`](../docs/KET_QUA_THUC_NGHIEM.md) mục 1 — không chép số cố định ở đây để
 tránh lệch mỗi lần tái sinh dữ liệu. Mọi lớp đều được sinh ≥ 100 mẫu (vượt xa tiêu chí ≥ 50/lớp).
 
 ## Cohen's kappa

@@ -1,3 +1,6 @@
+/** Cac ham dinh dang so lieu hien thi cho nguoi dung Viet Nam (tien te, don vi kg/inch/%).
+ * Moi ham deu tra ve "—" khi gia tri null/undefined - tranh hien "NaN" hay "undefined" tren
+ * man hinh khi du lieu con thieu (vd may chua co pin/gia). */
 export function formatVnd(amount: number | null | undefined): string {
   if (amount == null) return '—';
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);

@@ -2,6 +2,10 @@ import { Router } from 'express';
 import { prisma } from '../../lib/prisma';
 import { requireAuth, requireRole } from '../../middlewares/auth';
 
+// CRUD cho 2 bang benchmark THAT (CPU/GPU) - moi dong la 1 dong chip cu the kem diem PassMark
+// da quy doi (0-100) va nguon tra cuu. Day la dau vao cho `cpu_score`/`gpu_score` cua ca Mo hinh
+// A lan Mo hinh B (xem ml-service/app/features.py build_bench_lookup). GET khong yeu cau dang
+// nhap (ai cung xem duoc bang tham khao), nhung POST/PUT/DELETE chi ADMIN moi duoc sua.
 export const benchmarksRouter = Router();
 
 benchmarksRouter.get('/cpu', async (_req, res, next) => {

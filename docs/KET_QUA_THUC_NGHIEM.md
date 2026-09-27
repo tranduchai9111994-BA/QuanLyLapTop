@@ -131,11 +131,11 @@ trong metric kNN**, không chỉ là huy hiệu trang trí trên giao diện.
 Đã bổ sung:
 - Dữ liệu: 35% số máy trong catalog đang giảm giá (5–25%), có `originalPriceVnd` (giá gốc) và
   `salesCount` (lượt bán, tương quan với độ "đáng tiền" + uy tín thương hiệu + có đang giảm giá hay
-  không) — sinh tại [data/generate_catalog.py](data/generate_catalog.py).
-- Đặc trưng mới cho Mô hình B ([ml-service/app/features.py](ml-service/app/features.py)):
+  không) — sinh tại [data/generate_catalog.py](../data/generate_catalog.py).
+- Đặc trưng mới cho Mô hình B ([ml-service/app/features.py](../ml-service/app/features.py)):
   `discount_percent` (% giảm giá) và `sales_score` (lượt bán, log-hoá về thang 0–100 để không bị vài
   máy bán chạy đột biến lấn át).
-- Nhóm trọng số mới trong metric kNN ([ml-service/app/retriever.py](ml-service/app/retriever.py)):
+- Nhóm trọng số mới trong metric kNN ([ml-service/app/retriever.py](../ml-service/app/retriever.py)):
   `"popularity": ["discount_percent", "sales_score"]`, trọng số **cố định** 0,12 (không cho người
   dùng chỉnh qua thanh trượt ưu tiên — đây là tín hiệu nền, không phải tiêu chí người dùng tự chọn).
 - Hướng tối ưu: cả hai đặc trưng đều "càng cao càng tốt" và **không phạt khi vượt** — máy giảm giá

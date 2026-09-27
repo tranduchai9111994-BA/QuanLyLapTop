@@ -13,6 +13,9 @@ import { formatVnd, formatKg } from '../../utils/format';
 import { explainText } from '../../utils/explainText';
 import { api } from '../../lib/api';
 
+/** The hien thi 1 may trong danh sach "Ket qua goi y" (Results.tsx) - gom anh, gia + khuyen mai,
+ * 2 diem manh/canh bao noi bat nhat, nut Vi sao/So sanh/Chi tiet, va nut Thich/Khong thich de
+ * ghi lai phan hoi (dung cho "hoc tu phan hoi" - xem retrain_from_feedback trong ml-service). */
 export function RecommendationCard({
   item,
   sessionId,
@@ -31,6 +34,11 @@ export function RecommendationCard({
   const laptop = item.laptop;
   const isTop1 = item.rank === 1;
 
+  /** Ghi lai 1 su kien Thich/Khong thich - LUU Y: cap nhat giao dien (setFeedback) NGAY LAP TUC
+   * truoc khi cho ket qua goi API (optimistic update), vi day chi la telemetry phu, khong bat
+   * buoc thanh cong ngay lap tuc thi trai nghiem nguoi dung moi lam. Neu goi API loi thi im
+   * lang bo qua (khong hien thong bao loi) - khong nen lam gian doan nguoi dung vi 1 thao tac
+   * phu nhu the nay. */
   async function sendFeedback(type: 'LIKE' | 'DISLIKE') {
     setFeedback(type);
     try {
@@ -71,6 +79,9 @@ export function RecommendationCard({
             <div style={{ minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
                 <span style={{ fontWeight: 700 }}>#{item.rank}</span>
+                {/* isPinned: may nay duoc CUA HANG chu dong "ghim" uu tien (khong phai kNN chon)
+                    - vd may dang can day hang/co khuyen mai dac biet - phai ghi ro nguon goc
+                    khac nhau de khong nham lan voi goi y THAT cua thuat toan */}
                 {!item.isPinned && <AiBadge />}
                 {item.isPinned && <Tag>Đề xuất từ cửa hàng</Tag>}
               </div>

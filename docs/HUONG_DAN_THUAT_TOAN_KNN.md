@@ -10,14 +10,15 @@
 > - Mục 2.3 mô tả "mẹo nhân `sqrt(w)`" — code HIỆN TẠI không dùng mẹo này nữa, mà truyền thẳng một
 >   hàm khoảng cách MỘT PHÍA tuỳ biến vào `NearestNeighbors(metric=callable)` (xem
 >   [GIAI_THICH_THUAT_TOAN_KNN.md](GIAI_THICH_THUAT_TOAN_KNN.md) mục 4.2 và
->   [ml-service/app/retriever.py:214-229](ml-service/app/retriever.py)).
+>   [ml-service/app/retriever.py:214-229](../ml-service/app/retriever.py)).
 > - Mục 1.3 nói `k=1` là tham số tốt nhất — đây là số liệu CŨ trên dữ liệu mô phỏng đầu tiên. Sau
 >   khi dữ liệu được làm thực tế hơn (phân khúc chồng lấn, nhiễu gán nhãn hợp lý), tham số tốt
 >   nhất hiện tại là `k=7, metric=euclidean, weights=uniform` (xem
 >   [KET_QUA_THUC_NGHIEM.md](KET_QUA_THUC_NGHIEM.md) mục 2).
 
-Toàn bộ đường dẫn file đều tính từ gốc repo (`D:\QL_Laptop`). Xem thêm lý thuyết gốc ở
-[docs/04_MO_HINH_KNN.md](docs/04_MO_HINH_KNN.md).
+Các liên kết `[...](...)` trong file này trỏ tương đối từ chính thư mục `docs/`; các đường dẫn
+code viết dạng chữ thường (vd `app/features.py`) tính từ thư mục `ml-service/`. Xem thêm lý
+thuyết gốc ở [04_MO_HINH_KNN.md](04_MO_HINH_KNN.md).
 
 ## 0. Vì sao có 2 mô hình kNN, không phải 1?
 
@@ -39,7 +40,7 @@ Mô hình A cho k láng giềng **bỏ phiếu ra 1 nhãn**; Mô hình B trả v
 
 ## 1. Mô hình A — kNN phân lớp phân khúc
 
-### 1.1 Chuẩn bị đặc trưng — [`app/features.py`](ml-service/app/features.py)
+### 1.1 Chuẩn bị đặc trưng — [`app/features.py`](../ml-service/app/features.py)
 
 kNN đo khoảng cách giữa các điểm, nên **mọi thứ phải là số, cùng thang đo**. Tên CPU/GPU là chuỗi
 → phải quy đổi ra điểm số trước:
@@ -84,7 +85,7 @@ MODEL_A_FEATURES = NUMERIC_LOG + NUMERIC + BINARY   # KHONG co price_vnd
 MODEL_B_FEATURES = MODEL_A_FEATURES + ["price_vnd"] # Mo hinh B moi can gia
 ```
 
-### 1.2 Bản thân thuật toán kNN — [`app/classifier.py`](ml-service/app/classifier.py)
+### 1.2 Bản thân thuật toán kNN — [`app/classifier.py`](../ml-service/app/classifier.py)
 
 ```python
 def build_pipeline() -> Pipeline:
@@ -116,7 +117,7 @@ search = GridSearchCV(pipe, PARAM_GRID, cv=StratifiedKFold(5, shuffle=True, rand
                        scoring="f1_macro", n_jobs=-1)
 ```
 
-Chạy thật: [`app/train.py`](ml-service/app/train.py) gọi `grid_search()`, thử **tất cả tổ hợp** k ×
+Chạy thật: [`app/train.py`](../ml-service/app/train.py) gọi `grid_search()`, thử **tất cả tổ hợp** k ×
 weights × metric (16 × 2 × 2 = 64 cấu hình), mỗi cấu hình chạy 5-fold cross-validation, chọn cấu
 hình có `f1_macro` trung bình cao nhất. Kết quả hiện tại (dữ liệu mô phỏng):
 
@@ -125,12 +126,12 @@ Best params: {'knn__metric': 'euclidean', 'knn__n_neighbors': 1, 'knn__weights':
 ```
 
 `k=1` được chọn vì dữ liệu mô phỏng có ranh giới phân khúc quá rõ ràng (xem cảnh báo ở
-[ml-service/README.md](ml-service/README.md)) — **với dữ liệu thật, `k` tối ưu gần như chắc chắn sẽ
+[ml-service/README.md](../ml-service/README.md)) — **với dữ liệu thật, `k` tối ưu gần như chắc chắn sẽ
 lớn hơn 1** (k=1 rất nhạy nhiễu, đây là dấu hiệu dữ liệu giả lập "quá sạch", không phải lỗi code.
 
 ### 1.4 Suy phân khúc từ nhu cầu (khi người dùng chọn "Chưa rõ")
 
-[`app/segment_inference.py`](ml-service/app/segment_inference.py) — không train mô hình mới, mà
+[`app/segment_inference.py`](../ml-service/app/segment_inference.py) — không train mô hình mới, mà
 **dựng một vector đặc trưng giả định** từ các hoạt động người dùng chọn (`choi_game`, `van_phong`,...),
 rồi đưa vector đó qua **Mô hình A đã huấn luyện** ở trên để lấy `predict_proba()`:
 
@@ -221,7 +222,7 @@ dist, idx = nn.kneighbors(Xs[laptop_idx : laptop_idx + 1])
 return dist[0][1:], idx[0][1:]   # bo phan tu dau (chinh no)
 ```
 
-### 2.5 Giải thích kết quả — [`app/explain.py`](ml-service/app/explain.py)
+### 2.5 Giải thích kết quả — [`app/explain.py`](../ml-service/app/explain.py)
 
 `build_explanation()` không phải AI sinh văn bản — nó là **luật if/else dựa trên chênh lệch giữa
 laptop thật và vector lý tưởng q**, trả về mã code (`gpu_dedicated`, `perf_above`, `weight_over`,...)

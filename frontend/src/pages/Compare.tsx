@@ -70,7 +70,7 @@ export function Compare() {
               : 'Đang tải dữ liệu so sánh, hoặc các máy đã chọn không còn tồn tại.'
           }
         >
-          <Button type="primary" onClick={() => navigate('/catalog')}>
+          <Button type="primary" onClick={() => navigate('/laptops')}>
             Chọn máy trong danh mục
           </Button>
         </Empty>

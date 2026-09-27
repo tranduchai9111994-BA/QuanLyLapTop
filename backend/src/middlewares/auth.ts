@@ -20,10 +20,14 @@ declare global {
   }
 }
 
+/** Ky (sign) 1 JWT chua id/role/email - het han sau 8 gio nen nguoi dung phai dang nhap lai
+ * dinh ky, khong can co che refresh token rieng cho quy mo do an nay. */
 export function signToken(user: AuthUser): string {
   return jwt.sign(user, JWT_SECRET, { expiresIn: '8h' });
 }
 
+/** Middleware BAT BUOC dang nhap - dung cho cac route CHI danh cho STAFF/ADMIN (CRUD, quan ly
+ * gia,...). Thieu header hoac token het han/sai deu nem loi 401 NGAY, khong cho di tiep. */
 export function requireAuth(req: Request, _res: Response, next: NextFunction) {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) {
@@ -38,6 +42,10 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
   }
 }
 
+/** Middleware KHONG BAT BUOC dang nhap - dung cho cac route khach hang cung xem duoc (vd
+ * GET /laptops) nhung neu CO dang nhap thi van muon biet `req.user` la ai (vd de ghi nhan
+ * "khach quen"). Token sai/het han chi bi BO QUA IM LANG (coi nhu khach vang lai), khong bao loi -
+ * khac han `requireAuth` o tren. */
 export function optionalAuth(req: Request, _res: Response, next: NextFunction) {
   const header = req.headers.authorization;
   if (header?.startsWith('Bearer ')) {
@@ -50,6 +58,9 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction) {
   next();
 }
 
+/** Middleware kiem tra QUYEN (phai dung SAU `requireAuth` trong chuoi middleware, vi can
+ * `req.user` da duoc dien san). Vd `requireRole('ADMIN')` chi cho ADMIN, con
+ * `requireRole('STAFF', 'ADMIN')` cho ca 2 vai tro cung duoc phep. */
 export function requireRole(...roles: Role[]) {
   return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user || !roles.includes(req.user.role)) {

@@ -1,6 +1,10 @@
 import type { ThemeConfig } from 'antd';
 import { t } from './tokens';
 
+// Cau hinh theme cho AntD ConfigProvider (xem main.tsx) - dich cac token mau/khoang cach dung
+// chung o tokens.ts sang dinh dang rieng ma AntD hieu, de moi component (Button, Table, Menu,...)
+// tu dong dung dung mau/font/border-radius cua SmartLap ma khong can set tay tung noi.
+
 export const antdTheme: ThemeConfig = {
   token: {
     colorPrimary: t.primary500,

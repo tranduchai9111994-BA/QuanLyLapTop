@@ -49,7 +49,7 @@ thành một thuật toán tính được bằng máy tính.
 
 Trước khi nhóm quyết định dùng kNN làm lõi, hướng tiếp cận "hiển nhiên" nhất mà một người mới học
 lập trình thường nghĩ tới là **luật if-else** (rule-based), việc này cũng chính là baseline được
-so sánh trong đồ án (`rule_based_baseline` — [ml-service/app/classifier.py:77](ml-service/app/classifier.py)):
+so sánh trong đồ án (`rule_based_baseline` — [ml-service/app/classifier.py:77](../ml-service/app/classifier.py)):
 
 ```
 Nếu CPU điểm > 20000 VÀ có GPU rời VÀ RAM >= 16GB  → Gaming
@@ -107,7 +107,7 @@ số hàng chục) — dù cả hai có thể quan trọng như nhau với ngư�
 
 **Giải pháp**: chuẩn hoá mỗi đặc trưng về cùng một thang đo trước khi tính khoảng cách — đồ án
 dùng `StandardScaler` (z-score: trừ trung bình, chia độ lệch chuẩn) —
-[ml-service/app/retriever.py:81-85](ml-service/app/retriever.py). Sau bước này, "1 đơn vị" của
+[ml-service/app/retriever.py:81-85](../ml-service/app/retriever.py). Sau bước này, "1 đơn vị" của
 CPU score và "1 đơn vị" của giá đều mang cùng ý nghĩa thống kê (số độ-lệch-chuẩn so với trung
 bình), nên phép cộng khoảng cách giữa các chiều mới công bằng.
 
@@ -116,7 +116,7 @@ bình), nên phép cộng khoảng cách giữa các chiều mới công bằng.
 trên toàn bộ dữ liệu (gồm cả phần sẽ dùng để đánh giá) thì mô hình đã "nhìn trộm" thống kê của dữ
 liệu kiểm tra trước khi bị kiểm tra — gọi là **rò rỉ dữ liệu (data leakage)**, làm điểm đánh giá
 ảo cao hơn thực tế. Đồ án ép `StandardScaler` phải nằm **bên trong** `Pipeline` của scikit-learn
-(`build_pipeline()` — [ml-service/app/classifier.py:41](ml-service/app/classifier.py)), được
+(`build_pipeline()` — [ml-service/app/classifier.py:41](../ml-service/app/classifier.py)), được
 kiểm chứng bằng test riêng `test_scaler_inside_pipeline`.
 
 ### 3.3 Trọng số (weights) — không phải mọi đặc trưng đều quan trọng như nhau
@@ -141,9 +141,9 @@ Với Euclidean thường, khoảng cách là **hai chiều**: nếu bạn cần
 hướng ngược lại — quá yếu). Điều này vô lý với trực giác con người: **máy mạnh hơn nhu cầu không
 đáng bị coi là "tệ"** như máy yếu hơn nhu cầu.
 
-Giải pháp của đồ án — [ml-service/app/retriever.py:189-211](ml-service/app/retriever.py)
+Giải pháp của đồ án — [ml-service/app/retriever.py:189-211](../ml-service/app/retriever.py)
 (`one_sided_distance`) — mỗi đặc trưng có một "hướng tốt" khai báo trước trong
-`FEATURE_DIRECTION` ([retriever.py:51-68](ml-service/app/retriever.py)):
+`FEATURE_DIRECTION` ([retriever.py:51-68](../ml-service/app/retriever.py)):
 
 ```
 huong +1 (cang cao cang tot, vd CPU, RAM):  pen = max(0, q - x)   # chi phat khi may YEU HON q
@@ -186,7 +186,7 @@ nào trong 4 nhóm: OFFICE / ULTRABOOK / GAMING / CREATOR.
 — không thể bắt nhân viên tự phân loại bằng tay (dễ sai, không nhất quán). Đây cũng là minh chứng
 cho tiêu chí "hệ thống tự học/tự phân loại máy mới" trong đề bài.
 
-**Code thật**: [ml-service/app/classifier.py:41-54](ml-service/app/classifier.py) (`build_pipeline`)
+**Code thật**: [ml-service/app/classifier.py:41-54](../ml-service/app/classifier.py) (`build_pipeline`)
 ```python
 def build_pipeline() -> Pipeline:
     return Pipeline([
@@ -195,7 +195,7 @@ def build_pipeline() -> Pipeline:
     ])
 ```
 Tham số tốt nhất được tìm bằng `GridSearchCV` (dò lưới) kết hợp `StratifiedKFold` 5 lần
-([classifier.py:56-75](ml-service/app/classifier.py)) — "Stratified" nghĩa là mỗi lần chia dữ
+([classifier.py:56-75](../ml-service/app/classifier.py)) — "Stratified" nghĩa là mỗi lần chia dữ
 liệu train/test đều giữ đúng TỈ LỆ 4 phân khúc như bộ dữ liệu gốc, tránh trường hợp ăn may một
 lần chia mà một phân khúc hiếm bị dồn hết vào tập test.
 
@@ -216,15 +216,15 @@ Khác với Mô hình A (trả lời "thuộc nhóm nào"), Mô hình B trả l�
 **4 bước xử lý thật, theo đúng thứ tự code chạy:**
 
 **Bước 1 — Dựng "máy trong mơ" (ideal vector) từ mức ưu tiên** —
-`build_ideal_vector()` [retriever.py:88-147](ml-service/app/retriever.py). Đây không phải một
+`build_ideal_vector()` [retriever.py:88-147](../ml-service/app/retriever.py). Đây không phải một
 máy có thật, mà là một **điểm trong không gian nhiều chiều** được suy ra từ phân vị (percentile)
 của chính tập ứng viên. Ví dụ cụ thể: người dùng chọn "hiệu năng" = 5/5 → tra bảng
-`PERCENTILE_BY_PRIORITY` ([retriever.py:21](ml-service/app/retriever.py)) ra phân vị 90 → nghĩa
+`PERCENTILE_BY_PRIORITY` ([retriever.py:21](../ml-service/app/retriever.py)) ra phân vị 90 → nghĩa
 là "CPU trong mơ" = giá trị CPU mà chỉ 10% máy trong catalog mạnh hơn (một cách nói: "tôi muốn một
 trong những máy mạnh nhất, nhưng không nhất thiết là mạnh NHẤT tuyệt đối").
 
 **Bước 2 — Tính trọng số mỗi đặc trưng** — `build_weights()`
-[retriever.py:150-186](ml-service/app/retriever.py). Ví dụ cụ thể (trích nguyên văn docstring
+[retriever.py:150-186](../ml-service/app/retriever.py). Ví dụ cụ thể (trích nguyên văn docstring
 trong code): người dùng đặt "hiệu năng" = 5/5, phân khúc GAMING có hệ số nền mặc định cho nhóm
 hiệu năng là 1.3 → trọng số thô của nhóm = `5 × 1.3 = 6.5`. Nhóm hiệu năng gồm 4 đặc trưng
 (cpu_score, gpu_score, ram_gb, ssd_gb) nên mỗi đặc trưng nhận `6.5 / 4 = 1.625`. Cuối cùng TẤT CẢ
@@ -233,8 +233,8 @@ công thức Euclidean có trọng số (mục 3.3).
 
 **Bước 3 — Tính khoảng cách MỘT PHÍA và đưa thẳng vào kNN** —
 `one_sided_distance()` + `make_one_sided_metric()`
-[retriever.py:189-229](ml-service/app/retriever.py), rồi truyền thẳng vào
-`NearestNeighbors(metric=callable)` ở [retriever.py:271-274](ml-service/app/retriever.py). Đây là
+[retriever.py:189-229](../ml-service/app/retriever.py), rồi truyền thẳng vào
+`NearestNeighbors(metric=callable)` ở [retriever.py:271-274](../ml-service/app/retriever.py). Đây là
 điểm mấu chốt trả lời yêu cầu "kNN phải là lõi, không phải xếp hạng lại bên ngoài": hàm khoảng
 cách tuỳ biến được đưa **trực tiếp vào tham số `metric` của thuật toán kNN gốc**, không phải chạy
 kNN xong rồi viết thêm code để "sắp xếp lại theo ý mình".
@@ -245,24 +245,24 @@ kNN xong rồi viết thêm code để "sắp xếp lại theo ý mình".
 > sai thứ tự làm **lật dấu phạt** — hệ thống vô tình ưu tiên máy YẾU HƠN thay vì MẠNH HƠN. Lỗi
 > này được phát hiện bằng cách so sánh thủ công một trường hợp cụ thể (máy mạnh hơn nhu cầu phải
 > được xếp hạng cao, nhưng thực tế lại xếp thấp), sửa bằng cách đảo tham số tường minh trong
-> `metric()` ở [retriever.py:225-227](ml-service/app/retriever.py), và chặn tái phát bằng
+> `metric()` ở [retriever.py:225-227](../ml-service/app/retriever.py), và chặn tái phát bằng
 > `test_one_sided_metric_argument_order` trong
-> [ml-service/tests/test_one_sided_metric.py](ml-service/tests/test_one_sided_metric.py). Sau
+> [ml-service/tests/test_one_sided_metric.py](../ml-service/tests/test_one_sided_metric.py). Sau
 > khi sửa, nDCG@5 (độ đo chất lượng xếp hạng) tăng từ 0,589 lên 0,788 trong lần đo đó — con số cụ
 > thể chứng minh lỗi này ảnh hưởng lớn thế nào.
 
 **Bước 4 — Lọc mềm theo phân khúc thay vì lọc cứng** —
-[retriever.py:259-264](ml-service/app/retriever.py). Thay vì loại bỏ thẳng các máy khác phân khúc
+[retriever.py:259-264](../ml-service/app/retriever.py). Thay vì loại bỏ thẳng các máy khác phân khúc
 mong muốn (lọc cứng — có thể bỏ sót máy tốt), "độ khớp phân khúc" được đưa vào làm **một đặc
 trưng nữa trong metric** (trọng số cố định `SEGMENT_SOFT_WEIGHT = 0.18`
-— [retriever.py:235](ml-service/app/retriever.py)): máy khác phân khúc bị trừ điểm nhẹ nhưng
+— [retriever.py:235](../ml-service/app/retriever.py)): máy khác phân khúc bị trừ điểm nhẹ nhưng
 **vẫn có cơ hội** lọt top-5 nếu các mặt khác thực sự vượt trội.
 
 **Ứng dụng thật mới nhất — khuyến mãi & lượt bán** (trả lời yêu cầu: "máy giá gốc cao hơn nhưng
 giảm giá sâu hơn, bán chạy hơn vẫn có thể được chọn nhiều hơn"): 2 đặc trưng `discount_percent`
 (% giảm giá) và `sales_score` (lượt bán, đã log-hoá) được thêm vào nhóm `"popularity"`
-([retriever.py:31-37](ml-service/app/retriever.py)), hướng luôn là "+1" (càng cao càng tốt, không
-phạt khi vượt — [retriever.py:63-64](ml-service/app/retriever.py)), với trọng số **cố định**
+([retriever.py:31-37](../ml-service/app/retriever.py)), hướng luôn là "+1" (càng cao càng tốt, không
+phạt khi vượt — [retriever.py:63-64](../ml-service/app/retriever.py)), với trọng số **cố định**
 `POPULARITY_WEIGHT = 0.12` (không có thanh trượt riêng cho người dùng chỉnh, vì đây là tín hiệu
 hành vi thị trường, không phải tiêu chí kỹ thuật người dùng tự chọn).
 
@@ -285,7 +285,7 @@ nhiều câu nên trọng số thấp, nhưng "kế toán" chỉ xuất hiện �
 giúp phân biệt nhóm tốt hơn là đếm từ đơn thuần.
 
 **Code thật** — `build_text_pipeline()`
-[ml-service/app/text_classifier.py:94-128](ml-service/app/text_classifier.py):
+[ml-service/app/text_classifier.py:94-128](../ml-service/app/text_classifier.py):
 ```python
 FeatureUnion([
     ("word", TfidfVectorizer(analyzer="word", ngram_range=(1, 2), ...)),   # cum 1-2 tu lien tiep
@@ -310,7 +310,7 @@ Hai điểm đáng chú ý:
 
 Phần **trích số cụ thể** (ngân sách "tầm 20 triệu", ràng buộc "dưới 1.4kg") vẫn dùng regex —
 `extract_budget()` / `extract_constraints()`
-([text_classifier.py:139-192](ml-service/app/text_classifier.py)) — vì đây là tri thức HỖ TRỢ
+([text_classifier.py:139-192](../ml-service/app/text_classifier.py)) — vì đây là tri thức HỖ TRỢ
 (trích số, không cần "học"), còn việc **phân loại nhóm nhu cầu** (phần khó, cần hiểu ý nghĩa) mới
 là việc do kNN đảm nhiệm.
 
@@ -364,21 +364,21 @@ hơn nhu cầu, đúng như yêu cầu gốc của giảng viên.
 
 ## 6. Muốn tìm hiểu sâu hơn — đọc tiếp phần nào, theo thứ tự
 
-1. **Bắt đầu**: [ml-service/app/retriever.py](ml-service/app/retriever.py) — đọc từ trên xuống
+1. **Bắt đầu**: [ml-service/app/retriever.py](../ml-service/app/retriever.py) — đọc từ trên xuống
    theo đúng thứ tự file (docstring đầu file tóm tắt 5 thay đổi quan trọng nhất so với kNN gốc).
-2. **Cách 3 mô hình được ghép vào API thực tế**: [ml-service/app/main.py](ml-service/app/main.py)
-   — endpoint `/recommend` ([main.py:121-150](ml-service/app/main.py)) là nơi gọi cả `build_ideal_vector`,
+2. **Cách 3 mô hình được ghép vào API thực tế**: [ml-service/app/main.py](../ml-service/app/main.py)
+   — endpoint `/recommend` ([main.py:121-150](../ml-service/app/main.py)) là nơi gọi cả `build_ideal_vector`,
    `build_weights`, `recommend`, `match_pct` theo đúng thứ tự đã mô tả ở mục 4.2.
-3. **Cách chuẩn bị đặc trưng từ dữ liệu thô**: [ml-service/app/features.py](ml-service/app/features.py)
+3. **Cách chuẩn bị đặc trưng từ dữ liệu thô**: [ml-service/app/features.py](../ml-service/app/features.py)
    (hàm `enrich_catalog`) — nơi tính `value_index`, `ppi`, `discount_percent`, `sales_score`... từ
    các cột thô trong CSV/database.
 4. **Bằng chứng bằng số** (không chỉ code mà cả kết quả đo lường thật):
    [KET_QUA_THUC_NGHIEM.md](KET_QUA_THUC_NGHIEM.md) — macro-F1, P@5, nDCG@5, so sánh với 3
    baseline khác, đo "công sức tìm kiếm" thực tế.
 5. **Test tự động chứng minh các tính chất quan trọng vẫn đúng sau khi sửa code**:
-   - [ml-service/tests/test_one_sided_metric.py](ml-service/tests/test_one_sided_metric.py) — 4
+   - [ml-service/tests/test_one_sided_metric.py](../ml-service/tests/test_one_sided_metric.py) — 4
      test cho khoảng cách một phía (gồm test chặn lỗi thứ tự tham số đã kể ở mục 4.2).
-   - [ml-service/tests/test_priority_sensitivity.py](ml-service/tests/test_priority_sensitivity.py)
+   - [ml-service/tests/test_priority_sensitivity.py](../ml-service/tests/test_priority_sensitivity.py)
      — 19 test kiểm tra "kéo thanh ưu tiên lên thì kết quả phải đổi đúng hướng" trên nhiều phân
      khúc và tổ hợp khác nhau.
 6. **Tài liệu tham khảo bên ngoài** (đọc để hiểu nền tảng lý thuyết, không phải để chép):

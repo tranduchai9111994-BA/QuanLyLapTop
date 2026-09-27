@@ -3,6 +3,9 @@ import { Button, Form, Input, Card, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 
+/** Man dang nhap RIENG cho khu quan tri (khac tai khoan khach hang neu sau nay co).
+ * `initialValues` dien san tai khoan demo (xem TAI_KHOAN_DANG_NHAP.md) de test nhanh, khong
+ * anh huong bao mat that vi day chi la du lieu demo cho do an. */
 export function AdminLogin() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -12,6 +15,8 @@ export function AdminLogin() {
     try {
       const r = await api.post('/auth/login', values);
       const { token, user } = r.data.data;
+      // Backend khong phan biet API rieng cho quan tri - dang nhap THANH CONG nhung neu la tai
+      // khoan CUSTOMER thi tu choi ngay tai day (chan o phia frontend, khong luu token)
       if (user.role === 'CUSTOMER') {
         message.error('Tài khoản này không có quyền truy cập trang quản trị.');
         return;

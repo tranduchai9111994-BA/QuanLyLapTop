@@ -5,6 +5,10 @@ import { AppError } from '../../middlewares/error';
 import { mlClient } from '../../lib/mlClient';
 import { toJson, fromJson } from '../../lib/json';
 
+// Quan ly VONG DOI MO HINH (docs/09_VONG_DOI_TRI_TUE.md): moi lan train ra 1 "challenger" (ung
+// vien) - KHONG tu dong thay the mo hinh dang chay ("champion") ma phai qua buoc "promote" co
+// KIEM QUY TAC ro rang (xem comment o /:version/promote ben duoi). "rollback" cho phep quay lai
+// mot phien ban CU bat ky da tung la champion neu ban moi co van de.
 export const modelsRouter = Router();
 
 modelsRouter.get('/', requireAuth, requireRole('ADMIN'), async (_req, res, next) => {

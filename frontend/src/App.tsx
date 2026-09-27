@@ -16,6 +16,12 @@ import { t } from './theme/tokens';
 
 const { Header, Content } = Layout;
 
+// File nay chia UNG DUNG lam 2 "the gioi" rieng biet dua vao duong dan URL:
+//  - "/admin/*"  -> App quan tri (co menu sidebar rieng, yeu cau dang nhap STAFF/ADMIN)
+//  - con lai     -> App khach hang (menu ngang don gian, ai cung xem duoc)
+// Kiem tra `location.pathname.startsWith('/admin')` ngay trong component App() (thay vi long
+// Route binh thuong) de mount HAN TOAN KHAC layout (khong dung chung TopNav/Menu khach hang).
+
 function TopNav() {
   const location = useLocation();
   return (

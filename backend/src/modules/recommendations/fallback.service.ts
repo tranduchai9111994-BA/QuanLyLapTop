@@ -7,6 +7,12 @@ export function fallbackRank(
   priorities: { performance: number; mobility: number; display: number; price: number },
   topN: number
 ) {
+  // Cong thuc DON GIAN (khong phai kNN - day chinh la diem khac biet voi Mo hinh B that su):
+  // diem cang cao cang tot, cong theo hieu nang (uu tien cao -> cong nhieu), cong theo do "dang
+  // tien" (valueIdx, nhan 5 de cung thang do voi performanceIdx), TRU theo can nang (uu tien di
+  // dong cao -> tru nhieu hon cho may nang). Cac he so 5/3 la HANG SO KINH NGHIEM de 3 yeu to
+  // co anh huong tuong duong nhau, khong phai tinh toan khoa hoc - chi la giai phap TAM THOI
+  // khi khong goi duoc kNN that.
   const wPerf = priorities.performance;
   const wPrice = priorities.price;
   const scored = candidates.map((l) => {

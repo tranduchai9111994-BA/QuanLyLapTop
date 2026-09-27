@@ -23,7 +23,7 @@
       dùng minh họa phong cách ảnh chụp (không gán nhầm ảnh thật cho model không tồn tại).
       **Sửa lại cho đúng bản chất (bạn phát hiện qua câu hỏi)**: lúc đầu 5 ảnh này chỉ được TẢI
       TAY một lần rồi bỏ vào repo — KHÔNG có tích hợp API thật nào, không ai kiểm chứng lại được
-      nguồn gốc. Đã sửa: tạo [scripts/fetch_brand_photos.py](scripts/fetch_brand_photos.py) gọi
+      nguồn gốc. Đã sửa: tạo [scripts/fetch_brand_photos.py](../scripts/fetch_brand_photos.py) gọi
       thật API `https://dummyjson.com/products/category/laptops`, tự động tải lại đúng 5 ảnh này
       (đã chạy lại và xác nhận thành công). Giới hạn THẬT của nguồn dữ liệu miễn phí này: category
       "laptops" của DummyJSON chỉ có ĐÚNG 5 sản phẩm (Apple/Asus/Huawei/Lenovo/Dell) — không phải
@@ -140,13 +140,13 @@
        mật khẩu `Demo@123`, nguồn từ `backend/prisma/seed.ts`).
 13. [x] **MỚI**: tích hợp THẬT API DummyJSON để tải ảnh sản phẩm (bạn phát hiện 5 ảnh cũ chỉ được
        tải tay 1 lần, không có script) — đã tạo
-       [scripts/fetch_brand_photos.py](scripts/fetch_brand_photos.py), chạy thành công, xác nhận
+       [scripts/fetch_brand_photos.py](../scripts/fetch_brand_photos.py), chạy thành công, xác nhận
        nội dung file trùng khớp 100% với bản cũ. Ghi nhận giới hạn thật: DummyJSON category
        "laptops" chỉ có đúng 5 sản phẩm.
 14. [x] **MỚI**: CRUD lại toàn bộ trên browser để đảm bảo hệ thống chạy đúng (bạn yêu cầu) — đã
        làm cả thủ công lẫn viết script Playwright tự động
-       [scripts/capture_crud_test.py](scripts/capture_crud_test.py) lưu ảnh bằng chứng vào
-       [crud_test_screenshots/](crud_test_screenshots/) (16 ảnh, mỗi thao tác chính 1 ảnh). Quá
+       [scripts/capture_crud_test.py](../scripts/capture_crud_test.py) lưu ảnh bằng chứng vào
+       [crud_test_screenshots/](../crud_test_screenshots/) (16 ảnh, mỗi thao tác chính 1 ảnh). Quá
        trình này phát hiện và sửa được **3 lỗi thật** đang tồn tại trong code, không phải lỗi giả
        định:
        - **Hãng máy thiếu trường `tier` trong CRUD**: cả frontend (`AdminBrands.tsx`) lẫn backend
@@ -167,9 +167,9 @@
          công. `tsc --noEmit` sạch cả backend/frontend sau khi sửa.
 15. [x] **MỚI**: cập nhật lại TOÀN BỘ file `.md` trong repo (bạn yêu cầu) — đã viết lại
        [README.md](README.md) (rất lỗi thời, còn ghi macro-F1 dữ liệu mô phỏng 315 mẫu cũ),
-       [ml-service/README.md](ml-service/README.md) (số liệu cũ 0,957/9 test),
-       [backend/README.md](backend/README.md), [frontend/README.md](frontend/README.md) (còn
-       nguyên template Vite mặc định, chưa từng sửa), [data/README.md](data/README.md) (còn ghi
+       [ml-service/README.md](../ml-service/README.md) (số liệu cũ 0,957/9 test),
+       [backend/README.md](../backend/README.md), [frontend/README.md](../frontend/README.md) (còn
+       nguyên template Vite mặc định, chưa từng sửa), [data/README.md](../data/README.md) (còn ghi
        `generate_mock_catalog.py`, 315 dòng cũ) — tất cả đã cập nhật khớp thực tế hiện tại và trỏ
        đúng vào `KET_QUA_THUC_NGHIEM.md` làm nguồn số liệu duy nhất (tránh chép số bị lệch sau này).
 

@@ -5,6 +5,9 @@ import { fromJson } from '../../lib/json';
 
 export const dashboardRouter = Router();
 
+/** Cac chi so tong quan cho man Dashboard quan tri, tinh trong 1 KHOANG THOI GIAN (mac dinh 30
+ * ngay gan nhat neu khong truyen from/to). `fallbackRate` cao bat thuong bao hieu ML service hay
+ * bi loi/qua tai; `likeRate` do muc do hai long thuc te cua nguoi dung voi goi y. */
 dashboardRouter.get('/kpis', requireAuth, requireRole('ADMIN'), async (req, res, next) => {
   try {
     const from = req.query.from ? new Date(String(req.query.from)) : new Date(Date.now() - 30 * 86_400_000);

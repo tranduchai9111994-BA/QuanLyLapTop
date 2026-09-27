@@ -4,6 +4,10 @@ import { optionalAuth } from '../../middlewares/auth';
 import { mlClient } from '../../lib/mlClient';
 import * as recommendService from './recommend.service';
 
+// File nay CHI lam nhiem vu nhan request + validate zod - toan bo logic goi y THAT (loc cung,
+// goi ML service, xu ly fallback, ghi lai session) nam o recommend.service.ts. Ngoai `/` (goi y
+// chinh), con 2 route phu goi THANG sang ML service khong qua logic gi them: `/parse-need` (Mo
+// hinh C doc cau tu do) va `/infer-segment` (suy phan khuc tu danh sach hoat dong da chon).
 export const recommendationsRouter = Router();
 
 const prioritySchema = z.object({

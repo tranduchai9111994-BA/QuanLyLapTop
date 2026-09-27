@@ -13,6 +13,6 @@
 
 - Mật khẩu giống nhau cho cả 3 tài khoản chỉ vì đây là **dữ liệu demo phục vụ báo cáo/đồ án**,
   không dùng cho môi trường thật.
-- Nguồn khai báo: [backend/prisma/seed.ts](backend/prisma/seed.ts) (hàm tạo user đầu file `main()`).
+- Nguồn khai báo: [backend/prisma/seed.ts](../backend/prisma/seed.ts) (hàm tạo user đầu file `main()`).
 - Nếu đổi mật khẩu demo, nhớ sửa cả file này lẫn `seed.ts` để không bị lệch thông tin.
 - Chạy `npx tsx prisma/seed.ts --reset` sẽ xoá và tạo lại đúng 3 tài khoản này (không đổi mật khẩu).

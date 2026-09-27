@@ -1,3 +1,5 @@
+// Cac danh sach gia tri CO DINH dung chung ca backend lan validate zod - khai bao 1 lan duy nhat
+// o day (thay vi lap lai chuoi string o nhieu route) de doi 1 cho la khap noi tu dong cap nhat.
 export const ROLES = ['CUSTOMER', 'STAFF', 'ADMIN'] as const;
 export type Role = (typeof ROLES)[number];
 

@@ -2,6 +2,9 @@ import { Router } from 'express';
 import { requireAuth } from '../../middlewares/auth';
 import { prisma } from '../../lib/prisma';
 
+// Danh sach "yeu thich" cua NGUOI DUNG DA DANG NHAP (khac voi so sanh - chi luu tren trinh
+// duyet, khong can dang nhap). `upsert` o POST: bam "yeu thich" 1 may da co san se khong bao
+// loi trung, chi coi nhu khong doi gi (idempotent).
 export const favoritesRouter = Router();
 
 favoritesRouter.get('/', requireAuth, async (req, res, next) => {
@@ -41,6 +44,8 @@ favoritesRouter.delete('/:laptopId', requireAuth, async (req, res, next) => {
   }
 });
 
+// Lich su TU VAN cua nguoi dung da dang nhap (moi lan bam "Xem ket qua" o Wizard tao 1
+// RecommendationSession) - de nguoi dung xem lai cac lan tu van truoc, khong can lam lai tu dau.
 export const sessionsRouter = Router();
 
 sessionsRouter.get('/', requireAuth, async (req, res, next) => {
