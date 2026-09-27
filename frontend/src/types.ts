@@ -16,7 +16,7 @@ export interface Laptop {
   batteryWh: number | null;
   priceVnd: number;
   // Gia goc (truoc khuyen mai) - null neu may khong dang giam gia. Dung de hien thi gach ngang +
-  // tinh % giam gia tren giao dien (xem KET_QUA_THUC_NGHIEM.md muc 4.4).
+  // tinh % giam gia tren giao dien (xem docs/14_KET_QUA_THUC_NGHIEM.md muc 4.4).
   originalPriceVnd?: number | null;
   // So luot ban luy ke - hien thi "Da ban N" tren the san pham, dong thoi la dac trung dau vao cua
   // Mo hinh B (kNN truy hoi) sau khi log-hoa (xem retriever.py nhom "popularity").

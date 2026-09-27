@@ -21,7 +21,7 @@ const FEATURE_LABELS: Record<string, string> = {
 /** Drawer "Vi sao goi y?" - phan giai thich CHI TIET NHAT cho 1 may trong ket qua: liet ke diem
  * manh/diem can luu y (dang cau chu, tu explainText.ts) VA bang so sanh tung dac trung so hoc
  * that voi ho so ly tuong `ideal` (dung de nguoi dung/hoi dong doi chieu truc tiep voi cong thuc
- * khoang cach mot phia da hoc trong GIAI_THICH_THUAT_TOAN_KNN.md). */
+ * khoang cach mot phia da hoc trong docs/13_GIAI_THICH_THUAT_TOAN_KNN.md). */
 export function ExplainDrawer({
   open,
   onClose,

@@ -2,7 +2,7 @@ import { Progress } from 'antd';
 import { t } from '../../theme/tokens';
 
 /** Vong tron % phu hop (`matchPct` tu backend, tinh boi retriever.match_pct() - xem
- * GIAI_THICH_THUAT_TOAN_KNN.md muc 4.2) kem nhan chu de nguoi khong quen doc % cung hieu duoc
+ * docs/13_GIAI_THICH_THUAT_TOAN_KNN.md muc 4.2) kem nhan chu de nguoi khong quen doc % cung hieu duoc
  * muc do phu hop. Nguong 85/70 la NGUONG HIEN THI don thuan (khong anh huong xep hang thuc su). */
 export function MatchScore({ pct }: { pct: number | null }) {
   if (pct == null) return null;

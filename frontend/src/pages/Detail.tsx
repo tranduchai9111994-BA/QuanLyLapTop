@@ -10,7 +10,7 @@ import { formatVnd, formatKg, formatInch } from '../utils/format';
 import { t } from '../theme/tokens';
 
 /** Trang Chi tiet 1 may: thong so ky thuat day du + danh sach "May tuong tu" (item-item kNN,
- * xem retriever.similar_items - GIAI_THICH_THUAT_TOAN_KNN.md muc 4.2). 2 API duoc goi doc lap:
+ * xem retriever.similar_items - docs/13_GIAI_THICH_THUAT_TOAN_KNN.md muc 4.2). 2 API duoc goi doc lap:
  * neu "may tuong tu" loi (vd ML service chua dong bo may nay) trang CHINH van hien binh thuong,
  * chi rieng phan "May tuong tu" hien trang thai rong - khong lam sap ca trang vi 1 phan phu. */
 export function Detail() {

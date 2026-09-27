@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 
 /** Man dang nhap RIENG cho khu quan tri (khac tai khoan khach hang neu sau nay co).
- * `initialValues` dien san tai khoan demo (xem TAI_KHOAN_DANG_NHAP.md) de test nhanh, khong
+ * `initialValues` dien san tai khoan demo (xem docs/00_README.md muc 5) de test nhanh, khong
  * anh huong bao mat that vi day chi la du lieu demo cho do an. */
 export function AdminLogin() {
   const navigate = useNavigate();
