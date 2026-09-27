@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Button, Card, Col, Row, Statistic, Table, Tag, message } from 'antd';
+import { Alert, Button, Card, Statistic, Table, Tag, message } from 'antd';
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -16,6 +16,7 @@ interface Kpis {
   totalSessions: number;
   fallbackRate: number;
   avgLatencyMs: number;
+  p95LatencyMs: number;
   likeRate: number | null;
   likeCount: number;
   dislikeCount: number;
@@ -85,10 +86,15 @@ export function AdminDashboard() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      {/* flexWrap: man hep (375px) khong du cho tieu de + 2 nut tren CUNG 1 hang - de tu xuong
+          dong thay vi day tran ngang ca trang (phat hien khi kiem thu NFR-04 o Giai doan 7). */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
         <h2 style={{ margin: 0 }}>Dashboard</h2>
-        <div>
-          <Button icon={<ReloadOutlined />} onClick={load} style={{ marginRight: 8 }}>
+        {/* display:flex + flexWrap tren CHINH nhom 2 nut nay - 2 the <Button> dung sat nhau
+            trong JSX khong co khoang trang giua chung nen trinh duyet KHONG co diem ngat dong
+            tu nhien (khac van ban thuong); phai tu khai bao flex-wrap moi xuong dong duoc. */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <Button icon={<ReloadOutlined />} onClick={load}>
             Tải lại
           </Button>
           <Button type="primary" icon={<ScanOutlined />} loading={scanning} onClick={scanNow}>
@@ -97,59 +103,60 @@ export function AdminDashboard() {
         </div>
       </div>
 
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={8}>
-          <Card loading={loading}>
-            <Statistic title="Lượt tư vấn (30 ngày)" value={kpis?.totalSessions ?? 0} prefix={<ThunderboltOutlined />} />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card loading={loading}>
-            <Statistic
-              title="Tỷ lệ hài lòng (👍 / 👍+👎)"
-              value={kpis?.likeRate != null ? Math.round(kpis.likeRate * 100) : undefined}
-              suffix="%"
-              prefix={<LikeOutlined />}
-              valueStyle={{ color: kpis?.likeRate != null && kpis.likeRate < 0.4 ? t.error : t.success }}
-            />
-            {kpis && <div style={{ color: t.textTertiary, fontSize: 12 }}>{kpis.likeCount} 👍 · {kpis.dislikeCount} 👎</div>}
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card loading={loading}>
-            <Statistic
-              title="Độ trễ trung bình"
-              value={kpis ? Math.round(kpis.avgLatencyMs) : undefined}
-              suffix="ms"
-              prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: kpis && kpis.avgLatencyMs > 800 ? t.error : t.success }}
-            />
-          </Card>
-        </Col>
-      </Row>
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={8}>
-          <Card loading={loading}>
-            <Statistic
-              title="Tỷ lệ dùng chế độ dự phòng"
-              value={kpis ? Math.round(kpis.fallbackRate * 1000) / 10 : undefined}
-              suffix="%"
-              prefix={<WarningOutlined />}
-              valueStyle={{ color: kpis && kpis.fallbackRate > 0.05 ? t.error : t.success }}
-            />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card loading={loading}>
-            <Statistic title="Nhãn đang chờ xác minh" value={reviewBacklog} prefix={<CheckCircleOutlined />} valueStyle={{ color: reviewBacklog > 20 ? t.warning : undefined }} />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card loading={loading}>
-            <Statistic title="Tổng phản hồi" value={(kpis?.likeCount ?? 0) + (kpis?.dislikeCount ?? 0)} />
-          </Card>
-        </Col>
-      </Row>
+      {/* CSS grid tu co dan (khong dung Row/Col span co dinh cua antd) - `auto-fit`/`minmax` tu
+          giam so cot tren man hep thay vi giu nguyen 3 cot ep noi dung ben trong bi bop mop
+          (phat hien khi kiem thu 375px o Giai doan 7: Card 118px khong du cho tieu de dai nhu
+          "Độ trễ p95 (NFR-01: < 800ms)", lam noi dung tran ra ngoai Card). */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 24 }}>
+        <Card loading={loading}>
+          <Statistic title="Lượt tư vấn (30 ngày)" value={kpis?.totalSessions ?? 0} prefix={<ThunderboltOutlined />} />
+        </Card>
+        <Card loading={loading}>
+          <Statistic
+            title="Tỷ lệ hài lòng (👍 / 👍+👎)"
+            value={kpis?.likeRate != null ? Math.round(kpis.likeRate * 100) : undefined}
+            suffix="%"
+            prefix={<LikeOutlined />}
+            valueStyle={{ color: kpis?.likeRate != null && kpis.likeRate < 0.4 ? t.error : t.success }}
+          />
+          {kpis && <div style={{ color: t.textTertiary, fontSize: 12 }}>{kpis.likeCount} 👍 · {kpis.dislikeCount} 👎</div>}
+        </Card>
+        <Card loading={loading}>
+          <Statistic
+            title="Độ trễ trung bình"
+            value={kpis ? Math.round(kpis.avgLatencyMs) : undefined}
+            suffix="ms"
+            prefix={<ClockCircleOutlined />}
+            valueStyle={{ color: kpis && kpis.avgLatencyMs > 800 ? t.error : t.success }}
+          />
+        </Card>
+        <Card loading={loading}>
+          {/* NFR-01: p95 < 800ms - so voi trung binh o tren, p95 phan anh dung trai nghiem
+              CUA NGUOI DUNG CHAM NHAT, khong bi "trung binh keo" boi da so phien nhanh. */}
+          <Statistic
+            title="Độ trễ p95 (NFR-01: < 800ms)"
+            value={kpis ? Math.round(kpis.p95LatencyMs) : undefined}
+            suffix="ms"
+            prefix={<ClockCircleOutlined />}
+            valueStyle={{ color: kpis && kpis.p95LatencyMs > 800 ? t.error : t.success }}
+          />
+        </Card>
+        <Card loading={loading}>
+          <Statistic
+            title="Tỷ lệ dùng chế độ dự phòng"
+            value={kpis ? Math.round(kpis.fallbackRate * 1000) / 10 : undefined}
+            suffix="%"
+            prefix={<WarningOutlined />}
+            valueStyle={{ color: kpis && kpis.fallbackRate > 0.05 ? t.error : t.success }}
+          />
+        </Card>
+        <Card loading={loading}>
+          <Statistic title="Nhãn đang chờ xác minh" value={reviewBacklog} prefix={<CheckCircleOutlined />} valueStyle={{ color: reviewBacklog > 20 ? t.warning : undefined }} />
+        </Card>
+        <Card loading={loading}>
+          <Statistic title="Tổng phản hồi" value={(kpis?.likeCount ?? 0) + (kpis?.dislikeCount ?? 0)} />
+        </Card>
+      </div>
 
       <h3>Cảnh báo đang mở</h3>
       {!loading && alerts.length === 0 && (
@@ -160,6 +167,7 @@ export function AdminDashboard() {
         loading={loading}
         dataSource={alerts}
         pagination={false}
+        scroll={{ x: 'max-content' }}
         columns={[
           { title: 'Mức', dataIndex: 'severity', render: (v: string) => <Tag color={SEVERITY_COLOR[v]}>{v}</Tag> },
           { title: 'Mã', dataIndex: 'code' },

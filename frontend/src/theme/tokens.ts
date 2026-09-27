@@ -16,12 +16,19 @@ export const t = {
   borderStrong: '#C9D6E8',
   textPrimary: '#0F1B2D',
   textSecondary: '#4A5B73',
-  textTertiary: '#64748B',
+  // NFR-05 (WCAG AA, Giai doan 7): #64748B ban dau chi dat 4.34:1 tren `bgSubtle` (#F0F5FC, vd
+  // chu thich thoi gian trong the mo ta) - duoi nguong 4.5:1 cho van ban thuong. Toi mau xuong
+  // 1 bac (#5B6B85) de dat 4.93:1 tren nen sang nhat dang dung cung mau nay, van giu dung "cam
+  // giac" xam trung tinh nhu cu (kiem chung: scripts/check_contrast.py).
+  textTertiary: '#5B6B85',
   success: '#15803D',
   successBg: '#EAF8EF',
   warning: '#B45309',
   warningBg: '#FFF6E5',
-  error: '#DC2626',
+  // NFR-05: #DC2626 chi dat 4.23:1 tren `errorBg` (#FDECEC, vd chu "Khong thich"/canh bao loi) -
+  // duoi nguong 4.5:1. Toi xuong #C62828 de dat 4.92:1, van la do ro rang, khong doi cam giac
+  // "canh bao/loi" cua mau (kiem chung: scripts/check_contrast.py).
+  error: '#C62828',
   errorBg: '#FDECEC',
   shadowSm: '0 1px 2px rgba(26,115,232,0.06)',
   shadowMd: '0 4px 16px rgba(26,115,232,0.08)',

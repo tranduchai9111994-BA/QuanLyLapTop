@@ -115,6 +115,7 @@ function UsersTab() {
         rowKey="id"
         loading={loading}
         dataSource={rows}
+        scroll={{ x: 'max-content' }}
         columns={[
           { title: 'Họ tên', dataIndex: 'fullName' },
           { title: 'Email', dataIndex: 'email' },
@@ -191,6 +192,7 @@ function AuditTab() {
         rowKey="id"
         loading={loading}
         dataSource={rows}
+        scroll={{ x: 'max-content' }}
         columns={[
           { title: 'Lúc', dataIndex: 'createdAt', render: (v: string) => new Date(v).toLocaleString('vi-VN'), width: 170 },
           { title: 'Người thực hiện', render: (_: unknown, r: AuditRow) => r.user?.fullName ?? '—' },

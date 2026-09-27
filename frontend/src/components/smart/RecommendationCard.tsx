@@ -77,6 +77,14 @@ export function RecommendationCard({
   return (
     <div
       style={{
+        // `minWidth: 0`: the outer div here IS a CSS grid item (Results.tsx renders these
+        // directly inside a `display:grid` list) - grid items, like flex items, default to
+        // `min-width: auto` and refuse to shrink below their content's min-content size unless
+        // told otherwise. The inner flex rows already declare `minWidth: 0` so THEIR own text
+        // can wrap/shrink, but without it HERE too the whole card still can't go narrower than
+        // (thumbnail 128px + match-score circle 64px + paddings/gaps), pushing the page into
+        // horizontal overflow on narrow screens (found testing NFR-04 at 375px in Giai đoạn 7).
+        minWidth: 0,
         background: t.bgSurface,
         borderRadius: 16,
         border: isTop1 ? `3px solid transparent` : `1px solid ${t.border}`,
@@ -90,14 +98,19 @@ export function RecommendationCard({
       {/* Bo cuc NGANG: anh ben trai, thong tin ben phai (docs/07 SS7.4) - truoc day anh keo dai
           het chieu ngang the nen thua rat nhieu khoang trong. */}
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-        <LaptopThumbnail
-          imageUrl={laptop.imageUrl}
-          segment={laptop.segmentLabel?.segment}
-          brand={laptop.brand?.name}
-          name={laptop.name}
-          width={128}
-          height={96}
-        />
+        {/* flexShrink:0 - anh la KICH THUOC CO DINH co chu y (128x96), khong muon no tu bop nho
+            lai truoc khi noi dung ben canh (ten/gia/thong so) kip wrap xuong dong; neu khong co
+            dong nay, tren man hep ca anh LAN chu deu bi ep nho lai dong thoi, cang de gay tran. */}
+        <div style={{ flexShrink: 0 }}>
+          <LaptopThumbnail
+            imageUrl={laptop.imageUrl}
+            segment={laptop.segmentLabel?.segment}
+            brand={laptop.brand?.name}
+            name={laptop.name}
+            width={128}
+            height={96}
+          />
+        </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
@@ -132,7 +145,9 @@ export function RecommendationCard({
                 {formatKg(laptop.weightKg)}
               </div>
             </div>
-            <MatchScore pct={item.matchPct} />
+            <div style={{ flexShrink: 0 }}>
+              <MatchScore pct={item.matchPct} />
+            </div>
           </div>
 
           <div style={{ marginTop: 8 }}>

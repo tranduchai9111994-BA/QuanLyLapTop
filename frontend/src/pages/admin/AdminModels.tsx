@@ -127,6 +127,7 @@ export function AdminModels() {
         rowKey="id"
         loading={loading}
         dataSource={rows}
+        scroll={{ x: 'max-content' }}
         columns={[
           { title: 'Phiên bản', dataIndex: 'version' },
           {
@@ -221,6 +222,7 @@ export function AdminModels() {
             <Table
               size="small"
               pagination={false}
+              scroll={{ x: 'max-content' }}
               dataSource={metrics.test.confusion_matrix.map((row, i) => ({
                 key: metrics.test.labels[i],
                 actual: segmentColors[metrics.test.labels[i]]?.label ?? metrics.test.labels[i],

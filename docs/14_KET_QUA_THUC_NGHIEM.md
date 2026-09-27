@@ -381,6 +381,71 @@ hệ thống" hiện đầy đủ các hành động tạo/sửa tài khoản v�
 thứ tự thời gian. `tsc --noEmit` sạch ở backend/frontend, `pytest` ml-service 35/35 pass (không
 đổi ML ở giai đoạn này).
 
+### 5.8 Kiểm chứng NFR — responsive 375–1920px, độ trễ p95, tương phản màu (NFR-01, 04, 05)
+
+Giai đoạn cuối cùng: đo lại các yêu cầu phi chức năng bằng số liệu thật thay vì chỉ khẳng định
+suông, và tìm/sửa các lỗi hiển thị ở 2 đầu mút kích thước màn hình (docs/02 mục 4).
+
+**NFR-01 (p95 < 800ms)**: trước đây Dashboard chỉ hiện độ trễ **trung bình**, dễ che giấu các phiên
+chậm bất thường. Đã thêm `p95LatencyMs` vào `GET /dashboard/kpis` (sắp xếp toàn bộ độ trễ trong
+khoảng thời gian rồi lấy phần tử ở vị trí `ceil(0.95 × n) − 1`, cùng cách tính với `alertScan.ts`),
+hiện thẻ riêng "Độ trễ p95 (NFR-01: < 800ms)" trên Dashboard. **Đo được: p95 = 198ms** (trên 418
+phiên 30 ngày gần nhất) — đạt dư nhiều so với ngưỡng 800ms.
+
+**NFR-04 (responsive 375–1920px)**: viết kịch bản kiểm tra `document.documentElement.scrollWidth`
+không được vượt `clientWidth` trên toàn bộ 15 trang (khách hàng + quản trị) ở cả 2 đầu mút. Lượt
+kiểm tra đầu tiên phát hiện **6 lỗi tràn ngang thật** trên 375px, sửa từng lỗi rồi xác nhận lại:
+
+1. **`TopNav` (App.tsx)**: menu ngang + link đăng nhập/quản trị tràn hẳn ra ngoài màn hình hẹp,
+   một phần bị cắt mất hoàn toàn (không cuộn được tới). Sửa: gộp toàn bộ điều hướng vào 1 nút "☰"
+   mở `Drawer` trên màn hẹp (dùng `Grid.useBreakpoint()` của antd — đáng tin cậy ngay từ lần
+   render đầu, khác với `Sider`/`Pagination` responsive kiểu "chỉ phản ứng theo sự kiện resize"
+   ở lỗi #2 và #3 bên dưới).
+2. **`Segmented` lọc phân khúc + `Pagination` (Catalog.tsx)**: `Segmented` với nhãn dài tự tràn
+   ra ngoài `Layout.Content` — nguyên nhân gốc là `Content` (antd `Layout`, flex-column) không có
+   `minWidth: 0`, khiến 1 widget con quá rộng kéo dãn cả trang thay vì tự cuộn riêng trong khung
+   `overflowX:auto` của nó. `Pagination` (84 trang) cũng tràn vì prop `responsive` có sẵn của antd
+   **chỉ cập nhật khi nhận sự kiện `resize` của window**, không tự kiểm tra lúc mount — người
+   dùng tải trang lần đầu trên điện thoại (không resize) vẫn thấy bản đầy đủ desktop. Sửa: thêm
+   `minWidth:0` cho `Content`, và tự quyết định `simple` bằng `Grid.useBreakpoint()` thay vì
+   `responsive`.
+3. **Sidebar quản trị (`AdminLayout.tsx`)**: tương tự — `Sider` với `breakpoint`/`collapsedWidth={0}`
+   của antd gắn đúng class "đã thu gọn" nhưng **`getComputedStyle` cho thấy `flex-basis` vẫn là
+   220px thật sự** (một điểm không nhất quán trong phiên bản antd đang dùng), chiếm chỗ trong
+   flex dù nhìn "như đã ẩn". Sửa triệt để: không dựa vào cơ chế responsive nửa-tự-động của
+   `Sider` nữa, tự tính `isMobile` bằng `Grid.useBreakpoint()` và **không render `Sider`** trên
+   màn hẹp (thay bằng nút "☰" + `Drawer`, giống TopNav khách hàng).
+4. **2 form trong `AdminKnowledge.tsx`** (thêm Ghim/Cấm máy, nút Lưu trọng số): `<Space wrap>`
+   của antd render `display:inline-flex` — loại box này **tự co theo nội dung** (shrink-to-fit)
+   thay vì bị giới hạn bởi `Card` cha, nên `flexWrap` không có tác dụng thật (trình duyệt vẫn coi
+   như có "không gian vô hạn" để xếp hết trên 1 dòng trước khi tính wrap). Sửa: thay `<Space>`
+   bằng `<div style={{display:'flex', flexWrap:'wrap'}}>` (block-level, bị giới hạn đúng bởi cha).
+5. **Card KPI Dashboard**: `Row`/`Col span={8}` cố định 3 cột bất kể độ rộng màn hình, ép nội
+   dung Card (tiêu đề dài như "Độ trễ p95 (NFR-01: < 800ms)") bị bóp méo tràn ra ngoài cột 49px.
+   Sửa: đổi sang CSS grid `repeat(auto-fit, minmax(220px, 1fr))` (tự giảm số cột trên màn hẹp,
+   mẫu đã dùng sẵn ở Catalog/Favorites/Detail).
+6. **`RecommendationCard.tsx`** (thẻ kết quả gợi ý — trang quan trọng nhất với khách hàng): đây là
+   phần tử **grid-item** trực tiếp trong `display:grid` của Results.tsx; giống flex-item, grid-item
+   mặc định `min-width:auto` (không chịu co nhỏ hơn nội dung "min-content" của nó) trừ khi khai
+   báo `minWidth:0` ngay trên chính nó — không chỉ trên các div con bên trong (đã có sẵn). Vì
+   thiếu khai báo này ở tầng ngoài cùng, ảnh đại diện cố định 128px + vòng tròn % phù hợp cố định
+   64px cùng buộc cả thẻ phải rộng tối thiểu ~412px. Sửa: thêm `minWidth:0` cho div ngoài cùng,
+   và `flexShrink:0` cho 2 phần tử kích thước cố định (ảnh, vòng tròn %) để lực co giãn dồn hết
+   vào phần văn bản (tên máy/thông số) — nơi DUY NHẤT có thể xuống dòng an toàn.
+
+Sau khi sửa: `scripts/capture_phase7_nfr_responsive.py` xác nhận **0 lỗi tràn ngang** trên 21 lượt
+kiểm tra (9 trang khách hàng ở 375px kể cả trang Kết quả có dữ liệu thật, 10 trang/tab quản trị ở
+375px, 3 trang ở 1920px) — ảnh `crud_test_screenshots/phase7_*.png`. Toàn bộ 4 kịch bản kiểm thử
+của Giai đoạn 3–6 (28 lượt kiểm) chạy lại **không hồi quy** sau các thay đổi CSS này.
+
+**NFR-05 (tương phản màu WCAG AA)**: viết `scripts/check_contrast.py` tính tỷ lệ tương phản
+(công thức WCAG 2.1) cho 16 cặp chữ/nền dùng trong `theme/tokens.ts`. Phát hiện 2 cặp **dưới**
+ngưỡng 4,5:1 cho văn bản thường: `error` (`#DC2626`) trên `errorBg` chỉ đạt 4,23:1, và
+`textTertiary` (`#64748B`) trên `bgSubtle` chỉ đạt 4,34:1. Đã tối màu 2 token này
+(`error` → `#C62828`, đạt 4,92:1; `textTertiary` → `#5B6B85`, đạt 4,93:1) — chênh lệch màu sắc rất
+nhỏ, không đổi cảm giác thiết kế, và **không làm giảm** tương phản ở bất kỳ cặp nào khác đang dùng
+2 token này (đã kiểm lại toàn bộ 16 cặp, tất cả đều PASS sau khi đổi).
+
 ## 6. Độ đo thực tế — công sức tìm kiếm
 
 Đo bằng **số máy người dùng phải xem qua** trước khi gặp máy phù hợp (máy thuộc nhóm 20% hài lòng

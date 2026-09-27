@@ -15,21 +15,29 @@ dashboardRouter.get('/kpis', requireAuth, requireRole('ADMIN'), async (req, res,
     const to = req.query.to ? new Date(String(req.query.to)) : new Date();
     const where = { createdAt: { gte: from, lte: to } };
 
-    const [totalSessions, fallbackSessions, avgLatency, likeCount, dislikeCount] = await Promise.all([
+    const [totalSessions, fallbackSessions, avgLatency, latencies, likeCount, dislikeCount] = await Promise.all([
       prisma.recommendationSession.count({ where }),
       prisma.recommendationSession.count({ where: { ...where, isFallback: true } }),
       prisma.recommendationSession.aggregate({ where, _avg: { latencyMs: true } }),
+      // NFR-01 (docs/02 muc 4): p95 < 800ms - can DAY DU danh sach de tinh phan vi (Prisma chua
+      // ho tro ham thong ke phan vi truc tiep tren SQL Server), sap xep tang dan roi lay phan tu
+      // o vi tri ceil(0.95 * n) - 1 (giong cach lam trong alertScan.ts).
+      prisma.recommendationSession.findMany({ where, select: { latencyMs: true }, orderBy: { latencyMs: 'asc' } }),
       prisma.interactionEvent.count({ where: { ...where, type: 'LIKE' } }),
       prisma.interactionEvent.count({ where: { ...where, type: 'DISLIKE' } }),
     ]);
 
     const feedbackTotal = likeCount + dislikeCount;
+    const p95LatencyMs = latencies.length
+      ? latencies[Math.min(latencies.length - 1, Math.ceil(0.95 * latencies.length) - 1)].latencyMs
+      : 0;
     res.json({
       success: true,
       data: {
         totalSessions,
         fallbackRate: totalSessions ? fallbackSessions / totalSessions : 0,
         avgLatencyMs: avgLatency._avg.latencyMs ?? 0,
+        p95LatencyMs,
         likeRate: feedbackTotal ? likeCount / feedbackTotal : null,
         likeCount,
         dislikeCount,

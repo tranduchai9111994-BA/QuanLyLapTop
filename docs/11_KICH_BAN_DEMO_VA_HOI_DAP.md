@@ -2,7 +2,8 @@
 
 ## 1. Chuẩn bị
 - Chạy local cả 3 dịch vụ + SQL Server; đã `seed` và `seed:telemetry`.
-- Mở sẵn tab: trang chủ, `/quan-tri/mo-hinh`, `/quan-tri/phan-hoi`, terminal ML service.
+- Mở sẵn tab: trang chủ, `/admin/models` (Quản lý mô hình), `/admin/feedback` (Phân tích phản hồi),
+  `/admin/dashboard` (KPI + cảnh báo), terminal ML service.
 - Có sẵn 1 laptop "mới" chưa nhập (thông số ghi giấy) để demo gợi ý phân khúc.
 
 ## 2. Kịch bản 10 phút

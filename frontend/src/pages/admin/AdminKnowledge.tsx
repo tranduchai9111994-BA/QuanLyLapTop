@@ -175,11 +175,17 @@ function PinsTab() {
   return (
     <div>
       <Card style={{ marginBottom: 16 }} title="Thêm mới">
-        <Space wrap size={12} style={{ marginBottom: 12 }}>
+        {/* `<Space>` cua antd render "inline-flex" - loai box nay tu co dan theo NOI DUNG
+            (shrink-to-fit) thay vi bi gioi han boi chieu rong Card cha, nen `flexWrap` cua no
+            khong co tac dung tren man hep (may tinh van co du "khong gian vo han" de xep tat ca
+            phan tu tren 1 dong roi moi tinh wrap, dan den tran ngang). Doi sang the `div` thuong
+            voi `display:flex` (block-level, BI gioi han boi Card) de flex-wrap hoat dong dung
+            nhu mong doi - phat hien khi kiem thu 375px o Giai doan 7. */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
           <Select
             showSearch
             placeholder="Chọn máy..."
-            style={{ width: 280 }}
+            style={{ width: 280, maxWidth: '100%' }}
             value={laptopId}
             onChange={setLaptopId}
             optionFilterProp="label"
@@ -192,16 +198,16 @@ function PinsTab() {
           <Select
             allowClear
             placeholder="Áp dụng cho phân khúc (để trống = mọi phân khúc)"
-            style={{ width: 260 }}
+            style={{ width: 260, maxWidth: '100%' }}
             value={segment}
             onChange={setSegment}
             options={SEGMENTS.map((s) => ({ value: s, label: segmentColors[s].label }))}
           />
-        </Space>
-        <Space wrap size={12}>
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
           <Input
             placeholder="Lý do (vd: đang cần đẩy hàng tồn / lỗi phổ biến bị khách phàn nàn)"
-            style={{ width: 360 }}
+            style={{ width: 360, maxWidth: '100%' }}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
           />
@@ -214,13 +220,14 @@ function PinsTab() {
           <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={create}>
             Lưu
           </Button>
-        </Space>
+        </div>
       </Card>
 
       <Table
         rowKey="id"
         loading={loading}
         dataSource={pins}
+        scroll={{ x: 'max-content' }}
         columns={[
           {
             title: 'Loại',
@@ -372,13 +379,17 @@ function WeightsTab() {
           nhiều đến thứ hạng gợi ý cho phân khúc này, kể cả khi khách hàng đặt mức ưu tiên như
           nhau. Ví dụ Gaming mặc định coi hiệu năng nặng ký hơn Văn phòng."
       />
-      <Radio.Group value={segment} onChange={(e) => setSegment(e.target.value)} style={{ marginBottom: 20 }}>
-        {SEGMENTS.map((s) => (
-          <Radio.Button key={s} value={s}>
-            {segmentColors[s].label}
-          </Radio.Button>
-        ))}
-      </Radio.Group>
+      {/* Radio.Group kieu nut khong tu xuong dong (giong Segmented) - boc trong 1 khung cuon
+          ngang RIENG thay vi de no day tran ca trang tren man hep (phat hien o Giai doan 7). */}
+      <div style={{ overflowX: 'auto', marginBottom: 20 }}>
+        <Radio.Group value={segment} onChange={(e) => setSegment(e.target.value)}>
+          {SEGMENTS.map((s) => (
+            <Radio.Button key={s} value={s}>
+              {segmentColors[s].label}
+            </Radio.Button>
+          ))}
+        </Radio.Group>
+      </div>
 
       {(Object.keys(WEIGHT_GROUP_LABELS) as (keyof WeightGroups)[]).map((g) => (
         <div key={g} style={{ marginBottom: 16 }}>
@@ -398,12 +409,14 @@ function WeightsTab() {
         </div>
       ))}
 
-      <Space>
+      {/* flex div thay vi <Space> (inline-flex khong bi Card gioi han chieu rong - xem ghi chu
+          o PinsTab phia tren) de 2 nut tu xuong dong tren man hep. */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={save}>
           Lưu tất cả phân khúc
         </Button>
         <Button onClick={resetSegment}>Khôi phục mặc định (phân khúc này)</Button>
-      </Space>
+      </div>
     </Card>
   );
 }

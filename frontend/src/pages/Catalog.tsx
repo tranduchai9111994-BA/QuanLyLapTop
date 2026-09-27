@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, Checkbox, Empty, Input, Pagination, Segmented, Select, Skeleton, Slider, Space, Tag } from 'antd';
+import { Button, Card, Checkbox, Empty, Grid, Input, Pagination, Segmented, Select, Skeleton, Slider, Space, Tag } from 'antd';
 import { api } from '../lib/api';
 import type { Laptop, Segment } from '../types';
 import { SegmentTag } from '../components/smart/SegmentTag';
@@ -31,6 +31,7 @@ const ALL = 'Tất cả';
 
 export function Catalog() {
   const navigate = useNavigate();
+  const screens = Grid.useBreakpoint();
   const [segment, setSegment] = useState<Segment | undefined>(undefined);
   // Mang cac khoa sap xep DA CHON, THU TU trong mang = thu tu uu tien (khoa dau tien duoc xet
   // truoc; may nao "hoa" nhau moi xet den khoa tiep theo). Mac dinh 1 khoa "gia tang dan".
@@ -350,7 +351,20 @@ export function Catalog() {
             ))}
           </div>
           <div style={{ textAlign: 'center', marginTop: 24 }}>
-            <Pagination current={page} pageSize={pageSize} total={total} onChange={setPage} showSizeChanger={false} />
+            {/* `simple` (rut gon dang "< 5/84 >") tren man hep - antd co san prop `responsive`
+                nhung no chi doi lai theo su kien 'resize' cua window, KHONG tu kiem tra ngay
+                luc mount, nen nguoi dung tai trang lan dau tren dien thoai (khong resize) van
+                se thay ban desktop day du trang gay tran ngang. Tu quyet dinh bang
+                `Grid.useBreakpoint()` (co gia tri dung ngay tu lan render dau) thay vi dua vao
+                `responsive` - phat hien loi nay khi kiem thu NFR-04 o Giai doan 7. */}
+            <Pagination
+              current={page}
+              pageSize={pageSize}
+              total={total}
+              onChange={setPage}
+              showSizeChanger={false}
+              simple={!screens.sm}
+            />
           </div>
         </>
       )}
