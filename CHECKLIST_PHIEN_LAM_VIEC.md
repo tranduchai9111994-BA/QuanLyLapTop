@@ -123,7 +123,8 @@
       tsc sạch, pytest 34/34 pass).
 - [x] Viết `TONG_HOP_THAY_DOI_PHIEN_NAY.md` — đã tạo
       [TONG_HOP_THAY_DOI_PHIEN_NAY.md](TONG_HOP_THAY_DOI_PHIEN_NAY.md).
-- [ ] `git add -A && git commit && git push` — làm SAU CÙNG (bước kế tiếp ngay sau file này)
+- [x] `git add -A && git commit && git push` — đã commit `0f7615d` và push thành công lên
+      `origin/main` (https://github.com/tranduchai9111994-BA/QuanLyLapTop).
 
 ## D. Ghi chú để không lặp lỗi
 
