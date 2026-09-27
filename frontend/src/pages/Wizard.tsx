@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Button, Card, Checkbox, InputNumber, Radio, Select, Slider, Spin, Tag, message } from 'antd';
+import { Alert, Button, Card, Checkbox, Radio, Select, Slider, Space, Spin, Tag, message } from 'antd';
 import {
   ThunderboltOutlined,
   RocketOutlined,
@@ -121,7 +121,7 @@ export function Wizard() {
     try {
       const r = await api.post<{ success: boolean; data: RecommendationResult }>('/recommendations', requestBody);
       navigate('/results', { state: { result: r.data.data, requestBody } });
-    } catch (err) {
+    } catch {
       message.error('Không kết nối được máy chủ. Kiểm tra mạng và thử lại.');
     } finally {
       setLoading(false);
@@ -137,7 +137,7 @@ export function Wizard() {
     inferred.confidence >= 0.6;
 
   return (
-    <div style={{ maxWidth: 1240, margin: '24px auto', padding: '0 24px' }}>
+    <div style={{ maxWidth: 1200, margin: '24px auto', padding: '0 24px' }}>
       <h1>Cho chúng tôi biết nhu cầu của bạn</h1>
 
       <NeedTextInput onParsed={applyParsedNeed} />
@@ -147,7 +147,7 @@ export function Wizard() {
       <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <div style={{ flex: '1 1 560px', minWidth: 320 }}>
 
-      <div style={{ textAlign: 'center', color: '#64748B', marginBottom: 20 }}>
+      <div style={{ textAlign: 'center', color: t.textTertiary, marginBottom: 20 }}>
         — hoặc chọn thủ công bên dưới —
       </div>
 

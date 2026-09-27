@@ -5,6 +5,7 @@ import { RecommendationCard } from '../components/smart/RecommendationCard';
 import { ExplainDrawer } from '../components/smart/ExplainDrawer';
 import { FallbackBanner, BudgetRelaxedBanner } from '../components/smart/FallbackBanner';
 import { api } from '../lib/api';
+import { t } from '../theme/tokens';
 import type { RecommendationItemDto, RecommendationResult } from '../types';
 
 // FR-02: cho phep xem 3-10 ket qua thay vi co dinh 5 - tang dan de tranh danh sach qua dai
@@ -93,12 +94,12 @@ export function Results() {
   }
 
   return (
-    <div style={{ maxWidth: 1240, margin: '24px auto', padding: '0 24px' }}>
+    <div style={{ maxWidth: 1200, margin: '24px auto', padding: '0 24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <h1 style={{ margin: 0 }}>Kết quả gợi ý</h1>
         {requestBody && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ color: '#64748B' }}>Số lượng hiển thị</span>
+            <span style={{ color: t.textTertiary }}>Số lượng hiển thị</span>
             <Segmented
               options={TOPN_OPTIONS.map((n) => ({ label: String(n), value: n }))}
               value={topN}
@@ -123,7 +124,7 @@ export function Results() {
               <div style={{ fontWeight: 600, marginBottom: 8 }}>
                 Chưa tìm được máy nào khớp toàn bộ yêu cầu của bạn
               </div>
-              <div style={{ color: '#4A5B73' }}>
+              <div style={{ color: t.textSecondary }}>
                 Thường do ngân sách hơi thấp so với cấu hình mong muốn, hoặc ràng buộc bắt buộc
                 (RAM / cân nặng) quá chặt.
               </div>

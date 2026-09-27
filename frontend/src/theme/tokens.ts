@@ -11,6 +11,9 @@ export const t = {
   aiGradient: 'linear-gradient(135deg, #1A73E8 0%, #06B6D4 100%)',
   bgPage: '#F5F9FF',
   bgSurface: '#FFFFFF',
+  // Alias cua bgSurface, dat rieng vi ngu nghia khac han: dung khi can chu/icon TRANG tren nen
+  // TOI (gradient AI, nut primary) - khong phai "nen thẻ" nhu bgSurface, du trung gia tri hex.
+  white: '#FFFFFF',
   bgSubtle: '#F0F5FC',
   border: '#E2EAF5',
   borderStrong: '#C9D6E8',

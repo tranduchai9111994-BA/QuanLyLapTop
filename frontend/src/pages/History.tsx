@@ -77,7 +77,7 @@ export function History() {
   }
 
   return (
-    <div style={{ maxWidth: 900, margin: '24px auto', padding: '0 24px' }}>
+    <div style={{ maxWidth: 1200, margin: '24px auto', padding: '0 24px' }}>
       <h1>Lịch sử tư vấn</h1>
       {!loading && rows.length === 0 && (
         <Empty description="Chưa có lượt tư vấn nào.">

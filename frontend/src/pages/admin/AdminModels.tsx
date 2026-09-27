@@ -210,7 +210,7 @@ export function AdminModels() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="k" label={{ value: 'k (số láng giềng)', position: 'insideBottom', offset: -4 }} />
                 <YAxis domain={[0, 1]} tickFormatter={(v) => `${Math.round(v * 100)}%`} />
-                <Tooltip formatter={(v: number) => `${(v * 100).toFixed(1)}%`} labelFormatter={(k) => `k=${k}`} />
+                <Tooltip formatter={(v) => `${(Number(v) * 100).toFixed(1)}%`} labelFormatter={(k) => `k=${k}`} />
                 {params?.knn__n_neighbors != null && (
                   <ReferenceLine x={params.knn__n_neighbors as number} stroke={t.primary700} strokeDasharray="4 4" label="k đã chọn" />
                 )}

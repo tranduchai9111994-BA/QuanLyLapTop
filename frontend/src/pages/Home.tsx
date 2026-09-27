@@ -24,7 +24,7 @@ const HIGHLIGHTS = [
 export function Home() {
   const navigate = useNavigate();
   return (
-    <div style={{ maxWidth: 1100, margin: '32px auto 48px', padding: '0 16px' }}>
+    <div style={{ maxWidth: 1200, margin: '32px auto 48px', padding: '0 16px' }}>
       {/* Hero: anh minh hoa ben trai, loi keu goi ben phai - lap khoang trong hai ben */}
       <div
         style={{

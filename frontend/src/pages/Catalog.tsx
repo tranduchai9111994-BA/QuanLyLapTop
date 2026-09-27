@@ -131,7 +131,7 @@ export function Catalog() {
   ];
 
   return (
-    <div style={{ maxWidth: 1400, margin: '24px auto', padding: '0 24px' }}>
+    <div style={{ maxWidth: 1200, margin: '24px auto', padding: '0 24px' }}>
       <h1>Danh mục laptop</h1>
 
       <div style={{ marginBottom: 12, overflowX: 'auto' }}>

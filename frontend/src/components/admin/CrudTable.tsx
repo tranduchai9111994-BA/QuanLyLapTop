@@ -3,6 +3,7 @@ import { Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Switch, Ta
 import { UploadOutlined, DownloadOutlined, SearchOutlined } from '@ant-design/icons';
 import * as XLSX from 'xlsx';
 import { api } from '../../lib/api';
+import { t } from '../../theme/tokens';
 
 export type FieldType = 'text' | 'number' | 'boolean' | 'select';
 
@@ -303,7 +304,7 @@ export function CrudTable({
       </div>
 
       {searchText && (
-        <div style={{ marginBottom: 8, color: '#4A5B73', fontSize: 13 }}>
+        <div style={{ marginBottom: 8, color: t.textSecondary, fontSize: 13 }}>
           Tìm thấy {filteredRows.length}/{rows.length} dòng khớp "{searchText}"
         </div>
       )}

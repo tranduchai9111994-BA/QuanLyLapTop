@@ -446,6 +446,50 @@ ngưỡng 4,5:1 cho văn bản thường: `error` (`#DC2626`) trên `errorBg` ch
 nhỏ, không đổi cảm giác thiết kế, và **không làm giảm** tương phản ở bất kỳ cặp nào khác đang dùng
 2 token này (đã kiểm lại toàn bộ 16 cặp, tất cả đều PASS sau khi đổi).
 
+### 5.9 Rà soát tuân thủ `docs/07_UIUX.md` — Giai đoạn 8: nền tảng & sửa lệch token
+
+Rà soát toàn bộ đặc tả UI/UX bằng agent đọc-mã-nguồn phát hiện: hầu hết đã đúng (token màu,
+`antdTheme.ts`, `utils/format.ts`, các component `MatchScore`/`SegmentTag`/`AiBadge`/
+`FallbackBanner`/`RecommendationCard`), nhưng còn thiếu ở tầng nền tảng và có 1 lỗi lệch dữ liệu
+mới phát sinh. Đã sửa trong Giai đoạn 8 (phần bố cục lớn hơn và component `ConfidenceIndicator`
+còn thiếu chuyển sang Giai đoạn 9–10):
+
+- **Lỗi lệch token**: `Results.tsx` và `Wizard.tsx` hardcode `#64748B` — là giá trị **cũ** của
+  `textTertiary` trước khi đổi thành `#5B6B85` để đạt WCAG AA ở Giai đoạn 7. Đã sửa dùng lại
+  `t.textTertiary`; quét thêm 4 file khác (`AiBadge.tsx`, `CrudTable.tsx`, `AdminLayout.tsx` ×3)
+  cũng hardcode hex trùng giá trị token có sẵn — đổi tất cả sang tham chiếu token.
+- **`global.css`**: trước chỉ export 7/24 token thành CSS variable; đã bổ sung đủ toàn bộ
+  (`--success`, `--warning`, `--error`, `--text-*`, `--border-strong`, `--bg-subtle`, 3 mức
+  shadow) để đồng bộ với `tokens.ts`.
+- **Cấm hardcode hex (docs mục 10)**: dự án dùng **oxlint**, không phải ESLint — rule mẫu
+  `no-restricted-syntax` trong docs không áp dụng được (oxlint là bộ rule cố định viết bằng Rust,
+  không hỗ trợ rule tuỳ chỉnh). Viết `frontend/scripts/check-no-hardcoded-colors.mjs` (quét mọi
+  `.ts`/`.tsx` tìm chuỗi hex ngoài danh sách cho phép) làm tương đương, gắn vào `npm run lint`.
+  Loại trừ hợp lý `LaptopThumbnail.tsx` (màu logo thương hiệu thật + minh hoạ SVG, không phải màu
+  giao diện dùng lặp lại).
+- **Focus-ring (mục 11, a11y)**: thêm `:focus-visible { box-shadow: 0 0 0 3px var(--primary-200) }`
+  toàn cục — trước đó hoàn toàn chưa có, chỉ có viền focus mặc định của trình duyệt.
+- **Max-width nội dung khách hàng**: trước không nhất quán (Home 1100, Catalog 1400, Results/
+  Wizard 1240, trong khi Compare/Detail đã đúng 1200) — chuẩn hoá toàn bộ về `1200px` theo mục 6.1.
+- **Phát hiện phụ quan trọng**: `npx tsc --noEmit` chạy ở thư mục gốc `frontend/` trong suốt các
+  Giai đoạn 1–7 **luôn báo "sạch" một cách SAI** — `tsconfig.json` gốc chỉ là file tổng hợp
+  `references` (`"files": []`), không tự biên dịch gì cả; lệnh đúng phải là
+  `npx tsc -p tsconfig.app.json --noEmit` (hoặc `npx tsc -b`, khớp với script `build` thật trong
+  `package.json`). Chạy lại đúng lệnh phát hiện **6 lỗi thật** đã lọt qua suốt phiên làm việc:
+  1 lỗi vi phạm "rules of hooks" thật sự trong `AdminLayout.tsx` (gọi `useState`/`useEffect`/
+  `Grid.useBreakpoint()` SAU một `return` có điều kiện — tiềm ẩn crash "Rendered fewer hooks than
+  expected" nếu component không unmount giữa 2 lần render), 1 biến `Space` dùng trong JSX nhưng
+  quên import ở `Wizard.tsx`, 3 import không dùng, và 1 lỗi kiểu dữ liệu ở `Tooltip formatter`
+  của Recharts (`AdminModels.tsx`). Đã sửa toàn bộ; `npx tsc -b --force` (build thật) nay sạch
+  hoàn toàn. Đây là bài học quan trọng cho các buổi làm việc sau: **luôn xác nhận lệnh kiểm tra
+  đang thực sự biên dịch file nào**, nhất là với dự án dùng TypeScript project references.
+
+**Đã kiểm thử**: `scripts/capture_phase8_ui_foundation.py` xác nhận focus-ring hiển thị đúng khi
+điều hướng bằng bàn phím và 3 trang khách hàng dùng thống nhất `max-width: 1200px`. Chạy lại toàn
+bộ 4 kịch bản Giai đoạn 3–7 (28 lượt kiểm) xác nhận không hồi quy. `npx tsc -b --force` sạch ở
+frontend (lệnh đúng, không phải lệnh sai đã dùng trước đó), `npx tsc --noEmit` sạch ở backend,
+`pytest` ml-service 35/35 pass.
+
 ## 6. Độ đo thực tế — công sức tìm kiếm
 
 Đo bằng **số máy người dùng phải xem qua** trước khi gặp máy phù hợp (máy thuộc nhóm 20% hài lòng

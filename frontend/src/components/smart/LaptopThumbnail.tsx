@@ -18,6 +18,11 @@ const BRAND_PHOTO: Record<string, string> = {
   Dell: '/brand-photos/dell.webp',
 };
 
+// NGOAI LE co chu y voi quy tac "cam hardcode hex ngoai tokens.ts" (docs/07_UIUX.md muc 10):
+// day la MAU LOGO THUONG HIEU that (Apple xam, Dell xanh duong hang,...) va mau minh hoa
+// SVG (bong do, khung may, vien man hinh) - khong phai mau GIAO DIEN dung chung nhieu noi nen
+// khong thuoc pham vi "token thiet ke" (chi ap dung cho mau lap lai xuyen suot UI). Dua chung
+// vao tokens.ts se lam file do phinh ra voi 12+ mau chi dung o DUY NHAT component nay.
 const BRAND_ACCENT: Record<string, string> = {
   Apple: '#555555',
   Dell: '#0076CE',

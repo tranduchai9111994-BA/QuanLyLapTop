@@ -15,7 +15,7 @@ export function AiBadge() {
           padding: '2px 10px',
           borderRadius: 999,
           background: t.aiGradient,
-          color: '#fff',
+          color: t.white,
           fontSize: 13,
           fontWeight: 600,
         }}

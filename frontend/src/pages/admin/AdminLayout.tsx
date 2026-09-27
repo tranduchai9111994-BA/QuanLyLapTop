@@ -3,6 +3,7 @@ import { Badge, Button, Drawer, Grid, Layout, Menu } from 'antd';
 import { LogoutOutlined, EyeOutlined, MenuOutlined } from '@ant-design/icons';
 import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
+import { t } from '../../theme/tokens';
 
 const { Sider, Content, Header } = Layout;
 
@@ -19,31 +20,35 @@ export function AdminLayout() {
   const token = localStorage.getItem('smartlap_token');
   const userRaw = localStorage.getItem('smartlap_user');
   const user = userRaw ? JSON.parse(userRaw) : null;
-  if (!token || user?.role === 'CUSTOMER') return <Navigate to="/admin/login" replace />;
+  const isAllowed = !!token && user?.role !== 'CUSTOMER';
+
+  // QUAN TRONG: moi Hook phai goi VO DIEU KIEN, truoc bat ky return som nao (React rules-of-
+  // hooks - oxlint da bat loi nay khi con dat sau `if (!token...) return <Navigate/>` ben duoi:
+  // neu component KHONG unmount giua 2 lan render ma chi doi tu "da dang nhap" sang "chua dang
+  // nhap" - vd sau nay co doan code nao khac khong dieu huong di ngay - so luong Hook goi duoc
+  // se tut dot ngot, React se nem loi "Rendered fewer hooks than expected"). Cac side-effect ben
+  // trong tu kiem tra `isAllowed` de khong chay khi chua dang nhap hop le, thay vi bo qua ca
+  // Hook.
 
   // So may dang cho xac minh (UC-10) - hien so tren menu de nhan vien biet CO viec can lam ma
   // khong phai tu vao tung man kiem tra. Chi doc 1 lan khi vao khu quan tri (khong tu lam moi
   // lien tuc) - du dung cho muc dich "nhac nho", khong can that real-time.
   const [pendingCount, setPendingCount] = useState(0);
   function reloadPendingCount() {
+    if (!isAllowed) return;
     api
       .get('/labels/review-queue')
       .then((r) => setPendingCount(r.data.data.length))
       .catch(() => undefined);
   }
-  useEffect(reloadPendingCount, [location.pathname]);
+  useEffect(reloadPendingCount, [location.pathname, isAllowed]);
   // Man Duyet nhan phat su kien nay ngay sau khi duyet xong 1 may - cap nhat huy hieu NGAY,
   // khong doi den luc chuyen trang moi thay so giam (xem AdminReviewQueue.tsx).
   useEffect(() => {
     window.addEventListener('smartlap:review-queue-changed', reloadPendingCount);
     return () => window.removeEventListener('smartlap:review-queue-changed', reloadPendingCount);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  function logout() {
-    localStorage.removeItem('smartlap_token');
-    localStorage.removeItem('smartlap_user');
-    navigate('/admin/login');
-  }
 
   // NFR-04: tren man hep (< 768px), Sider 220px co dinh + noi dung se tran ngang ca trang (phat
   // hien khi kiem thu 375px o Giai doan 7). Lan dau tung dung Sider's `breakpoint` +
@@ -56,6 +61,14 @@ export function AdminLayout() {
   const screens = Grid.useBreakpoint();
   const isMobile = !screens.md;
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  if (!isAllowed) return <Navigate to="/admin/login" replace />;
+
+  function logout() {
+    localStorage.removeItem('smartlap_token');
+    localStorage.removeItem('smartlap_user');
+    navigate('/admin/login');
+  }
 
   const menuItems = [
     // Dashboard/Mo hinh/Tri thuc/Phan hoi CHI danh cho ADMIN o phia backend (requireRole('ADMIN')
@@ -93,7 +106,7 @@ export function AdminLayout() {
         <Sider width={220} theme="light">
           <div style={{ padding: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
             <img src="/logo-mark.png" alt="" style={{ height: 30, width: 'auto' }} />
-            <span style={{ fontWeight: 700, color: '#1A73E8' }}>SmartLap · Quản trị</span>
+            <span style={{ fontWeight: 700, color: t.primary500 }}>SmartLap · Quản trị</span>
           </div>
           <Menu mode="inline" selectedKeys={[location.pathname]} items={menuItems} />
         </Sider>
@@ -101,12 +114,12 @@ export function AdminLayout() {
       <Layout style={{ minWidth: 0 }}>
         <Header
           style={{
-            background: '#fff',
+            background: t.bgSurface,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'flex-end',
             gap: 12,
-            borderBottom: '1px solid #E2EAF5',
+            borderBottom: `1px solid ${t.border}`,
             padding: '0 16px',
             flexWrap: 'wrap',
           }}
@@ -114,7 +127,7 @@ export function AdminLayout() {
           {isMobile && (
             <MenuOutlined style={{ fontSize: 18, marginRight: 'auto', cursor: 'pointer' }} onClick={() => setDrawerOpen(true)} />
           )}
-          {user && !isMobile && <span style={{ color: '#4A5B73' }}>{user.fullName} ({user.role})</span>}
+          {user && !isMobile && <span style={{ color: t.textSecondary }}>{user.fullName} ({user.role})</span>}
           {/* Mo tab moi de xem giao dien khach hang ma khong mat phien dang nhap quan tri */}
           <Button icon={<EyeOutlined />} onClick={() => window.open('/', '_blank')}>
             {isMobile ? '' : 'Xem như khách hàng'}

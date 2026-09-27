@@ -54,7 +54,7 @@ export function Favorites() {
   }
 
   return (
-    <div style={{ maxWidth: 1000, margin: '24px auto', padding: '0 24px' }}>
+    <div style={{ maxWidth: 1200, margin: '24px auto', padding: '0 24px' }}>
       <h1>Máy đã yêu thích</h1>
       {!loading && rows.length === 0 && (
         <Empty description="Chưa có máy nào — bấm biểu tượng trái tim ở trang Chi tiết để lưu lại.">
