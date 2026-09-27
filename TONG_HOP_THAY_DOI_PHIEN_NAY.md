@@ -44,7 +44,7 @@ vẫn có thể sẽ được chọn nhiều hơn"*.
 |---|---|---|
 | 1 | Empty state không được để trống | Rà lại toàn bộ trang có thể rỗng: Catalog, Results (đã sửa từ trước), **Detail** (máy tương tự rỗng → nút "Xem toàn bộ danh mục"), **Compare** (chưa chọn máy → nút "Chọn máy trong danh mục"), Wizard (đã có thông báo lỗi từ trước) |
 | 2 | Bố cục trống nhiều khoảng | Mở rộng thêm **Compare** (`maxWidth` 1000→1200); xác nhận các trang admin (CrudTable) không bị giới hạn chiều rộng, không cần sửa |
-| 3 | Sort → checkbox đa chọn? | **Chưa làm đúng y yêu cầu gốc** — tự quyết định thay bằng bộ lọc đa điều kiện (giá, RAM, hãng, từ khóa, card rời) thay vì chuyển sang checkbox, với lý do kỹ thuật (tăng/giảm cùng 1 tiêu chí loại trừ nhau). Đây là quyết định thay thế CHƯA có bạn xác nhận đồng ý — nếu muốn đúng y yêu cầu gốc cần làm lại |
+| 3 | Sort → checkbox đa chọn? | **Đã làm đúng yêu cầu gốc** (sau khi bạn xác nhận): chuyển "Sắp xếp" sang checkbox đa chọn, kết hợp được nhiều tiêu chí (thứ tự chọn = ưu tiên), 2 chiều của cùng 1 tiêu chí giá vẫn loại trừ nhau. Backend đổi `sort` sang mảng, dùng `orderBy` đa cấp thật của Prisma. Đã test qua browser + curl xác nhận sắp đa cấp đúng |
 | 4 | Test kỹ độ nhạy ưu tiên | 19 test tự động chạy lại sau khi đổi dữ liệu — 19/19 pass |
 | 5 | Thiếu form quản lý giá | Đã có từ trước; phiên này mở rộng thêm 2 cột khuyến mãi/lượt bán (mục 2) |
 | 6 | Tham số phải load từ danh sách | Rà soát lại kỹ hơn qua CRUD test thật: phát hiện **Hãng máy thiếu hẳn trường `tier`** (mức uy tín) trong cả frontend lẫn backend dù đây là đặc trưng thật của Mô hình B — đã thêm dropdown + validate. Các trường khác (RAM/SSD/màn hình/độ phân giải/tần số quét) đã đúng dropdown từ trước |

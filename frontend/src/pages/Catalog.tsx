@@ -16,11 +16,15 @@ const SEGMENTS: { label: string; value: Segment }[] = [
   { label: 'Đồ họa – Kỹ thuật', value: 'CREATOR' },
 ];
 
-const SORT_OPTIONS = [
-  { label: 'Giá tăng dần', value: 'price_asc' },
-  { label: 'Giá giảm dần', value: 'price_desc' },
-  { label: 'Hiệu năng cao nhất', value: 'perf_desc' },
-  { label: 'Đáng tiền nhất', value: 'value_desc' },
+// Sap xep DA TIEU CHI qua checkbox (theo dung gop y: "cho phep chon nhieu de ket hop dieu kien,
+// nhung tach rieng gia thi tang/giam, hieu nang/dang tien thi rieng"). `group` dung de xac dinh
+// 2 lua chon nao LOAI TRU nhau (khong the vua "Gia tang dan" vua "Gia giam dan" cung luc) - chon
+// 1 cai trong nhom se tu bo chon cai kia trong CUNG nhom; khac nhom thi ket hop tu do duoc.
+const SORT_OPTIONS: { label: string; value: string; group: string }[] = [
+  { label: 'Giá tăng dần', value: 'price_asc', group: 'price' },
+  { label: 'Giá giảm dần', value: 'price_desc', group: 'price' },
+  { label: 'Hiệu năng cao nhất', value: 'perf_desc', group: 'perf' },
+  { label: 'Đáng tiền nhất', value: 'value_desc', group: 'value' },
 ];
 
 const ALL = 'Tất cả';
@@ -28,8 +32,25 @@ const ALL = 'Tất cả';
 export function Catalog() {
   const navigate = useNavigate();
   const [segment, setSegment] = useState<Segment | undefined>(undefined);
-  const [sort, setSort] = useState('price_asc');
+  // Mang cac khoa sap xep DA CHON, THU TU trong mang = thu tu uu tien (khoa dau tien duoc xet
+  // truoc; may nao "hoa" nhau moi xet den khoa tiep theo). Mac dinh 1 khoa "gia tang dan".
+  const [sortKeys, setSortKeys] = useState<string[]>(['price_asc']);
   const [page, setPage] = useState(1);
+
+  /** Bat/tat 1 tieu chi sap xep. Neu tieu chi vua bam CUNG NHOM voi tieu chi dang chon (vd
+   * "Gia tang dan" voi "Gia giam dan") thi tu dong bo chon cai cu - 2 chieu nguoc nhau cua CUNG
+   * 1 tieu chi khong the ap dung dong thoi. Tieu chi moi luon them vao CUOI mang (uu tien thap
+   * nhat trong so cac tieu chi dang chon), giu nguyen thu tu uu tien cua nhung tieu chi da chon
+   * truoc do. */
+  function toggleSort(value: string) {
+    const opt = SORT_OPTIONS.find((o) => o.value === value)!;
+    setSortKeys((prev) => {
+      if (prev.includes(value)) return prev.filter((k) => k !== value);
+      const sameGroupOthers = SORT_OPTIONS.filter((o) => o.group === opt.group && o.value !== value).map((o) => o.value);
+      return [...prev.filter((k) => !sameGroupOthers.includes(k)), value];
+    });
+    setPage(1);
+  }
   const pageSize = 12;
 
   const [items, setItems] = useState<Laptop[]>([]);
@@ -70,7 +91,7 @@ export function Catalog() {
       .get('/laptops', {
         params: {
           segment,
-          sort,
+          sort: sortKeys.length ? sortKeys.join(',') : undefined,
           page,
           pageSize,
           priceMin: priceRange[0] > 0 ? priceRange[0] * 1_000_000 : undefined,
@@ -88,7 +109,7 @@ export function Catalog() {
         setTotal(r.data.meta?.total ?? 0);
       })
       .finally(() => setLoading(false));
-  }, [segment, sort, page, priceRange, ramMin, brandIds, keyword, onlyDedicatedGpu]);
+  }, [segment, sortKeys, page, priceRange, ramMin, brandIds, keyword, onlyDedicatedGpu]);
 
   function resetFilters() {
     setPriceRange([0, 80]);
@@ -133,16 +154,24 @@ export function Catalog() {
           }}
         >
           <div>
-            <div style={{ fontSize: 13, color: t.textSecondary, marginBottom: 4 }}>Sắp xếp theo</div>
-            <Select
-              style={{ width: '100%' }}
-              value={sort}
-              options={SORT_OPTIONS}
-              onChange={(v) => {
-                setSort(v);
-                setPage(1);
-              }}
-            />
+            <div style={{ fontSize: 13, color: t.textSecondary, marginBottom: 4 }}>
+              Sắp xếp theo (chọn nhiều để kết hợp — số thứ tự là mức ưu tiên)
+            </div>
+            <Space direction="vertical" size={2}>
+              {SORT_OPTIONS.map((opt) => {
+                const priority = sortKeys.indexOf(opt.value);
+                return (
+                  <Checkbox key={opt.value} checked={priority >= 0} onChange={() => toggleSort(opt.value)}>
+                    {opt.label}
+                    {priority >= 0 && sortKeys.length > 1 && (
+                      <Tag style={{ marginLeft: 6 }} color="blue">
+                        ưu tiên {priority + 1}
+                      </Tag>
+                    )}
+                  </Checkbox>
+                );
+              })}
+            </Space>
           </div>
 
           <div>

@@ -31,7 +31,10 @@ export interface LaptopFilters {
   ramMin?: number;
   weightMax?: number;
   q?: string;
-  sort?: 'price_asc' | 'price_desc' | 'perf_desc' | 'value_desc';
+  // Mang (khong con la 1 gia tri don) - nguoi dung chon NHIEU tieu chi qua checkbox, THU TU
+  // trong mang la thu tu uu tien khi sap xep (Prisma ho tro orderBy la MANG cac dieu kien, ap
+  // dung LAN LUOT: tieu chi dau tien so sanh truoc, may nao "hoa" nhau moi xet tieu chi tiep theo).
+  sort?: ('price_asc' | 'price_desc' | 'perf_desc' | 'value_desc')[];
   page?: number;
   pageSize?: number;
 }
@@ -52,12 +55,18 @@ export async function listLaptops(filters: LaptopFilters) {
   if (filters.weightMax != null) where.weightKg = { lte: filters.weightMax };
   if (filters.q) where.name = { contains: filters.q };
 
-  const orderBy: any = {
+  // Moi "khoa sap xep" (key) ung voi 1 dieu kien orderBy that su cua Prisma
+  const SORT_KEY_TO_ORDER_BY: Record<string, Record<string, 'asc' | 'desc'>> = {
     price_asc: { priceVnd: 'asc' },
     price_desc: { priceVnd: 'desc' },
     perf_desc: { performanceIdx: 'desc' },
     value_desc: { valueIdx: 'desc' },
-  }[filters.sort ?? 'price_asc'];
+  };
+  // Chuyen danh sach khoa (co the nhieu khoa, dung thu tu uu tien nguoi dung chon) thanh MANG
+  // dieu kien cho Prisma - Prisma se sap theo dieu kien DAU TIEN truoc, chi khi cac ban ghi
+  // "hoa" nhau (bang gia tri) o dieu kien do moi xet tiep dieu kien thu 2, v.v.
+  const keys = filters.sort?.length ? filters.sort : (['price_asc'] as const);
+  const orderBy = keys.map((k) => SORT_KEY_TO_ORDER_BY[k]);
 
   const [items, total] = await Promise.all([
     prisma.laptop.findMany({

@@ -61,13 +61,21 @@
        `1200`); các trang admin (AdminBrands/AdminBenchmarks/AdminLaptops/AdminPrices dùng chung
        `CrudTable`) không có giới hạn `maxWidth` nào — đã chiếm toàn bộ chiều rộng sẵn, không cần
        sửa.
-3. [~] **Lưu ý trung thực**: đây KHÔNG phải làm đúng y yêu cầu gốc (chuyển sang checkbox đa chọn)
-       — tôi đã QUYẾT ĐỊNH THAY THẾ bằng bộ lọc đa điều kiện (giá, RAM, hãng đa chọn, từ khóa,
-       card rời), với lý do "tăng dần/giảm dần cùng 1 tiêu chí loại trừ nhau nên không hợp lý
-       để chọn nhiều". Lý do kỹ thuật đúng, nhưng đây là quyết định do tôi tự đưa ra và tự đánh
-       dấu hoàn thành, KHÔNG có xác nhận đồng ý từ bạn về việc thay đổi hướng giải quyết — nên
-       không nên tính là "xong" theo đúng nghĩa đen của yêu cầu gốc, mà là "đã đề xuất hướng khác
-       và cần bạn xác nhận có chấp nhận không".
+3. [x] **Đã làm đúng yêu cầu gốc** (bạn xác nhận "có nhé"): chuyển "Sắp xếp theo" từ dropdown
+       đơn trị sang **checkbox đa chọn kết hợp được** (`Catalog.tsx`). Thiết kế: 2 chiều của
+       CÙNG 1 tiêu chí giá ("Giá tăng dần"/"Giá giảm dần") vẫn loại trừ nhau (chọn 1 cái tự bỏ
+       chọn cái kia — không có ý nghĩa hợp lệ nào để chọn cả 2 chiều ngược nhau cùng lúc), nhưng
+       CÁC TIÊU CHÍ KHÁC NHAU thì kết hợp tự do được (vd vừa "Hiệu năng cao nhất" vừa "Đáng tiền
+       nhất") — thứ tự chọn = thứ tự ưu tiên sắp xếp (hiện số "ưu tiên N" cạnh mỗi checkbox đã
+       chọn). Backend (`laptops.routes.ts`/`laptops.service.ts`) đổi `sort` từ 1 giá trị sang
+       MẢNG nhận qua chuỗi phân cách dấu phẩy (`sort=perf_desc,value_desc`), dùng `orderBy` dạng
+       mảng của Prisma để sắp đa cấp thật (không phải sắp rồi cắt). Vẫn tương thích ngược với
+       nơi gọi `sort=price_desc` đơn (vd `AdminPrices.tsx`). Đã kiểm thử trên browser: chọn 2
+       tiêu chí cùng lúc → network log xác nhận `sort=price_asc,perf_desc` → 200 OK; test qua
+       curl xác nhận sắp đa cấp đúng (nhóm `performanceIdx` bằng nhau được sắp tiếp theo
+       `valueIdx` giảm dần: 1.72→1.49→1.37→1.27); test loại trừ 2 chiều giá trên UI thật thành
+       công (chọn "Giá giảm dần" khi đang chọn "Giá tăng dần" → tự động đổi, giữ nguyên ưu tiên
+       của tiêu chí khác). `tsc --noEmit` sạch cả backend/frontend, pytest 34/34 vẫn pass.
 4. [x] Test kỹ đổi mức ưu tiên — 19 test tự động (`test_priority_sensitivity.py`, quét 4 phân
        khúc × 4 nhóm + 81 tổ hợp) + kiểm chứng qua API thật (4 tình huống, số liệu cụ thể).
 5. [x] Form Quản lý giá — đã thêm `price.service.ts` (lịch sử giá, điều chỉnh hàng loạt %,
@@ -89,7 +97,14 @@
        script cho khớp giao diện mới: dropdown RAM/SSD/màn hình/độ phân giải/tần số quét thay vì
        ô nhập tự do, thêm bước chụp màn Quản lý giá mới `12b_quan_ly_gia_khuyen_mai.png`) — 16
        ảnh mới trong `screenshots/`, đã xem lại 2 ảnh tiêu biểu xác nhận hiển thị đúng badge
-       khuyến mãi/lượt bán.
+       khuyến mãi/lượt bán. **Rà soát lại lần nữa (bạn hỏi "đã chụp đầy đủ chức năng quan trọng
+       chưa")**: phát hiện 2 khoảng trống thật — (1) ảnh Catalog cũ đã lỗi thời do vừa đổi UI
+       sắp xếp sang checkbox, (2) **chưa từng có ảnh minh chứng cho các trạng thái RỖNG** (yêu
+       cầu C0.1 từ đầu phiên) dù đã sửa code từ lâu. Đã bổ sung script chụp 3 ảnh mới:
+       `09b_danh_muc_rong.png` (lọc ra 0 kết quả, có nêu rõ điều kiện + nút xóa lọc),
+       `09c_so_sanh_rong.png` (chưa chọn máy nào), `10b_quan_tri_hang_may.png` (màn Hãng máy có
+       cột "Mức uy tín" mới) — tổng hiện tại 19 ảnh trong `screenshots/`, đã xem lại cả 3 ảnh
+       mới xác nhận đúng nội dung.
 9. [x] Comment code đầy đủ — đã xong toàn bộ: `retriever.py`, `classifier.py`,
        `text_classifier.py`, `features.py`, `recommend.service.ts`, và 4 file còn thiếu vừa làm
        xong trong lượt này: `price.service.ts` (giải thích từng bước tính lại chỉ số, so sánh

@@ -99,7 +99,16 @@ const listSchema = z.object({
   ramMin: z.coerce.number().optional(),
   weightMax: z.coerce.number().optional(),
   q: z.string().optional(),
-  sort: z.enum(['price_asc', 'price_desc', 'perf_desc', 'value_desc']).optional(),
+  // Sap xep DA TIEU CHI (checkbox chon nhieu, ket hop duoc): nguoi dung co the chon dong thoi
+  // "Hieu nang cao nhat" + "Dang tien nhat" -> sap theo hieu nang TRUOC, nhung may hoa nhau ve
+  // hieu nang thi sap tiep theo do "dang tien". Chuoi cach nhau boi dau phay, THU TU trong chuoi
+  // la THU TU UU TIEN (phan tu dau tien uu tien cao nhat). Van nhan 1 gia tri don (khong dau
+  // phay) de tuong thich nguoc voi cac noi dang goi `sort=price_desc` (vd AdminPrices.tsx).
+  sort: z
+    .string()
+    .optional()
+    .transform((s) => (s ? s.split(',') : undefined))
+    .pipe(z.array(z.enum(['price_asc', 'price_desc', 'perf_desc', 'value_desc'])).optional()),
   page: z.coerce.number().optional(),
   pageSize: z.coerce.number().optional(),
 });

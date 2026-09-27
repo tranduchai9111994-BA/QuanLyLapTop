@@ -75,6 +75,19 @@ def main():
         page.wait_for_timeout(1000)
         page.screenshot(path=OUT / "09_danh_muc_loc_gaming.png")
 
+        # --- 09b: TRANG THAI RONG - Danh muc khi bo loc chan het ket qua (yeu cau C0.1: khong
+        # duoc de trang rong cut lun, phai neu ro dieu kien dang chan + nut thoat) ---
+        page.goto(f"{BASE}/laptops")
+        page.wait_for_timeout(800)
+        page.get_by_placeholder("Ví dụ: Legion, ThinkPad...").fill("khong-co-may-nao-ten-nay-xyz123")
+        page.wait_for_timeout(600)
+        page.screenshot(path=OUT / "09b_danh_muc_rong.png")
+
+        # --- 09c: TRANG THAI RONG - So sanh khi chua chon may nao ---
+        page.goto(f"{BASE}/compare")
+        page.wait_for_timeout(500)
+        page.screenshot(path=OUT / "09c_so_sanh_rong.png")
+
         # --- 10+: Khu quan tri ---
         page.goto(f"{BASE}/admin/login")
         page.wait_for_timeout(600)
@@ -82,6 +95,11 @@ def main():
         page.get_by_role("button", name="Đăng nhập").click()
         page.wait_for_url("**/admin/**", timeout=10000)
         page.wait_for_timeout(1500)
+
+        # --- 10b: Hang may (co cot "Muc uy tin" - dac trung that cua Mo hinh B, moi bo sung) ---
+        page.goto(f"{BASE}/admin/brands")
+        page.wait_for_timeout(1000)
+        page.screenshot(path=OUT / "10b_quan_tri_hang_may.png")
 
         page.goto(f"{BASE}/admin/laptops")
         page.wait_for_timeout(2500)

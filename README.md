@@ -81,6 +81,9 @@ npm run dev
   gốc); 7 hãng còn lại dùng minh hoạ vẽ tay vì API không có ảnh thật cho các hãng đó.
 - **Empty state đầy đủ** ở mọi trang có thể rỗng (Catalog/Results/Detail/Compare), bộ lọc đa điều
   kiện (giá/RAM/hãng/từ khóa/card rời), bố cục đã tối ưu cho màn hình rộng.
+- **Sắp xếp đa tiêu chí (checkbox kết hợp)**: chọn nhiều tiêu chí cùng lúc (vd "Hiệu năng cao
+  nhất" + "Đáng tiền nhất"), thứ tự chọn là mức ưu tiên — sắp đa cấp thật ở backend (Prisma
+  `orderBy` dạng mảng), không phải sắp rồi cắt phía client.
 
 ## Đã kiểm thử THẬT (không chỉ code, có bằng chứng cụ thể)
 
@@ -106,8 +109,6 @@ npm run dev
 4. Chưa có test tự động cho backend (`vitest`/`supertest`) và frontend (Vitest/Testing Library) —
    chỉ có pytest (ml-service) + kiểm thử thủ công/Playwright end-to-end cho phần còn lại.
 5. `alertScan`/`retrainCheck` cron thật chưa cài (hiện chỉ có `snapshotSync`).
-6. "Sắp xếp" trong Catalog vẫn giữ đơn trị thay vì checkbox đa chọn như một góp ý ban đầu yêu cầu —
-   đã thay bằng bộ lọc đa điều kiện, nhưng đây là quyết định thay thế chưa được xác nhận đồng ý.
 
 ## Cấu trúc
 
