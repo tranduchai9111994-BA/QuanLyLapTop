@@ -23,8 +23,7 @@ Tài khoản demo (admin/staff/khách): xem [`../docs/TAI_KHOAN_DANG_NHAP.md`](.
   `performanceIdx`/`valueIdx`) — **đạt tiêu chí nghiệm thu GĐ4 quan trọng nhất**.
 - `GET /dashboard/kpis` sau khi chạy `seed:telemetry` → số liệu hợp lý (403 phiên, likeRate 72,8%).
 - CRUD quản trị (Hãng máy/Benchmark CPU-GPU/Laptop/Quản lý giá) kiểm thử trên browser bằng
-  `scripts/capture_crud_test.py`; các lỗi phát hiện được và cách sửa ghi ở
-  [`../docs/CHECKLIST_PHIEN_LAM_VIEC.md`](../docs/CHECKLIST_PHIEN_LAM_VIEC.md) mục 4.
+  `scripts/capture_crud_test.py`, ảnh bằng chứng ở `crud_test_screenshots/`.
 
 ## Việc còn thiếu / rút gọn so với đặc tả đầy đủ (docs/06)
 

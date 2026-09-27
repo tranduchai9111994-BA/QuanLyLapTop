@@ -9,7 +9,7 @@ npx tsc --noEmit  # kiểm tra kiểu tĩnh (không build)
 ```
 
 Backend (port 4000) và ML service (port 8001) phải đang chạy để trang hoạt động đầy đủ (xem
-[`../docs/README.md`](../docs/README.md) mục "Chạy nhanh").
+[`../docs/00_README.md`](../docs/00_README.md) mục "Chạy hệ thống").
 
 ## Cấu trúc trang (route)
 
@@ -42,7 +42,6 @@ Backend (port 4000) và ML service (port 8001) phải đang chạy để trang h
 
 - `npx tsc --noEmit` — sạch, chạy lại sau mỗi lần sửa lớn.
 - CRUD admin đã kiểm thử THẬT trên browser (thủ công + script Playwright tự động
-  `../scripts/capture_crud_test.py`) — xem `../docs/CHECKLIST_PHIEN_LAM_VIEC.md` và
-  `../crud_test_screenshots/` để có bằng chứng ảnh chụp từng thao tác.
+  `../scripts/capture_crud_test.py`) — ảnh chụp từng thao tác ở `../crud_test_screenshots/`.
 - Chưa có test tự động cấp component (Vitest/Testing Library) — mọi kiểm thử hiện tại là thủ
   công qua trình duyệt hoặc script Playwright cấp end-to-end.
