@@ -25,14 +25,10 @@ Người dùng khai báo nhu cầu (mục đích sử dụng, ngân sách, mức
 | 10 | `10_KE_HOACH_TRIEN_KHAI.md` | 7 giai đoạn + tiêu chí nghiệm thu | Trưởng nhóm |
 | 11 | `11_KICH_BAN_DEMO_VA_HOI_DAP.md` | Kịch bản demo 10 phút + bộ câu hỏi hội đồng | Bảo vệ |
 | 12 | `12_TAI_LIEU_THAM_KHAO.md` | Tài liệu tham khảo học thuật | Báo cáo |
+| 13 | `13_GIAI_THICH_THUAT_TOAN_KNN.md` | kNN trong đồ án đã triển khai: nguyên lý, ví dụ tính tay, 3 mô hình kèm trích dẫn code, cách tự kiểm tra, hỏi đáp | Bảo vệ, báo cáo C2 |
+| 14 | `14_KET_QUA_THUC_NGHIEM.md` | Số liệu thực nghiệm mới nhất (macro-F1, P@5/nDCG@5, so baseline) và danh sách hạn chế | Báo cáo, bảo vệ |
 
-**Tài liệu kết quả sau khi triển khai:**
-
-| File | Nội dung |
-|------|----------|
-| [GIAI_THICH_THUAT_TOAN_KNN.md](GIAI_THICH_THUAT_TOAN_KNN.md) | Giải thích kNN trong đồ án: nguyên lý, ví dụ tính tay, 3 mô hình kèm trích dẫn code, cách tự kiểm tra, hỏi đáp bảo vệ |
-| [KET_QUA_THUC_NGHIEM.md](KET_QUA_THUC_NGHIEM.md) | Số liệu thực nghiệm mới nhất (macro-F1, P@5/nDCG@5, so baseline) và danh sách hạn chế |
-| [TAI_KHOAN_DANG_NHAP.md](TAI_KHOAN_DANG_NHAP.md) | Tài khoản demo (admin/staff/khách) |
+`CLAUDE.md` giữ nguyên tên không đánh số vì Claude Code chỉ tự nạp file có đúng tên này.
 
 ## 3. Công nghệ
 
@@ -64,7 +60,18 @@ smartlap/
 
 **Nhanh nhất:** bấm đúp shortcut **`SmartLap`** trên Desktop → cả 3 dịch vụ chạy ẩn và tự mở
 `http://localhost:5180` (khoảng 4 giây). Tắt bằng `stop-smartlap.bat`. Log lỗi ở `logs/*.log`.
-Quản trị: link "Quản trị viên / Nhân viên" góc phải → tài khoản ở `TAI_KHOAN_DANG_NHAP.md`.
+Quản trị: link "Quản trị viên / Nhân viên" góc phải (`/admin/login`).
+
+**Tài khoản demo** (tạo tự động mỗi lần chạy seed, kể cả `--reset`, khai báo ở
+[backend/prisma/seed.ts](../backend/prisma/seed.ts)):
+
+| Vai trò | Email | Mật khẩu | Dùng để |
+|---------|-------|----------|---------|
+| Quản trị viên (ADMIN) | `admin@smartlap.vn` | `Demo@123` | Vào `/admin`: quản lý laptop, giá, benchmark, hãng máy |
+| Nhân viên tư vấn (STAFF) | `staff@smartlap.vn` | `Demo@123` | Tư vấn, sửa laptop/giá, không có toàn quyền admin |
+| Khách hàng (CUSTOMER) | `khach@smartlap.vn` | `Demo@123` | Luồng người dùng cuối (Wizard → Kết quả → So sánh) |
+
+Mật khẩu chung chỉ vì đây là dữ liệu demo cho đồ án. Đổi mật khẩu thì sửa cả `seed.ts` lẫn bảng này.
 
 **Chạy tay lần đầu** (cần SQL Server, Python, Node.js):
 
@@ -84,9 +91,3 @@ cd frontend && npm install && npm run dev
 Sinh lại dữ liệu (chỉ khi cần): `python data/generate_catalog.py && python data/generate_personas.py`,
 rồi `npm run seed -- --reset` ở backend. Chụp lại ảnh giao diện: `python scripts/capture_screenshots.py`.
 
-## 6. Bài học rút ra từ đề tài trước (áp dụng ngay)
-
-1. **Lõi thông minh phải là học máy nhận diện được** — lần này kNN nằm trong danh mục thầy ưu tiên và có trong slide C2 (khoảng cách Euclidean, Manhattan, 5 bước thuật toán).
-2. **Có `07_UIUX.md` từ đầu** — design token, theme AntD, quy tắc màu, trạng thái rỗng/lỗi/dự phòng, không để frontend tự chọn màu.
-3. **Mọi quyết định đều ghi vào nhật ký quyết định** (mục 5 file 01) kèm tiêu chí C mà nó phục vụ.
-4. **Có kiểm thử chặn hồi quy** cho các lỗi logic dễ tái phát (ví dụ: quên chuẩn hóa đặc trưng làm kNN bị giá tiền chi phối).

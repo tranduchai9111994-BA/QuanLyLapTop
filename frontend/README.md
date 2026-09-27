@@ -21,7 +21,7 @@ Backend (port 4000) và ML service (port 8001) phải đang chạy để trang h
 | `/laptops` | `Catalog.tsx` | Danh mục đầy đủ, lọc đa điều kiện (giá/RAM/hãng/từ khóa/card rời) |
 | `/laptop/:id` | `Detail.tsx` | Chi tiết 1 máy + máy tương tự (item-item kNN) |
 | `/compare` | `Compare.tsx` | So sánh nhiều máy dạng bảng |
-| `/admin/login` | `admin/AdminLogin.tsx` | Đăng nhập quản trị (tài khoản demo: xem `../docs/TAI_KHOAN_DANG_NHAP.md`) |
+| `/admin/login` | `admin/AdminLogin.tsx` | Đăng nhập quản trị (tài khoản demo: xem `../docs/00_README.md` mục "Chạy hệ thống") |
 | `/admin/brands`, `/admin/benchmarks/cpu`, `/admin/benchmarks/gpu`, `/admin/laptops` | CRUD dùng chung `components/admin/CrudTable.tsx` |
 | `/admin/prices` | `admin/AdminPrices.tsx` | Quản lý giá + khuyến mãi + lượt bán riêng (nghiệp vụ đổi giá thường xuyên) |
 

@@ -68,7 +68,7 @@ Cách này có 3 vấn đề nền tảng mà kNN giải quyết được:
 
 Đây chính là yêu cầu gốc số 7 mà giảng viên đặt ra: *"kNN phải là thuật toán LÕI, không phải luật
 if-else"* — và đồ án đã đo lường cụ thể: trên bộ dữ liệu có phân khúc chồng lấn thực tế, kNN vượt
-baseline luật if-else **+0,155 macro-F1** (xem [KET_QUA_THUC_NGHIEM.md](KET_QUA_THUC_NGHIEM.md)
+baseline luật if-else **+0,155 macro-F1** (xem [14_KET_QUA_THUC_NGHIEM.md](14_KET_QUA_THUC_NGHIEM.md)
 mục 2) — tức là chứng minh bằng số liệu rằng kNN thực sự tốt hơn, không phải chọn vì "nghe tên
 hay".
 
@@ -226,7 +226,7 @@ mỗi cấu hình chạy `StratifiedKFold` 5 lần, chọn cấu hình có macro
 may một lần chia mà phân khúc hiếm bị dồn hết vào tập test.
 
 **Số liệu thật** (sau lần retrain gần nhất, xem
-[KET_QUA_THUC_NGHIEM.md](KET_QUA_THUC_NGHIEM.md) mục 2): k=7, metric=Euclidean, weights=uniform,
+[14_KET_QUA_THUC_NGHIEM.md](14_KET_QUA_THUC_NGHIEM.md) mục 2): k=7, metric=Euclidean, weights=uniform,
 macro-F1 trên tập test = **0,787** (mục tiêu ≥ 0,75).
 
 **Dùng lại Mô hình A khi người dùng chọn "Chưa rõ phân khúc"** —
@@ -351,7 +351,7 @@ Hai điểm đáng chú ý:
 
 **Số liệu thật**: 132 câu tiếng Việt viết tay, 6 nhóm nhu cầu, k=7, macro-F1 (5-fold CV) = 0,7725,
 độ chính xác trên 30 câu persona = 93% (xem
-[KET_QUA_THUC_NGHIEM.md](KET_QUA_THUC_NGHIEM.md) mục 3).
+[14_KET_QUA_THUC_NGHIEM.md](14_KET_QUA_THUC_NGHIEM.md) mục 3).
 
 Phần **trích số cụ thể** (ngân sách "tầm 20 triệu", ràng buộc "dưới 1.4kg") vẫn dùng regex —
 `extract_budget()` / `extract_constraints()`
@@ -468,7 +468,7 @@ Kỳ vọng: phần lớn 7 láng giềng là `GAMING`, khoảng cách tăng d�
   nhất, macro-F1, confusion matrix dạng số), `confusion_matrix.png` (hàng = nhãn thật, cột = dự
   đoán; ô ngoài đường chéo là nhầm lẫn), `k_curve.png` (macro-F1 theo từng giá trị k).
 - `python -m app.evaluate` → P@5/nDCG@5 Mô hình B so 3 baseline, cập nhật
-  `artifacts/evaluation.json` (số liệu đưa vào [KET_QUA_THUC_NGHIEM.md](KET_QUA_THUC_NGHIEM.md)).
+  `artifacts/evaluation.json` (số liệu đưa vào [14_KET_QUA_THUC_NGHIEM.md](14_KET_QUA_THUC_NGHIEM.md)).
 - `python -m app.ablation` → bảng so sánh có/không `StandardScaler`, bỏ từng đặc trưng, đổi
   Manhattan↔Euclidean — dùng để trả lời câu "sao biết chuẩn hoá là cần thiết?".
 
@@ -490,7 +490,7 @@ curl -X POST http://localhost:4000/api/recommendations -H "Content-Type: applica
 
 **"Sao không dùng if-else phân loại luôn, cần gì kNN?"** → Trên dữ liệu có phân khúc chồng lấn,
 kNN vượt baseline luật if-else **+0,155 macro-F1** (xem
-[KET_QUA_THUC_NGHIEM.md](KET_QUA_THUC_NGHIEM.md) mục 2). Luật cứng chỉ hiệu quả khi ranh giới rõ
+[14_KET_QUA_THUC_NGHIEM.md](14_KET_QUA_THUC_NGHIEM.md) mục 2). Luật cứng chỉ hiệu quả khi ranh giới rõ
 ràng; kNN học được ranh giới mờ (xem mục 2.2).
 
 **"Tại sao chọn k = 7?"** → Không chọn tay: `GridSearchCV` thử 64 cấu hình với cross-validation
@@ -508,7 +508,7 @@ cần bỏ phiếu ra 1 nhãn. Vì vậy dùng `NearestNeighbors`.
 
 **"Khuyến mãi/lượt bán có thực sự làm gợi ý tốt hơn không?"** → Trả lời trung thực: đã đưa vào
 metric thật, nhưng **chưa chạy ablation** bật/tắt trên cùng 1 bộ dữ liệu, nên chưa có bằng chứng
-định lượng tách bạch (xem [KET_QUA_THUC_NGHIEM.md](KET_QUA_THUC_NGHIEM.md) mục 4.1 và 7).
+định lượng tách bạch (xem [14_KET_QUA_THUC_NGHIEM.md](14_KET_QUA_THUC_NGHIEM.md) mục 4.1 và 7).
 
 ## 8. Muốn tìm hiểu sâu hơn — đọc tiếp phần nào, theo thứ tự
 
@@ -521,7 +521,7 @@ metric thật, nhưng **chưa chạy ablation** bật/tắt trên cùng 1 bộ d
    (hàm `enrich_catalog`) — nơi tính `value_index`, `ppi`, `discount_percent`, `sales_score`... từ
    các cột thô trong CSV/database.
 4. **Bằng chứng bằng số** (không chỉ code mà cả kết quả đo lường thật):
-   [KET_QUA_THUC_NGHIEM.md](KET_QUA_THUC_NGHIEM.md) — macro-F1, P@5, nDCG@5, so sánh với 3
+   [14_KET_QUA_THUC_NGHIEM.md](14_KET_QUA_THUC_NGHIEM.md) — macro-F1, P@5, nDCG@5, so sánh với 3
    baseline khác, đo "công sức tìm kiếm" thực tế.
 5. **Test tự động chứng minh các tính chất quan trọng vẫn đúng sau khi sửa code**:
    - [ml-service/tests/test_one_sided_metric.py](../ml-service/tests/test_one_sided_metric.py) — 4

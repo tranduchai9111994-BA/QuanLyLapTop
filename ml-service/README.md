@@ -20,12 +20,12 @@ uvicorn app.main:app --reload --port 8001
 | Mô hình C | `app/text_classifier.py` | Phân lớp văn bản (TF-IDF + kNN cosine) | Hiểu câu nhu cầu tự do người dùng gõ (màn Wizard) |
 
 Giải thích đầy đủ (lịch sử, nguyên lý, ví dụ, trích dẫn code) ở
-[`../docs/GIAI_THICH_THUAT_TOAN_KNN.md`](../docs/GIAI_THICH_THUAT_TOAN_KNN.md).
+[`../docs/13_GIAI_THICH_THUAT_TOAN_KNN.md`](../docs/13_GIAI_THICH_THUAT_TOAN_KNN.md).
 
 ## Kết quả hiện tại
 
 Số liệu đo lường đầy đủ (macro-F1, P@5/nDCG@5, so baseline, đo công sức tìm kiếm) nằm ở
-[`../docs/KET_QUA_THUC_NGHIEM.md`](../docs/KET_QUA_THUC_NGHIEM.md) — đây là **nguồn số liệu duy nhất, cập
+[`../docs/14_KET_QUA_THUC_NGHIEM.md`](../docs/14_KET_QUA_THUC_NGHIEM.md) — đây là **nguồn số liệu duy nhất, cập
 nhật mỗi lần retrain**; không chép lại con số cụ thể ở file này để tránh bị lệch mỗi khi dữ liệu
 đổi (file này từng có số liệu cũ từ giai đoạn dữ liệu mô phỏng ban đầu, đã bị lỗi thời và gỡ bỏ).
 
@@ -40,4 +40,4 @@ python -m app.evaluate   # in P@5/nDCG@5, cap nhat artifacts/evaluation.json
 - `registry.py` hỗ trợ activate theo version cục bộ, chưa có "kiểm quy tắc" so sánh với
   `golden_test` khi promote (xem `docs/09_VONG_DOI_TRI_TUE.md` §2.3).
 - Hạn chế về dữ liệu/thực nghiệm (Kaggle, ablation khuyến mãi, quy mô Mô hình C…): xem
-  [`../docs/KET_QUA_THUC_NGHIEM.md`](../docs/KET_QUA_THUC_NGHIEM.md) mục 7.
+  [`../docs/14_KET_QUA_THUC_NGHIEM.md`](../docs/14_KET_QUA_THUC_NGHIEM.md) mục 7.
