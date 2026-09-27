@@ -9,7 +9,7 @@ npx tsc --noEmit  # kiểm tra kiểu tĩnh (không build)
 ```
 
 Backend (port 4000) và ML service (port 8001) phải đang chạy để trang hoạt động đầy đủ (xem
-[`../README.md`](../README.md) mục "Chạy nhanh").
+[`../docs/README.md`](../docs/README.md) mục "Chạy nhanh").
 
 ## Cấu trúc trang (route)
 

@@ -35,18 +35,9 @@ python -m app.train      # in macro-F1 CV/test, luu artifact
 python -m app.evaluate   # in P@5/nDCG@5, cap nhat artifacts/evaluation.json
 ```
 
-## Tính năng khuyến mãi/lượt bán (mới)
-
-`discount_percent` (% giảm giá) và `sales_score` (lượt bán, log-hoá) là 2 đặc trưng thật trong
-metric của Mô hình B (nhóm `"popularity"`, trọng số cố định 0,12 trong `retriever.py`) — không chỉ
-để hiển thị. Xem chi tiết ở [`../docs/KET_QUA_THUC_NGHIEM.md`](../docs/KET_QUA_THUC_NGHIEM.md) mục 4.4.
-
 ## Việc còn thiếu
 
-- Thí nghiệm đối chứng Kaggle (`docs/04 §6.4`): chưa thực hiện — cần tự tải `laptop_price.csv` từ
-  Kaggle, kiểm tra giấy phép, rồi chạy `app/train.py` với dataset đó.
 - `registry.py` hỗ trợ activate theo version cục bộ, chưa có "kiểm quy tắc" so sánh với
   `golden_test` khi promote (xem `docs/09_VONG_DOI_TRI_TUE.md` §2.3).
-- Ablation study tách bạch cho riêng tính năng khuyến mãi/lượt bán (bật/tắt nhóm `"popularity"`
-  trên cùng 1 bộ dữ liệu để đo tác động thật) — hiện chưa chạy, xem ghi chú ở
-  `docs/KET_QUA_THUC_NGHIEM.md` mục 4.1.
+- Hạn chế về dữ liệu/thực nghiệm (Kaggle, ablation khuyến mãi, quy mô Mô hình C…): xem
+  [`../docs/KET_QUA_THUC_NGHIEM.md`](../docs/KET_QUA_THUC_NGHIEM.md) mục 7.

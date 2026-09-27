@@ -14,9 +14,8 @@ khác nhau cho 3 việc: hiểu câu nhu cầu tự do, phân loại phân khúc
 | [GIAI_THICH_THUAT_TOAN_KNN.md](GIAI_THICH_THUAT_TOAN_KNN.md) | Giải thích kNN đầy đủ — bắt đầu từ đây nếu chưa biết gì về thuật toán |
 | [KET_QUA_THUC_NGHIEM.md](KET_QUA_THUC_NGHIEM.md) | Số liệu thực nghiệm mới nhất (macro-F1, P@5/nDCG@5, so baseline) — nguồn số liệu DUY NHẤT, cập nhật mỗi lần retrain |
 | [TAI_KHOAN_DANG_NHAP.md](TAI_KHOAN_DANG_NHAP.md) | Tài khoản demo (admin/staff/khách) |
-| [CHECKLIST_PHIEN_LAM_VIEC.md](CHECKLIST_PHIEN_LAM_VIEC.md) | Nhật ký chi tiết mọi việc đã làm, đối chiếu từng yêu cầu — dùng để tự kiểm |
-| [TONG_HOP_THAY_DOI_PHIEN_NAY.md](TONG_HOP_THAY_DOI_PHIEN_NAY.md) | Tóm tắt nhanh thay đổi phiên làm việc gần nhất |
-| [HUONG_DAN_THUAT_TOAN_KNN.md](HUONG_DAN_THUAT_TOAN_KNN.md) | Tài liệu kNN viết sớm hơn, còn vài đoạn code chi tiết hữu ích (đã đánh dấu 2 chỗ lỗi thời) |
+| [CHECKLIST_PHIEN_LAM_VIEC.md](CHECKLIST_PHIEN_LAM_VIEC.md) | Checklist mọi yêu cầu đã giao + tổng hợp thay đổi, lỗi đã sửa, lịch sử commit |
+| [00_README.md](00_README.md) → `12_...md` | Bộ đặc tả thiết kế gốc (không sửa) |
 
 ## Chạy nhanh — icon Desktop
 
@@ -89,26 +88,22 @@ npm run dev
 
 - `pytest` (ml-service): 34/34 pass.
 - `npx tsc --noEmit` (backend + frontend): sạch, không lỗi.
-- **CRUD admin đã kiểm thử trực tiếp trên browser** — cả thủ công lẫn script Playwright tự động
-  (`scripts/capture_crud_test.py`), ảnh bằng chứng lưu ở `crud_test_screenshots/`. Quá trình này
-  phát hiện và sửa được 2 lỗi thật đang tồn tại trong code trước đó:
-  1. Sửa (không phải thêm mới) một laptop có sẵn trường optional đang `null` bị từ chối do lỗi
-     zod `.optional()` (chỉ chấp nhận `undefined`, không chấp nhận `null`).
-  2. "AI gợi ý phân khúc" báo thiếu dữ liệu dù đã điền đủ khi TẠO MỚI laptop — do đọc nhầm field
-     `resWidth`/`resHeight` (chỉ có giá trị lúc bấm Lưu) thay vì field `resolution` thật trên form.
-- Ảnh chức năng: [screenshots/](../screenshots/) (16 ảnh, chụp lại bằng
+- CRUD quản trị kiểm thử trực tiếp trên browser bằng script Playwright
+  (`scripts/capture_crud_test.py`), ảnh bằng chứng ở [crud_test_screenshots/](../crud_test_screenshots/).
+- Ảnh chức năng: [screenshots/](../screenshots/) (19 ảnh, chụp lại bằng
   `python scripts/capture_screenshots.py` mỗi khi giao diện đổi).
+- Danh sách lỗi thật đã phát hiện và sửa: [CHECKLIST_PHIEN_LAM_VIEC.md](CHECKLIST_PHIEN_LAM_VIEC.md) mục 4.
 
 ## Việc còn lại trước khi bảo vệ (trung thực, không giấu)
 
-1. Dữ liệu vẫn là **dữ liệu tổng hợp có logic**, không phải catalog thu thập thật từ thị trường —
-   xem [data/README.md](../data/README.md).
-2. Chạy thí nghiệm đối chứng Kaggle (`docs/04 §6.4`) — chưa có file `laptop_price.csv`.
-3. Ablation study tách bạch cho tính năng khuyến mãi/lượt bán (bật/tắt so sánh trên cùng 1 bộ dữ
-   liệu) — hiện chưa chạy, xem [KET_QUA_THUC_NGHIEM.md](KET_QUA_THUC_NGHIEM.md) mục 4.1.
-4. Chưa có test tự động cho backend (`vitest`/`supertest`) và frontend (Vitest/Testing Library) —
-   chỉ có pytest (ml-service) + kiểm thử thủ công/Playwright end-to-end cho phần còn lại.
-5. `alertScan`/`retrainCheck` cron thật chưa cài (hiện chỉ có `snapshotSync`).
+**Hạn chế về dữ liệu / mô hình / thực nghiệm** (dữ liệu tổng hợp, Kaggle, ablation khuyến mãi,
+quy mô Mô hình C…): xem danh sách duy nhất ở [KET_QUA_THUC_NGHIEM.md](KET_QUA_THUC_NGHIEM.md) mục 7.
+
+**Việc kỹ thuật còn lại** (chi tiết theo từng thành phần, không chép lại ở đây):
+- Backend (train chạy đồng bộ, cron `alertScan`/`retrainCheck`, rate limit, chưa có test tự động…):
+  [backend/README.md](../backend/README.md) mục "Việc còn thiếu".
+- Frontend (chưa có test cấp component): [frontend/README.md](../frontend/README.md) mục "Kiểm thử đã làm".
+- ML service (registry chưa kiểm quy tắc khi promote): [ml-service/README.md](../ml-service/README.md) mục "Việc còn thiếu".
 
 ## Cấu trúc
 

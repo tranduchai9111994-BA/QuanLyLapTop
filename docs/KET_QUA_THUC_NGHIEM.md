@@ -192,3 +192,8 @@ nhất), tái lập được bằng code nên không cần bấm giờ từng ng
 3. **Thí nghiệm đối chứng Kaggle chưa chạy** (chưa tải được `laptop_price.csv`).
 4. Thước đo "công sức tìm kiếm" là **proxy tính bằng code**, không phải đo thời gian thật trên
    người dùng. Muốn có số liệu thuyết phục hơn cần thử nghiệm với 5–10 người thật.
+5. **Chưa có ablation tách bạch cho khuyến mãi/lượt bán** — đặc trưng đã nằm trong metric thật,
+   nhưng chưa chạy bật/tắt nhóm `popularity` trên cùng 1 bộ dữ liệu, nên chưa chứng minh định
+   lượng được nó cải thiện xếp hạng (chi tiết ở mục 4.1).
+
+> Đây là danh sách hạn chế **duy nhất** của đồ án — các tài liệu khác chỉ trỏ về đây, không chép lại.

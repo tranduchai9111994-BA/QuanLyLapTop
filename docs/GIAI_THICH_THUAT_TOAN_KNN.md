@@ -179,29 +179,61 @@ Người dùng gõ câu tự nhiên
 
 ### 4.1 Mô hình A — kNN PHÂN LỚP phân khúc (`KNeighborsClassifier`)
 
-**Bài toán**: cho một cấu hình máy (CPU, GPU, RAM, giá, cân nặng...), đoán xem nó thuộc phân khúc
-nào trong 4 nhóm: OFFICE / ULTRABOOK / GAMING / CREATOR.
+**Bài toán**: cho một cấu hình máy (CPU, GPU, RAM, SSD, màn hình, cân nặng, pin...), đoán xem nó
+thuộc phân khúc nào trong 4 nhóm: OFFICE / ULTRABOOK / GAMING / CREATOR.
 
 **Vì sao cần**: khi nhân viên nhập một máy MỚI vào hệ thống, hệ thống phải tự gán nhãn phân khúc
 — không thể bắt nhân viên tự phân loại bằng tay (dễ sai, không nhất quán). Đây cũng là minh chứng
 cho tiêu chí "hệ thống tự học/tự phân loại máy mới" trong đề bài.
 
-**Code thật**: [ml-service/app/classifier.py:41-54](../ml-service/app/classifier.py) (`build_pipeline`)
+**Bước 1 — Chuẩn bị đặc trưng** ([ml-service/app/features.py](../ml-service/app/features.py)).
+kNN chỉ đo được khoảng cách giữa các con số, nên tên CPU/GPU (chuỗi chữ) phải được quy đổi ra
+điểm PassMark trước (`build_bench_lookup()` + `match_score()` — so khớp chuỗi sau khi bỏ
+`(R)`/`(TM)`/`Processor`, để "Intel Core i5-12500H" khớp với "i5-12500H" trong bảng benchmark).
+Sau đó `build_model_a_preprocessor()` chuẩn hoá toàn bộ đặc trưng:
+
+```python
+ColumnTransformer([
+    ("log", Pipeline([SimpleImputer, FunctionTransformer(np.log2), StandardScaler]), NUMERIC_LOG),  # ram_gb, ssd_gb
+    ("num", Pipeline([SimpleImputer, StandardScaler]), NUMERIC),  # cpu_score, gpu_score, ppi, ...
+    ("bin", "passthrough", BINARY),  # gpu_dedicated, srgb_100 (đã là 0/1)
+])
+```
+
+- **Vì sao lấy `log2` RAM/SSD trước khi chuẩn hoá?** Nâng 8→16GB quan trọng ngang 16→32GB (cùng
+  là gấp đôi), không phải "hơn 8GB". `log2` biến "gấp đôi" thành "cộng thêm 1 đơn vị" — hợp lý
+  hơn cho khoảng cách Euclidean.
+- **Vì sao Mô hình A KHÔNG dùng giá?** Nếu đưa giá vào, mô hình sẽ "học" phân khúc theo giá thay
+  vì theo cấu hình — hai máy cấu hình giống hệt nhưng giá khác vẫn phải cùng phân khúc. Giá chỉ
+  dùng ở Mô hình B (xếp hạng), không dùng để phân loại. Test `test_price_not_in_classifier` chặn
+  việc ai đó vô tình thêm giá vào.
+
+**Bước 2 — Thuật toán kNN** — [ml-service/app/classifier.py:41-54](../ml-service/app/classifier.py)
+(`build_pipeline`):
 ```python
 def build_pipeline() -> Pipeline:
     return Pipeline([
-        ("scaler", StandardScaler()),      # chuan hoa TRUOC, va nam TRONG pipeline (chong ro ri)
-        ("knn", KNeighborsClassifier()),   # k, weights, metric duoc do GridSearchCV tim ra
+        ("prep", build_model_a_preprocessor()),   # chuan hoa (buoc 1) - nam TRONG pipeline, chong ro ri
+        ("knn", KNeighborsClassifier()),           # k, weights, metric do GridSearchCV tim ra
     ])
 ```
-Tham số tốt nhất được tìm bằng `GridSearchCV` (dò lưới) kết hợp `StratifiedKFold` 5 lần
-([classifier.py:56-75](../ml-service/app/classifier.py)) — "Stratified" nghĩa là mỗi lần chia dữ
-liệu train/test đều giữ đúng TỈ LỆ 4 phân khúc như bộ dữ liệu gốc, tránh trường hợp ăn may một
-lần chia mà một phân khúc hiếm bị dồn hết vào tập test.
+
+**Bước 3 — Dò tham số tốt nhất** — `GridSearchCV` thử **mọi tổ hợp** trong lưới tham số
+([classifier.py:30-38](../ml-service/app/classifier.py)): `k` ∈ {1, 3, 5, …, 31} (số lẻ để tránh
+hoà phiếu) × `weights` ∈ {uniform, distance} × `metric` ∈ {euclidean, manhattan} = 64 cấu hình,
+mỗi cấu hình chạy `StratifiedKFold` 5 lần, chọn cấu hình có macro-F1 trung bình cao nhất.
+"Stratified" nghĩa là mỗi lần chia dữ liệu đều giữ đúng TỈ LỆ 4 phân khúc như bộ gốc, tránh ăn
+may một lần chia mà phân khúc hiếm bị dồn hết vào tập test.
 
 **Số liệu thật** (sau lần retrain gần nhất, xem
 [KET_QUA_THUC_NGHIEM.md](KET_QUA_THUC_NGHIEM.md) mục 2): k=7, metric=Euclidean, weights=uniform,
 macro-F1 trên tập test = **0,787** (mục tiêu ≥ 0,75).
+
+**Dùng lại Mô hình A khi người dùng chọn "Chưa rõ phân khúc"** —
+[ml-service/app/segment_inference.py](../ml-service/app/segment_inference.py) không huấn luyện
+mô hình mới, mà **dựng một vector đặc trưng giả định** từ các hoạt động người dùng chọn (tra bảng
+`ACTIVITY_TARGETS`, vd `choi_game` → cần `gpu_score` ở phân vị 75, `gpu_dedicated=1`), rồi đưa
+vector đó qua chính Mô hình A đã huấn luyện ở trên để lấy `predict_proba()`.
 
 ### 4.2 Mô hình B — kNN TRUY HỒI có trọng số một phía (`NearestNeighbors`)
 
@@ -265,6 +297,19 @@ giảm giá sâu hơn, bán chạy hơn vẫn có thể được chọn nhiều 
 phạt khi vượt — [retriever.py:63-64](../ml-service/app/retriever.py)), với trọng số **cố định**
 `POPULARITY_WEIGHT = 0.12` (không có thanh trượt riêng cho người dùng chỉnh, vì đây là tín hiệu
 hành vi thị trường, không phải tiêu chí kỹ thuật người dùng tự chọn).
+
+**Hai chức năng phụ dùng lại cùng hạ tầng Mô hình B:**
+- **"Máy tương tự" trên trang Chi tiết** — `similar_items()`
+  ([retriever.py:291-299](../ml-service/app/retriever.py)): cùng `NearestNeighbors`, nhưng điểm
+  truy vấn là **chính vector của máy đang xem** (không phải hồ sơ nhu cầu), dùng Euclidean **hai
+  phía** thông thường (ở đây cần tìm máy *giống nhau*, mạnh hơn hay yếu hơn đều là khác biệt), rồi
+  bỏ kết quả đầu tiên vì luôn là chính nó (khoảng cách 0).
+- **Giải thích "Vì sao gợi ý?"** — `build_explanation()`
+  ([ml-service/app/explain.py](../ml-service/app/explain.py)) **không phải AI sinh văn bản**: nó so
+  từng đặc trưng của máy với hồ sơ lý tưởng `q`, trả về **mã** (`gpu_dedicated`, `perf_above`,
+  `weight_over`, …) kèm tham số. Frontend
+  ([frontend/src/utils/explainText.ts](../frontend/src/utils/explainText.ts)) mới dịch mã đó
+  thành câu tiếng Việt — tách riêng để dễ kiểm thử (so mã, không so chuỗi) và dễ đổi cách diễn đạt.
 
 ### 4.3 Mô hình C — kNN phân loại VĂN BẢN tự do (TF-IDF + cosine kNN)
 
@@ -357,17 +402,120 @@ hơn nhu cầu, đúng như yêu cầu gốc của giảng viên.
 
 ---
 
-> **Tài liệu liên quan**: [HUONG_DAN_THUAT_TOAN_KNN.md](HUONG_DAN_THUAT_TOAN_KNN.md) là tài liệu
-> viết từ giai đoạn sớm hơn của đồ án, có thêm vài đoạn giải thích code chi tiết (cách dò tham số
-> bằng GridSearchCV, bảng đối chiếu 9 test cũ) — vẫn hữu ích để đọc thêm, nhưng file này (bạn đang
-> đọc) là bản **đầy đủ và cập nhật nhất**, nên dùng làm tài liệu chính khi bảo vệ.
+## 6. Cách tự kiểm tra thuật toán chạy đúng
 
-## 6. Muốn tìm hiểu sâu hơn — đọc tiếp phần nào, theo thứ tự
+### 6.1 Chạy bộ test tự động (nhanh nhất, nên làm trước)
+
+```bash
+cd ml-service
+pytest -v
+```
+
+22 hàm test / 34 ca kiểm thử (một số hàm chạy lặp qua 4 phân khúc). Mỗi test chặn đúng 1 loại lỗi
+kNN hay gặp:
+
+| File | Test | Chặn lỗi gì |
+|---|---|---|
+| `test_classifier.py` | `test_scaler_inside_pipeline` | Scaler bị fit ngoài pipeline → rò rỉ dữ liệu khi cross-validate |
+| | `test_price_not_in_classifier` | Ai đó vô tình thêm `price_vnd` vào đặc trưng Mô hình A |
+| | `test_reproducible` | Cùng seed 42 nhưng train ra kết quả khác nhau |
+| | `test_scale_invariance` | Đổi đơn vị đo làm đổi kết quả phân lớp |
+| `test_one_sided_metric.py` | `test_stronger_and_cheaper_not_penalized` | Máy mạnh hơn/rẻ hơn nhu cầu bị phạt oan |
+| | `test_one_sided_metric_argument_order` | Lỗi thứ tự tham số `metric(q, x)` của sklearn (mục 4.2) tái phát |
+| | `test_cheap_priority_returns_cheaper_machines` | Ưu tiên tiết kiệm nhưng kết quả không rẻ hơn |
+| | `test_soft_segment_filter_keeps_other_segments` | Lọc mềm phân khúc bị biến thành lọc cứng |
+| `test_retriever.py` | `test_identity_top1` | Truy vấn đúng bằng 1 máy → máy đó phải hạng 1 |
+| | `test_weight_changes_ranking` | Tăng ưu tiên "di động" nhưng top-5 không nhẹ hơn |
+| | `test_budget_hard_constraint` | Kết quả vượt ngân sách tối đa |
+| | `test_explanation_schema` | Kết quả không có điểm mạnh nào để giải thích |
+| `test_personas.py` | `test_personas` | 30 persona chạy qua đúng luồng, yêu cầu ≥ 90% đạt kỳ vọng |
+| | `test_need_text_model_on_personas` | Mô hình C hiểu sai câu nhu cầu của persona |
+| | `test_need_text_produces_valid_query` | Kết quả Mô hình C không dùng được làm đầu vào Mô hình B |
+| `test_priority_sensitivity.py` | 7 hàm / 19 ca | Kéo thanh ưu tiên lên nhưng kết quả không đổi đúng hướng (quét 4 phân khúc + 81 tổ hợp cực trị) |
+
+### 6.2 Tự kiểm tra bằng tay (hiểu cặn kẽ từng bước)
+
+```bash
+cd ml-service
+python -c "
+import pandas as pd
+from app.features import enrich_catalog, MODEL_A_FEATURES
+from app.classifier import build_pipeline
+
+catalog = pd.read_csv('../data/processed/catalog_vn.csv')
+cpu = pd.read_csv('../data/processed/cpu_benchmark.csv')
+gpu = pd.read_csv('../data/processed/gpu_benchmark.csv')
+df = enrich_catalog(catalog, cpu, gpu)
+
+pipe = build_pipeline()
+pipe.set_params(knn__n_neighbors=7, knn__weights='uniform', knn__metric='euclidean')
+pipe.fit(df[MODEL_A_FEATURES], df['segment'])
+
+sample = df[df['segment'] == 'GAMING'].iloc[[0]]
+Xs = pipe.named_steps['prep'].transform(sample[MODEL_A_FEATURES])
+dist, idx = pipe.named_steps['knn'].kneighbors(Xs, n_neighbors=7)
+print('Nhan that:', sample['segment'].values[0])
+print('7 lang gieng:', df.iloc[idx[0]]['segment'].tolist())
+print('Du doan:', pipe.predict(sample[MODEL_A_FEATURES])[0])
+"
+```
+
+Kỳ vọng: phần lớn 7 láng giềng là `GAMING`, khoảng cách tăng dần, dự đoán khớp nhãn thật.
+
+### 6.3 Xem báo cáo huấn luyện và đánh giá
+
+- `python -m app.train` → sinh `ml-service/artifacts/<version>/`: `metadata.json` (tham số tốt
+  nhất, macro-F1, confusion matrix dạng số), `confusion_matrix.png` (hàng = nhãn thật, cột = dự
+  đoán; ô ngoài đường chéo là nhầm lẫn), `k_curve.png` (macro-F1 theo từng giá trị k).
+- `python -m app.evaluate` → P@5/nDCG@5 Mô hình B so 3 baseline, cập nhật
+  `artifacts/evaluation.json` (số liệu đưa vào [KET_QUA_THUC_NGHIEM.md](KET_QUA_THUC_NGHIEM.md)).
+- `python -m app.ablation` → bảng so sánh có/không `StandardScaler`, bỏ từng đặc trưng, đổi
+  Manhattan↔Euclidean — dùng để trả lời câu "sao biết chuẩn hoá là cần thiết?".
+
+### 6.4 Kiểm tra qua API thật (backend → ML service)
+
+```bash
+curl -X POST http://localhost:4000/api/recommendations -H "Content-Type: application/json" -d '{
+  "segment": "GAMING", "activities": [],
+  "budget": {"min": 15000000, "max": 30000000},
+  "priorities": {"performance": 5, "mobility": 1, "display": 3, "price": 3},
+  "must": {}, "topN": 5
+}'
+```
+
+Đổi `priorities.mobility` từ 1 → 5, chạy lại, so cân nặng trung bình của 5 máy trả về — phải
+**giảm**. Đây là cách nhanh nhất để "cảm nhận" kNN có trọng số hoạt động thật.
+
+## 7. Câu hỏi hay gặp khi bảo vệ
+
+**"Sao không dùng if-else phân loại luôn, cần gì kNN?"** → Trên dữ liệu có phân khúc chồng lấn,
+kNN vượt baseline luật if-else **+0,155 macro-F1** (xem
+[KET_QUA_THUC_NGHIEM.md](KET_QUA_THUC_NGHIEM.md) mục 2). Luật cứng chỉ hiệu quả khi ranh giới rõ
+ràng; kNN học được ranh giới mờ (xem mục 2.2).
+
+**"Tại sao chọn k = 7?"** → Không chọn tay: `GridSearchCV` thử 64 cấu hình với cross-validation
+5 lần, k=7 cho macro-F1 trung bình cao nhất. Trên bộ dữ liệu mô phỏng ban đầu (ranh giới quá sạch)
+từng ra k=1 — dấu hiệu dữ liệu giả lập "quá dễ"; sau khi làm dữ liệu thực tế hơn, k tối ưu tăng
+lên 7, đúng như lý thuyết (k lớn hơn mượt hơn, ít nhạy nhiễu hơn).
+
+**"Tại sao Mô hình B không dùng `KNeighborsClassifier` cho tiện?"** → Mô hình B không phân lớp —
+nó cần **trả về chính các máy láng giềng** (kèm khoảng cách) để xếp hạng và giải thích, không
+cần bỏ phiếu ra 1 nhãn. Vì vậy dùng `NearestNeighbors`.
+
+**"Máy mạnh hơn nhu cầu thì sao lại không bị tính là 'xa'?"** → Vì dùng khoảng cách một phía
+(mục 3.4 và ví dụ tính tay ở mục 5): chỉ phạt khi máy *thiếu* so với nhu cầu, không phạt khi
+*vượt* theo hướng có lợi.
+
+**"Khuyến mãi/lượt bán có thực sự làm gợi ý tốt hơn không?"** → Trả lời trung thực: đã đưa vào
+metric thật, nhưng **chưa chạy ablation** bật/tắt trên cùng 1 bộ dữ liệu, nên chưa có bằng chứng
+định lượng tách bạch (xem [KET_QUA_THUC_NGHIEM.md](KET_QUA_THUC_NGHIEM.md) mục 4.1 và 7).
+
+## 8. Muốn tìm hiểu sâu hơn — đọc tiếp phần nào, theo thứ tự
 
 1. **Bắt đầu**: [ml-service/app/retriever.py](../ml-service/app/retriever.py) — đọc từ trên xuống
    theo đúng thứ tự file (docstring đầu file tóm tắt 5 thay đổi quan trọng nhất so với kNN gốc).
 2. **Cách 3 mô hình được ghép vào API thực tế**: [ml-service/app/main.py](../ml-service/app/main.py)
-   — endpoint `/recommend` ([main.py:121-150](../ml-service/app/main.py)) là nơi gọi cả `build_ideal_vector`,
+   — endpoint `/recommend` ([main.py:159-199](../ml-service/app/main.py)) là nơi gọi cả `build_ideal_vector`,
    `build_weights`, `recommend`, `match_pct` theo đúng thứ tự đã mô tả ở mục 4.2.
 3. **Cách chuẩn bị đặc trưng từ dữ liệu thô**: [ml-service/app/features.py](../ml-service/app/features.py)
    (hàm `enrich_catalog`) — nơi tính `value_index`, `ppi`, `discount_percent`, `sales_score`... từ
