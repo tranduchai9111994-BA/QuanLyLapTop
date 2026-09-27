@@ -1,4 +1,4 @@
-import { Button, Tag, message } from 'antd';
+import { Button, Modal, Radio, Space, Tag, message } from 'antd';
 import { LikeOutlined, DislikeOutlined, LikeFilled, DislikeFilled } from '@ant-design/icons';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -13,40 +13,65 @@ import { formatVnd, formatKg } from '../../utils/format';
 import { explainText } from '../../utils/explainText';
 import { api } from '../../lib/api';
 
+// Ly do "Khong thich" (FR-04) - khop voi enum `reason` phia backend (events.routes.ts) va
+// duoc dung lam du lieu hoc them trong retrain_from_feedback.py o ml-service.
+const DISLIKE_REASONS: { value: string; label: string }[] = [
+  { value: 'TOO_EXPENSIVE', label: 'Giá quá cao' },
+  { value: 'TOO_HEAVY', label: 'Máy quá nặng/cồng kềnh' },
+  { value: 'WEAK_PERFORMANCE', label: 'Cấu hình yếu' },
+  { value: 'POOR_DISPLAY', label: 'Màn hình không như ý' },
+  { value: 'BRAND', label: 'Không thích thương hiệu' },
+  { value: 'OTHER', label: 'Lý do khác' },
+];
+
 /** The hien thi 1 may trong danh sach "Ket qua goi y" (Results.tsx) - gom anh, gia + khuyen mai,
  * 2 diem manh/canh bao noi bat nhat, nut Vi sao/So sanh/Chi tiet, va nut Thich/Khong thich de
- * ghi lai phan hoi (dung cho "hoc tu phan hoi" - xem retrain_from_feedback trong ml-service). */
+ * ghi lai phan hoi (dung cho "hoc tu phan hoi" - xem retrain_from_feedback trong ml-service).
+ * `badges`: nhan phu (FR-02) do Results.tsx TINH TU TAP KET QUA DANG HIEN (khong dung nguong
+ * co dinh nhu valueIdx > X), vd "Nhe nhat"/"Manh nhat"/"Dang tien nhat" trong top may dang xem. */
 export function RecommendationCard({
   item,
   sessionId,
+  badges,
   onExplain,
   onCompareToggle,
   isComparing,
 }: {
   item: RecommendationItemDto;
   sessionId: string;
+  badges?: string[];
   onExplain: () => void;
   onCompareToggle: () => void;
   isComparing: boolean;
 }) {
   const navigate = useNavigate();
   const [feedback, setFeedback] = useState<'LIKE' | 'DISLIKE' | null>(null);
+  const [reasonPickerOpen, setReasonPickerOpen] = useState(false);
+  const [reason, setReason] = useState<string>('TOO_EXPENSIVE');
   const laptop = item.laptop;
   const isTop1 = item.rank === 1;
 
-  /** Ghi lai 1 su kien Thich/Khong thich - LUU Y: cap nhat giao dien (setFeedback) NGAY LAP TUC
-   * truoc khi cho ket qua goi API (optimistic update), vi day chi la telemetry phu, khong bat
-   * buoc thanh cong ngay lap tuc thi trai nghiem nguoi dung moi lam. Neu goi API loi thi im
-   * lang bo qua (khong hien thong bao loi) - khong nen lam gian doan nguoi dung vi 1 thao tac
-   * phu nhu the nay. */
-  async function sendFeedback(type: 'LIKE' | 'DISLIKE') {
+  /** Ghi lai 1 su kien phan hoi - LUU Y: cap nhat giao dien (setFeedback) NGAY LAP TUC truoc khi
+   * cho ket qua goi API (optimistic update), vi day chi la telemetry phu, khong bat buoc thanh
+   * cong ngay lap tuc thi trai nghiem nguoi dung moi lam. Neu goi API loi thi im lang bo qua
+   * (khong hien thong bao loi) - khong nen lam gian doan nguoi dung vi 1 thao tac phu nhu the nay. */
+  async function sendFeedback(type: 'LIKE' | 'DISLIKE', extra?: { reason?: string }) {
     setFeedback(type);
     try {
-      await api.post('/events', { sessionId, laptopId: laptop.id, type });
+      await api.post('/events', { sessionId, laptopId: laptop.id, type, ...extra });
       message.success('Cảm ơn bạn! Phản hồi giúp hệ thống gợi ý tốt hơn.');
     } catch {
       // im lang - khong lam gian doan trai nghiem
     }
+  }
+
+  function handleDislikeClick() {
+    setReasonPickerOpen(true);
+  }
+
+  function confirmDislike() {
+    setReasonPickerOpen(false);
+    sendFeedback('DISLIKE', { reason });
   }
 
   return (
@@ -88,7 +113,11 @@ export function RecommendationCard({
               <h3 style={{ margin: '2px 0' }}>{laptop.name}</h3>
               <div style={{ display: 'flex', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
                 {laptop.segmentLabel && <SegmentTag segment={laptop.segmentLabel.segment} />}
-                {laptop.valueIdx > 3.5 && <Tag color="gold">💎 Đáng tiền nhất</Tag>}
+                {badges?.map((b) => (
+                  <Tag color="gold" key={b}>
+                    {b}
+                  </Tag>
+                ))}
               </div>
               <div style={{ fontSize: 22, fontWeight: 700, color: t.primary700 }} className="tabular-nums">
                 {formatVnd(laptop.priceVnd)}
@@ -143,11 +172,32 @@ export function RecommendationCard({
           <Button
             shape="circle"
             icon={feedback === 'DISLIKE' ? <DislikeFilled /> : <DislikeOutlined />}
-            onClick={() => sendFeedback('DISLIKE')}
+            onClick={handleDislikeClick}
             style={{ color: feedback === 'DISLIKE' ? t.error : undefined }}
           />
         </div>
       </div>
+
+      {/* FR-04: khi bam "Khong thich", hoi RO ly do thay vi chi ghi 1 su kien chung chung - du
+          lieu nay dung de UC-15 (Phan tich phan hoi) thong ke nguyen nhan pho bien nhat. */}
+      <Modal
+        title="Vì sao bạn không thích máy này?"
+        open={reasonPickerOpen}
+        onCancel={() => setReasonPickerOpen(false)}
+        onOk={confirmDislike}
+        okText="Gửi phản hồi"
+        cancelText="Bỏ qua"
+      >
+        <Radio.Group value={reason} onChange={(e) => setReason(e.target.value)}>
+          <Space direction="vertical">
+            {DISLIKE_REASONS.map((r) => (
+              <Radio key={r.value} value={r.value}>
+                {r.label}
+              </Radio>
+            ))}
+          </Space>
+        </Radio.Group>
+      </Modal>
     </div>
   );
 }

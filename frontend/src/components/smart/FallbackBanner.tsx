@@ -16,13 +16,15 @@ export function FallbackBanner() {
 }
 
 /** Hien khi loc cung theo ngan sach nguoi dung chon tra ve QUA IT may (backend tu mo rong them
- * 10% ngoai ngan sach de van co du may cho kNN xep hang, thay vi tra ve danh sach rong). */
-export function BudgetRelaxedBanner() {
+ * 10% ngoai ngan sach de van co du may cho kNN xep hang, thay vi tra ve danh sach rong).
+ * `count` (FR-02): so may THAT SU thoa dieu kien ban dau, de nguoi dung hieu ro vi sao he thong
+ * phai noi rong thay vi 1 cau chung chung. */
+export function BudgetRelaxedBanner({ count }: { count: number }) {
   return (
     <Alert
       type="info"
       showIcon
-      message="Chỉ có ít máy trong ngân sách nên hệ thống đã mở rộng thêm 10%."
+      message={`Chỉ có ${count} máy thỏa điều kiện trong ngân sách bạn chọn nên hệ thống đã mở rộng thêm 10%.`}
       style={{ marginBottom: 16 }}
     />
   );

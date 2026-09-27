@@ -203,6 +203,48 @@ kèm phân bố xác suất đầy đủ, cho phép giữ nguyên nhãn AI hoặ
 hiệu "1" hiện trên menu, màn hiện đúng thông tin máy + phân bố xác suất, bấm duyệt xong hàng đợi
 rỗng và huy hiệu biến mất ngay lập tức.
 
+### 5.4 Hoàn thiện luồng khách hàng Wizard → Kết quả → Chi tiết (FR-01 → FR-04)
+
+Trước Giai đoạn 3, màn Tư vấn (Wizard) và Kết quả còn thiếu nhiều mục trong đặc tả
+`docs/02_YEU_CAU_CHUC_NANG.md`: ngân sách chỉ có ô nhập tay (không có nút chọn nhanh), không có ràng
+buộc SSD/cân nặng/hãng, không hiển thị phân khúc AI suy luận, không có gợi ý nhẹ khi người dùng tự
+chọn phân khúc khác dự đoán, số lượng kết quả cố định 5 máy, nhãn "Đáng tiền nhất" tính theo ngưỡng
+cố định toàn hệ thống thay vì so trong nhóm đang hiển thị, không có biểu đồ radar, không hỏi lý do
+khi "Không thích", không ghi nhận sự kiện thêm vào so sánh, và trang Chi tiết không hiện chênh lệch
+giá với máy tương tự.
+
+**Đã bổ sung:**
+
+- **`Wizard.tsx`**: đổi bố cục 2 cột (form + panel tóm tắt luôn cập nhật theo lựa chọn); thanh trượt
+  ngân sách 8–80tr kèm 4 nút chọn nhanh; 3 ô ràng buộc mới (SSD tối thiểu, cân nặng tối đa, hãng ưa
+  thích — nhiều lựa chọn); gọi `POST /recommendations/infer-segment` mỗi khi đổi hoạt động để hiển
+  thị "Nhu cầu của bạn gần với **X** (độ tin cậy Y%)" khi chưa tự chọn phân khúc, và cảnh báo nhẹ
+  "phân khúc X có thể hợp hơn" kèm nút "Xem thử" khi phân khúc tự chọn khác với dự đoán AI **và** độ
+  tin cậy dự đoán ≥ ngưỡng 60%.
+- **`recommend.service.ts` + `types.ts`**: trả thêm `candidatesBeforeRelax` (số máy thật sự thoả
+  ngân sách gốc trước khi nới 10%) để `BudgetRelaxedBanner` hiển thị con số cụ thể thay vì câu chung
+  chung.
+- **`Results.tsx`**: bộ chọn số lượng hiển thị (`Segmented` 3/5/8/10) gọi lại đúng request gốc (lưu
+  từ Wizard qua `location.state.requestBody`) với `topN` mới; nhãn phụ "🪶 Nhẹ nhất / ⚡ Mạnh nhất /
+  💎 Đáng tiền nhất" nay được tính **từ chính tập kết quả đang hiển thị** (so sánh `weightKg` /
+  `performanceIdx` / `valueIdx` giữa các máy trong top N) thay vì một ngưỡng cố định trong toàn bộ
+  1.000 máy; bấm "+ So sánh" ghi sự kiện `ADD_COMPARE` (tín hiệu quan tâm ngầm định, dùng cho UC-15).
+- **`RecommendationCard.tsx`**: bấm "Không thích" mở modal chọn 1 trong 6 lý do (khớp enum `reason`
+  phía backend) trước khi gửi sự kiện `DISLIKE` kèm lý do.
+- **`ExplainDrawer.tsx`**: thêm biểu đồ radar (Recharts) so sánh 6 trục "Bạn cần" vs "Máy này" (CPU,
+  GPU, RAM, SSD, Pin, tần số quét màn hình), mỗi trục chuẩn hoá về 0–100% theo giá trị lớn hơn giữa
+  hai bên để các đơn vị khác nhau (điểm CPU, GB, Hz) không lấn át nhau trên cùng biểu đồ.
+- **`Detail.tsx`**: mỗi máy trong "Máy tương tự" hiện nhãn chênh lệch giá so với máy đang xem
+  ("Đắt hơn N%" / "Rẻ hơn N%" / "Cùng mức giá").
+
+**Đã kiểm thử trên browser** (`scripts/capture_phase3_wizard_results.py`, ảnh
+`crud_test_screenshots/phase3_*.png`): xác nhận đủ 8 kịch bản — gợi ý phân khúc AI hiện đúng khi
+chưa chọn ("Văn phòng / soạn thảo" → AI đoán OFFICE 100%), gợi ý nhẹ hiện đúng khi tự chọn khác
+(chọn Gaming trong khi AI đoán OFFICE 100% ≥ ngưỡng), điều hướng Wizard → Kết quả, đổi số lượng
+hiển thị không lỗi, biểu đồ radar hiện trong Drawer, modal lý do "Không thích" hoạt động, nút So
+sánh không lỗi, và trang Chi tiết hiện đúng nhãn chênh lệch giá. `tsc --noEmit` sạch ở cả
+frontend/backend, `pytest` ml-service 35/35 pass (không đổi mô hình ở giai đoạn này).
+
 ## 6. Độ đo thực tế — công sức tìm kiếm
 
 Đo bằng **số máy người dùng phải xem qua** trước khi gặp máy phù hợp (máy thuộc nhóm 20% hài lòng

@@ -100,13 +100,27 @@ export function Detail() {
         />
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
-          {similar.map((s) => (
-            <Card key={s.laptopId} hoverable onClick={() => navigate(`/laptop/${s.laptopId}`)} size="small">
-              <LaptopThumbnail imageUrl={s.laptop?.imageUrl} segment={s.laptop?.segmentLabel?.segment} brand={s.laptop?.brand?.name} name={s.laptop?.name ?? ''} height={90} />
-              <div style={{ fontWeight: 600 }}>{s.laptop?.name}</div>
-              <div className="tabular-nums">{formatVnd(s.laptop?.priceVnd)}</div>
-            </Card>
-          ))}
+          {similar.map((s) => {
+            // FR-04: hien chenh lech gia SO VOI may dang xem, giup nguoi dung nhanh chong biet
+            // may tuong tu nay dat/re hon bao nhieu ma khong phai tu nham trong dau.
+            const diff = s.laptop ? s.laptop.priceVnd - laptop.priceVnd : 0;
+            const diffPct = laptop.priceVnd ? Math.round((diff / laptop.priceVnd) * 100) : 0;
+            return (
+              <Card key={s.laptopId} hoverable onClick={() => navigate(`/laptop/${s.laptopId}`)} size="small">
+                <LaptopThumbnail imageUrl={s.laptop?.imageUrl} segment={s.laptop?.segmentLabel?.segment} brand={s.laptop?.brand?.name} name={s.laptop?.name ?? ''} height={90} />
+                <div style={{ fontWeight: 600 }}>{s.laptop?.name}</div>
+                <div className="tabular-nums">{formatVnd(s.laptop?.priceVnd)}</div>
+                {s.laptop && diff !== 0 && (
+                  <Tag color={diff > 0 ? 'red' : 'green'} style={{ marginTop: 4 }}>
+                    {diff > 0 ? `Đắt hơn ${diffPct}%` : `Rẻ hơn ${Math.abs(diffPct)}%`}
+                  </Tag>
+                )}
+                {s.laptop && diff === 0 && (
+                  <Tag style={{ marginTop: 4 }}>Cùng mức giá</Tag>
+                )}
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

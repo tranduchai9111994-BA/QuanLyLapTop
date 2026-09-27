@@ -102,6 +102,9 @@ export async function recommend(body: RecommendRequestBody) {
   // ---- BUOC 2 + 3: loc cung, tu dong noi rong ngan sach neu qua it ket qua ----
   let candidates = await findCandidates(usedSegment, body.budget.max, body.must);
   let budgetRelaxed = false;
+  // Luu lai SO MAY truoc khi noi rong, de FE hien thong bao cu the "chi co 2 may thoa dieu
+  // kien" (FR-02) thay vi cau chung chung khong noi ro con so.
+  const candidatesBeforeRelax = candidates.length;
   if (candidates.length < DEFAULT_MIN_CANDIDATES) {
     budgetRelaxed = true;
     const relaxedMax = Math.round(body.budget.max * (1 + DEFAULT_BUDGET_RELAX_RATIO));
@@ -213,6 +216,7 @@ export async function recommend(body: RecommendRequestBody) {
     },
     mode,
     budgetRelaxed,
+    candidatesBeforeRelax,
     ideal,
     weights,
     items,

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Button, Card, Checkbox, InputNumber, Radio, Select, Spin, Tag, message } from 'antd';
+import { useEffect, useState } from 'react';
+import { Alert, Button, Card, Checkbox, InputNumber, Radio, Select, Slider, Spin, Tag, message } from 'antd';
 import {
   ThunderboltOutlined,
   RocketOutlined,
@@ -10,9 +10,9 @@ import { useNavigate } from 'react-router-dom';
 import { PrioritySlider } from '../components/smart/PrioritySlider';
 import { NeedTextInput, type ParsedNeed } from '../components/smart/NeedTextInput';
 import { api } from '../lib/api';
-import type { Priorities, RecommendationResult } from '../types';
-import { formatVnd } from '../utils/format';
-import { t } from '../theme/tokens';
+import type { Priorities, RecommendationResult, Segment } from '../types';
+import { formatVnd, formatShortVnd } from '../utils/format';
+import { segmentColors, t } from '../theme/tokens';
 
 const ACTIVITY_OPTIONS = [
   { value: 'van_phong', label: 'Văn phòng / soạn thảo' },
@@ -25,18 +25,67 @@ const ACTIVITY_OPTIONS = [
   { value: 'xem_phim', label: 'Xem phim / giải trí' },
 ];
 
+// FR-01: nut chon nhanh ngan sach - gioi han theo tung khoang, don gian hoa cho nguoi
+// khong quen keo thanh truot chinh xac den tung trieu.
+const BUDGET_PRESETS: { label: string; range: [number, number] }[] = [
+  { label: 'Dưới 15 tr', range: [8_000_000, 15_000_000] },
+  { label: '15–25 tr', range: [15_000_000, 25_000_000] },
+  { label: '25–40 tr', range: [25_000_000, 40_000_000] },
+  { label: 'Trên 40 tr', range: [40_000_000, 80_000_000] },
+];
+
+const BUDGET_MIN = 8_000_000;
+const BUDGET_MAX = 80_000_000;
+const BUDGET_STEP = 500_000;
+
+interface InferResult {
+  segment: Segment;
+  confidence: number;
+  distribution: Record<string, number>;
+}
+
 export function Wizard() {
   const navigate = useNavigate();
-  const [segmentChoice, setSegmentChoice] = useState<'unknown' | 'OFFICE' | 'ULTRABOOK' | 'GAMING' | 'CREATOR'>(
-    'unknown'
-  );
+  const [segmentChoice, setSegmentChoice] = useState<'unknown' | Segment>('unknown');
   const [activities, setActivities] = useState<string[]>([]);
   const [budget, setBudget] = useState<[number, number]>([15_000_000, 25_000_000]);
   const [ramMin, setRamMin] = useState<number | null>(null);
+  const [ssdMin, setSsdMin] = useState<number | null>(null);
+  const [weightMax, setWeightMax] = useState<number | null>(null);
+  const [brandIds, setBrandIds] = useState<number[]>([]);
+  const [brands, setBrands] = useState<{ id: number; name: string }[]>([]);
   const [priorities, setPriorities] = useState<Priorities>({ performance: 3, mobility: 3, display: 3, price: 3 });
   const [loading, setLoading] = useState(false);
   // Ket qua doc cau tu do (Mo hinh C) - dung de gui kem telemetry va truyen trong so thuong hieu
   const [parsedNeed, setParsedNeed] = useState<{ need: ParsedNeed; text: string } | null>(null);
+  // FR-01: Mo hinh A suy phan khuc tu cac HOAT DONG da chon (doc lap voi phan khuc nguoi dung
+  // tu chon o o Radio ben duoi) - dung de (a) hien "gan voi Gaming (72%)" khi chon "Chua ro",
+  // (b) goi y nhe khi nguoi dung tu chon 1 phan khuc KHAC voi du doan nay.
+  const [inferred, setInferred] = useState<InferResult | null>(null);
+
+  useEffect(() => {
+    api.get('/brands').then((r) => setBrands(r.data.data)).catch(() => undefined);
+  }, []);
+
+  // Goi lai moi khi danh sach hoat dong doi - danh sach rong thi khong suy duoc gi (bo qua).
+  useEffect(() => {
+    if (activities.length === 0) {
+      setInferred(null);
+      return;
+    }
+    let cancelled = false;
+    api
+      .post('/recommendations/infer-segment', { activities })
+      .then((r) => {
+        if (!cancelled) setInferred(r.data.data);
+      })
+      .catch(() => {
+        if (!cancelled) setInferred(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activities]);
 
   /** Khi Mo hinh C doc xong cau noi: dien san moi lua chon ben duoi. Nguoi dung van sua duoc -
    * he thong goi y chu khong ep (nguyen tac "ton trong quyet dinh nguoi dung", docs/07 SS1). */
@@ -50,25 +99,42 @@ export function Wizard() {
 
   async function handleSubmit() {
     setLoading(true);
+    // Luu lai NGUYEN VAN phan than request (khong chi ket qua) - Results.tsx can goi lai dung
+    // request nay voi topN khac khi nguoi dung doi "So luong ket qua" (FR-02), khong bat nguoi
+    // dung phai quay lai Wizard dien lai tu dau.
+    const requestBody = {
+      segment: segmentChoice === 'unknown' ? null : segmentChoice,
+      activities,
+      budget: { min: budget[0], max: budget[1] },
+      priorities,
+      must: {
+        ...(ramMin ? { ramMin } : {}),
+        ...(ssdMin ? { ssdMin } : {}),
+        ...(weightMax ? { weightMax } : {}),
+        ...(brandIds.length ? { brandIds } : {}),
+      },
+      topN: 5,
+      brandWeight: parsedNeed?.need.brandWeight ?? 1,
+      needText: parsedNeed?.text,
+      needLabel: parsedNeed?.need.label,
+    };
     try {
-      const r = await api.post<{ success: boolean; data: RecommendationResult }>('/recommendations', {
-        segment: segmentChoice === 'unknown' ? null : segmentChoice,
-        activities,
-        budget: { min: budget[0], max: budget[1] },
-        priorities,
-        must: ramMin ? { ramMin } : {},
-        topN: 5,
-        brandWeight: parsedNeed?.need.brandWeight ?? 1,
-        needText: parsedNeed?.text,
-        needLabel: parsedNeed?.need.label,
-      });
-      navigate('/results', { state: { result: r.data.data } });
+      const r = await api.post<{ success: boolean; data: RecommendationResult }>('/recommendations', requestBody);
+      navigate('/results', { state: { result: r.data.data, requestBody } });
     } catch (err) {
       message.error('Không kết nối được máy chủ. Kiểm tra mạng và thử lại.');
     } finally {
       setLoading(false);
     }
   }
+
+  // FR-01: goi y nhe khi nguoi dung TU chon 1 phan khuc ro rang nhung khac voi du doan tu hoat
+  // dong, VA du doan do du tin cay (>= 60%) - chi hien khi CA HAI dieu kien dung, khong ep buoc.
+  const showNudge =
+    segmentChoice !== 'unknown' &&
+    inferred &&
+    inferred.segment !== segmentChoice &&
+    inferred.confidence >= 0.6;
 
   return (
     <div style={{ maxWidth: 1240, margin: '24px auto', padding: '0 24px' }}>
@@ -90,14 +156,32 @@ export function Wizard() {
         options={ACTIVITY_OPTIONS}
         value={activities}
         onChange={(v) => setActivities(v as string[])}
-        style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 24 }}
+        style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}
       />
+
+      {/* FR-01: "Nhu cau cua ban gan voi Gaming (72%)" - CHI hien khi nguoi dung chua tu chon
+          phan khuc (dang de AI goi y), tranh trung lap voi goi y nhe ben duoi. */}
+      {segmentChoice === 'unknown' && inferred && (
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 24 }}
+          message={
+            <>
+              Nhu cầu của bạn gần với{' '}
+              <strong>{segmentColors[inferred.segment]?.label ?? inferred.segment}</strong> (độ tin
+              cậy {Math.round(inferred.confidence * 100)}%)
+            </>
+          }
+        />
+      )}
+      {segmentChoice === 'unknown' && !inferred && <div style={{ marginBottom: 24 }} />}
 
       <h3>Bạn đã biết mình cần dòng máy nào chưa?</h3>
       <Radio.Group
         value={segmentChoice}
         onChange={(e) => setSegmentChoice(e.target.value)}
-        style={{ marginBottom: 24 }}
+        style={{ marginBottom: 8 }}
       >
         <Radio.Button value="unknown">Chưa rõ, để AI gợi ý</Radio.Button>
         <Radio.Button value="OFFICE">Văn phòng</Radio.Button>
@@ -106,36 +190,102 @@ export function Wizard() {
         <Radio.Button value="CREATOR">Đồ họa</Radio.Button>
       </Radio.Group>
 
-      <h3>Ngân sách (VND)</h3>
-      <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
-        <InputNumber
-          style={{ width: '100%' }}
-          min={5_000_000}
-          step={1_000_000}
-          value={budget[0]}
-          formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
-          onChange={(v) => setBudget([Number(v ?? 0), budget[1]])}
+      {/* FR-01: goi y nhe khi phan khuc tu chon khac voi du doan tu hoat dong - KHONG EP, chi
+          de 1 nut nho cho doi neu nguoi dung muon. */}
+      {showNudge && inferred && (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 24 }}
+          message={
+            <span>
+              Với hoạt động bạn chọn, phân khúc{' '}
+              <strong>{segmentColors[inferred.segment]?.label ?? inferred.segment}</strong> có thể
+              hợp hơn (độ tin cậy {Math.round(inferred.confidence * 100)}%).{' '}
+              <Button size="small" onClick={() => setSegmentChoice(inferred.segment)}>
+                Xem thử
+              </Button>
+            </span>
+          }
         />
-        <span style={{ alignSelf: 'center' }}>đến</span>
-        <InputNumber
-          style={{ width: '100%' }}
-          min={5_000_000}
-          step={1_000_000}
-          value={budget[1]}
-          formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
-          onChange={(v) => setBudget([budget[0], Number(v ?? 0)])}
-        />
+      )}
+      {!showNudge && <div style={{ marginBottom: 24 }} />}
+
+      <h3>
+        Ngân sách: {formatShortVnd(budget[0])} – {formatShortVnd(budget[1])}
+      </h3>
+      <Slider
+        range
+        min={BUDGET_MIN}
+        max={BUDGET_MAX}
+        step={BUDGET_STEP}
+        value={budget}
+        tooltip={{ formatter: (v) => formatShortVnd(v) }}
+        onChange={(v) => setBudget(v as [number, number])}
+        style={{ marginBottom: 4 }}
+      />
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 24 }}>
+        {BUDGET_PRESETS.map((p) => (
+          <Tag
+            key={p.label}
+            style={{ cursor: 'pointer' }}
+            color={budget[0] === p.range[0] && budget[1] === p.range[1] ? 'blue' : undefined}
+            onClick={() => setBudget(p.range)}
+          >
+            {p.label}
+          </Tag>
+        ))}
       </div>
 
-      <h3>RAM tối thiểu (không bắt buộc)</h3>
-      <Select
-        allowClear
-        style={{ width: '100%', marginBottom: 24 }}
-        placeholder="Không yêu cầu"
-        value={ramMin ?? undefined}
-        onChange={(v) => setRamMin(v ?? null)}
-        options={[8, 16, 32].map((v) => ({ value: v, label: `${v} GB trở lên` }))}
-      />
+      <h3>Yêu cầu bắt buộc (không bắt buộc phải điền)</h3>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
+        <div>
+          <div style={{ fontSize: 13, color: t.textSecondary, marginBottom: 4 }}>RAM tối thiểu</div>
+          <Select
+            allowClear
+            style={{ width: '100%' }}
+            placeholder="Không yêu cầu"
+            value={ramMin ?? undefined}
+            onChange={(v) => setRamMin(v ?? null)}
+            options={[8, 16, 32].map((v) => ({ value: v, label: `${v} GB trở lên` }))}
+          />
+        </div>
+        <div>
+          <div style={{ fontSize: 13, color: t.textSecondary, marginBottom: 4 }}>SSD tối thiểu</div>
+          <Select
+            allowClear
+            style={{ width: '100%' }}
+            placeholder="Không yêu cầu"
+            value={ssdMin ?? undefined}
+            onChange={(v) => setSsdMin(v ?? null)}
+            options={[256, 512, 1024].map((v) => ({ value: v, label: `${v} GB trở lên` }))}
+          />
+        </div>
+        <div>
+          <div style={{ fontSize: 13, color: t.textSecondary, marginBottom: 4 }}>Trọng lượng tối đa</div>
+          <Select
+            allowClear
+            style={{ width: '100%' }}
+            placeholder="Không yêu cầu"
+            value={weightMax ?? undefined}
+            onChange={(v) => setWeightMax(v ?? null)}
+            options={[1.5, 2, 2.5, 3].map((v) => ({ value: v, label: `${v} kg trở xuống` }))}
+          />
+        </div>
+        <div>
+          <div style={{ fontSize: 13, color: t.textSecondary, marginBottom: 4 }}>Hãng ưa thích</div>
+          <Select
+            allowClear
+            mode="multiple"
+            maxTagCount="responsive"
+            style={{ width: '100%' }}
+            placeholder="Tất cả hãng"
+            value={brandIds}
+            onChange={setBrandIds}
+            options={brands.map((b) => ({ label: b.name, value: b.id }))}
+          />
+        </div>
+      </div>
 
       <h3>Mức độ ưu tiên</h3>
       <PrioritySlider
@@ -214,10 +364,19 @@ export function Wizard() {
             ))}
           </div>
 
-          {ramMin && (
+          {(ramMin || ssdMin || weightMax || brandIds.length > 0) && (
             <div>
-              <div style={{ fontSize: 13, color: t.textSecondary }}>Bắt buộc</div>
-              <Tag color="orange">RAM ≥ {ramMin} GB</Tag>
+              <div style={{ fontSize: 13, color: t.textSecondary, marginBottom: 4 }}>Bắt buộc</div>
+              <Space size={[4, 4]} wrap>
+                {ramMin && <Tag color="orange">RAM ≥ {ramMin} GB</Tag>}
+                {ssdMin && <Tag color="orange">SSD ≥ {ssdMin} GB</Tag>}
+                {weightMax && <Tag color="orange">≤ {weightMax} kg</Tag>}
+                {brandIds.length > 0 && (
+                  <Tag color="orange">
+                    {brandIds.length} hãng: {brandIds.map((id) => brands.find((b) => b.id === id)?.name).filter(Boolean).join(', ')}
+                  </Tag>
+                )}
+              </Space>
             </div>
           )}
         </Card>

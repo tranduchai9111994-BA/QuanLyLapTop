@@ -60,6 +60,9 @@ export interface RecommendationResult {
   // true neu loc cung ngan sach ban dau qua chat (khong con may nao) nen backend tu no rong
   // them 10% de van co ket qua tra ve (xem BudgetRelaxedBanner.tsx)
   budgetRelaxed: boolean;
+  // So may thoa dieu kien TRUOC khi noi rong ngan sach - dung de hien thong bao cu the
+  // "chi co N may thoa dieu kien" thay vi chung chung
+  candidatesBeforeRelax: number;
   // "May trong mo" duoc suy tu muc uu tien (xem retriever.build_ideal_vector) - dung de ve
   // bang so sanh trong ExplainDrawer.tsx
   ideal: Record<string, number>;
