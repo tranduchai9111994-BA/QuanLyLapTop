@@ -43,7 +43,7 @@ def main():
         page.goto(f"{BASE}/admin/login")
         page.wait_for_timeout(500)
         page.get_by_role("button", name="Đăng nhập").click()
-        page.wait_for_url("**/admin/**", timeout=10000)
+        page.wait_for_url(lambda url: "/admin/login" not in url and "/admin" in url, timeout=10000)
         page.wait_for_timeout(800)
 
         # ================= 1) HANG MAY: sua Muc uy tin (CRUD - Update) =================

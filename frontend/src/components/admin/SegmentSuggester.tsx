@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Button, Progress, Tag, message } from 'antd';
+import { Alert, Button, Form, Progress, Space, Tag, message } from 'antd';
 import { ExperimentOutlined } from '@ant-design/icons';
 import type { FormInstance } from 'antd';
 import { api } from '../../lib/api';
@@ -9,14 +9,21 @@ interface Prediction {
   label: string;
   proba: number;
   distribution: Record<string, number>;
+  /** k may trong tap huan luyen gan nhat da bo phieu (FR-09) - nhan + khoang cach. */
+  neighbors: { label: string; distance: number }[];
 }
 
 /** Tieu chi 3 - "he thong thong minh len": khi nhan vien nhap MAY MOI, Mo hinh A tu doc cau hinh
- * va GOI Y phan khuc kem do tin cay. Nhan vien chi can xac nhan thay vi tu phan loai bang tay.
- * Do tin cay < 60% se hien canh bao "can xac minh" (docs/07 SS7.8). */
+ * va GOI Y phan khuc kem do tin cay + danh sach k lang gieng da bo phieu. Nhan vien chi can chap
+ * nhan hoac chon nhan khac o o "Phan khuc" ben duoi, roi bam Luu.
+ * Viec LUU nhan do backend lam (segment.service.ts): giu nhan AI -> nguon MODEL, doi nhan khac ->
+ * nguon ADMIN; bo trong o "Phan khuc" -> backend tu dung du doan, do tin cay < nguong thi vao
+ * hang doi "Can xac minh". */
 export function SegmentSuggester({ form }: { form: FormInstance }) {
   const [pred, setPred] = useState<Prediction | null>(null);
   const [loading, setLoading] = useState(false);
+  // Theo doi o "Phan khuc" dang chon gi de biet nguoi dung dang giu hay doi nhan AI goi y
+  const chosenSegment = Form.useWatch('segment', form);
 
   async function suggest() {
     const v = form.getFieldsValue();
@@ -56,7 +63,11 @@ export function SegmentSuggester({ form }: { form: FormInstance }) {
         weightKg: v.weightKg,
         batteryWh: v.batteryWh ?? 55,
       });
-      setPred(r.data.data);
+      const p: Prediction = r.data.data;
+      setPred(p);
+      // O "Phan khuc" con trong -> dien san nhan AI de nguoi dung chi can bam Luu. Neu nguoi dung
+      // da tu chon roi thi KHONG ghi de - ton trong lua chon cua nguoi (co nut "Dung nhan AI").
+      if (!form.getFieldValue('segment')) form.setFieldValue('segment', p.label);
     } catch (err: any) {
       // Hien dung thong bao tu server (vd "hay tai lai trang") thay vi doan bua la loi ML service
       message.error(
@@ -94,12 +105,44 @@ export function SegmentSuggester({ form }: { form: FormInstance }) {
             </div>
           ))}
 
+          {/* FR-09: cho thay LY DO du doan - chinh k may gan nhat da bo phieu, khong phai hop den */}
+          <div style={{ marginTop: 8, fontSize: 12, color: t.textSecondary }}>
+            {pred.neighbors.length} máy gần nhất trong dữ liệu huấn luyện đã bỏ phiếu:{' '}
+            {Object.entries(
+              pred.neighbors.reduce<Record<string, number>>((acc, n) => {
+                acc[n.label] = (acc[n.label] ?? 0) + 1;
+                return acc;
+              }, {})
+            )
+              .sort((a, b) => b[1] - a[1])
+              .map(([seg, count]) => `${count} ${segmentColors[seg]?.label ?? seg}`)
+              .join(', ')}
+          </div>
+          <Space size={4} wrap style={{ marginTop: 4 }}>
+            {pred.neighbors.map((n, i) => (
+              <Tag key={i} color={segmentColors[n.label]?.color} style={{ fontSize: 11, margin: 0 }}>
+                #{i + 1} · khoảng cách {n.distance.toFixed(2)}
+              </Tag>
+            ))}
+          </Space>
+
+          {chosenSegment && chosenSegment !== pred.label && (
+            <div style={{ marginTop: 8 }}>
+              <span style={{ fontSize: 13, color: t.warning }}>
+                Bạn đang chọn phân khúc khác với AI (sẽ lưu với nguồn "nhân viên chọn").{' '}
+              </span>
+              <Button size="small" onClick={() => form.setFieldValue('segment', pred.label)}>
+                Dùng nhãn AI
+              </Button>
+            </div>
+          )}
+
           {pred.proba < 0.6 && (
             <Alert
               type="warning"
               showIcon
               style={{ marginTop: 8 }}
-              message="Hệ thống chưa chắc chắn — cần nhân viên xác minh lại phân khúc."
+              message="Hệ thống chưa chắc chắn — hãy kiểm tra lại ô Phân khúc. Nếu để trống, máy sẽ vào hàng đợi cần xác minh."
             />
           )}
         </div>

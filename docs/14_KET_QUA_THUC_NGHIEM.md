@@ -147,11 +147,30 @@ trong metric kNN**, không chỉ là huy hiệu trang trí trên giao diện.
 
 ## 5. Tiêu chí 3 — hệ thống thông minh lên theo thời gian
 
-### 5.1 Máy mới tự được gán phân khúc
+### 5.1 Máy mới tự được gán phân khúc — và THẬT SỰ được đưa vào catalog gợi ý
 
-Khi nhân viên nhập máy mới, Mô hình A đọc cấu hình và gợi ý phân khúc kèm phân bố xác suất. Ví dụ
-đã kiểm thử trên giao diện: ASUS ROG (i9-13900H + RTX 4070, 32GB, 240Hz, 2,6kg) → **Gaming 89%**,
-Đồ họa 11%. Độ tin cậy < 60% sẽ hiện cảnh báo "cần nhân viên xác minh".
+**Lỗi từng phát hiện (đối chiếu `docs/02_YEU_CAU_CHUC_NANG.md`)**: nút "AI gợi ý phân khúc" trước
+đây chỉ HIỂN THỊ kết quả dự đoán, không lưu nhãn nào cả. Vì bước đồng bộ sang ML service bỏ qua
+mọi máy chưa có nhãn (`snapshotSync.ts`), **máy mới thêm từ trang quản trị không bao giờ được gợi
+ý cho khách** — hỏng đúng tiêu chí 3 của đề bài. Đã sửa (`backend/src/modules/laptops/segment.service.ts`):
+mọi lần tạo/sửa laptop đều kết thúc bằng việc gán nhãn phân khúc thật, dựa trên đúng 1 lệnh gọi Mô
+hình A dùng chung cho cả nút "gợi ý xem trước" lẫn bước lưu.
+
+Quy tắc gán nhãn:
+- Nhân viên **giữ nguyên** nhãn AI gợi ý → nguồn `MODEL`; **tự đổi** nhãn khác → nguồn `ADMIN`.
+- Nhân viên **để trống** ô Phân khúc → dùng thẳng dự đoán AI, nguồn `MODEL`; độ tin cậy dưới
+  ngưỡng (đọc từ cấu hình tri thức `confidence_threshold`, mặc định 0,6) → trạng thái
+  `NEEDS_REVIEW` (vào hàng đợi cần xác minh) thay vì chặn lưu máy.
+- ML service trả thêm **danh sách k láng giềng đã bỏ phiếu** (nhãn + khoảng cách), hiển thị ngay
+  dưới thanh phần trăm để nhân viên thấy lý do cụ thể, không phải một con số hộp đen.
+
+Đã kiểm thử trên browser (script `scripts/capture_phase1_segment.py`, ảnh
+`crud_test_screenshots/phase1_*.png`): thêm máy "Acer i9-13900H + RTX 4070, 32GB, 240Hz, 2,6kg" →
+AI dự đoán **Gaming 100%** (7/7 láng giềng bỏ phiếu Gaming) → chọn thử nhãn khác (Đồ họa) → bấm
+"Dùng nhãn AI" quay lại Gaming → lưu → thông báo "Đã gán phân khúc: Gaming" → vào trang Chi tiết
+của chính máy đó: mục "Máy tương tự" hiển thị đủ 6 máy (trước khi sửa sẽ luôn rỗng vì máy chưa
+từng vào catalog gợi ý). Đã thêm test hồi quy `test_neighbors_explain_the_vote`
+(`ml-service/tests/test_classifier.py`) chặn lỗi lấy sai danh sách láng giềng.
 
 ### 5.2 Học từ phản hồi người dùng
 

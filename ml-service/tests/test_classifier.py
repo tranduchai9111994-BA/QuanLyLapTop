@@ -43,3 +43,24 @@ def test_scale_invariance(enriched_catalog):
     X2["price_vnd"] = X2["price_vnd"] / 1000  # doi don vi, khong anh huong vi price khong trong feature list
     pred_after = pipe.predict(X2[MODEL_A_FEATURES])
     assert (pred_before == pred_after).all()
+
+
+def test_neighbors_explain_the_vote(enriched_catalog):
+    """FR-09: danh sach lang gieng tra ve cho nhan vien phai DUNG la k may da bo phieu - voi
+    weights="uniform", ty le nhan trong k lang gieng phai bang dung xac suat predict_proba.
+    Chan loi lay lang gieng sai cach (vd quen buoc chuan hoa "prep" hoac map sai nhan)."""
+    X, y = enriched_catalog, enriched_catalog["segment"]
+    pipe = build_pipeline()
+    pipe.set_params(knn__n_neighbors=7, knn__weights="uniform", knn__metric="euclidean")
+    pipe.fit(X[MODEL_A_FEATURES], y)
+
+    sample = X[MODEL_A_FEATURES].iloc[:20]
+    proba = pipe.predict_proba(sample)
+    knn = pipe.named_steps["knn"]
+    _, idx = knn.kneighbors(pipe.named_steps["prep"].transform(sample))
+    train_labels = knn.classes_[knn._y]
+
+    for row_i in range(len(sample)):
+        votes = list(train_labels[idx[row_i]])
+        for class_i, label in enumerate(knn.classes_):
+            assert np.isclose(votes.count(label) / 7, proba[row_i][class_i])

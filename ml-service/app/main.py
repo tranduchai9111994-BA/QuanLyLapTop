@@ -112,8 +112,18 @@ def predict_segment(req: PredictSegmentRequest) -> dict:
             X[col] = 0
     proba = registry.model.predict_proba(X[MODEL_A_FEATURES])
     labels = registry.model.classes_
+
+    # FR-09: lay chinh k lang gieng da "bo phieu" - dua qua buoc chuan hoa ("prep") roi hoi buoc
+    # kNN. `knn._y` la nhan (da ma hoa thanh so) cua tap huan luyen, sklearn luu san sau khi fit;
+    # doi lai ra ten phan khuc bang `knn.classes_`. Dung de nhan vien thay DUOC ly do mo hinh
+    # chon nhan nay (vd "5/7 may gan nhat la Gaming"), khong phai 1 con so hop den.
+    prep = registry.model.named_steps["prep"]
+    knn = registry.model.named_steps["knn"]
+    neigh_dist, neigh_idx = knn.kneighbors(prep.transform(X[MODEL_A_FEATURES]))
+    train_labels = knn.classes_[knn._y]
+
     results = []
-    for row_proba in proba:
+    for row_i, row_proba in enumerate(proba):
         # Sap xep xac suat GIAM DAN de lay nhan co xac suat cao nhat len dau (order[0])
         order = np.argsort(row_proba)[::-1]
         results.append({
@@ -122,6 +132,10 @@ def predict_segment(req: PredictSegmentRequest) -> dict:
             # Tra ve CA PHAN BO xac suat (khong chi 1 nhan) de frontend hien thi "89% Gaming, 11%
             # Do hoa" - giup nhan vien thay duoc muc do CHAC CHAN cua du doan, khong chi 1 con so
             "distribution": {labels[i]: float(row_proba[i]) for i in order},
+            "neighbors": [
+                {"label": str(train_labels[j]), "distance": round(float(d), 4)}
+                for j, d in zip(neigh_idx[row_i], neigh_dist[row_i])
+            ],
         })
     return {"items": results, "modelVersion": registry.version}
 

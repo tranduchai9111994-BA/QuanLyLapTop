@@ -20,6 +20,10 @@ export interface CrudField {
   step?: number;
   /** Chu thich nho duoi o nhap (vd "Chon tu bang benchmark da co"). */
   help?: string;
+  /** Tu tinh gia tri hien trong BANG tu ca dong du lieu - dung khi gia tri khong nam thang o
+   * `row[key]` (vd phan khuc nam trong `row.segmentLabel.segment`). Neu tra ve chuoi thi o tim
+   * kiem cung tim theo chuoi nay. */
+  tableValue?: (row: any) => ReactNode;
 }
 
 /** Bang CRUD dung chung: 1 component phuc vu nhieu thuc the (Brand, CPU/GPU Benchmark, Laptop)
@@ -33,6 +37,7 @@ export function CrudTable({
   transformSubmit,
   transformEdit,
   renderFormExtra,
+  afterSave,
 }: {
   title: string;
   /** Duong dan goc dung cho POST/PUT/DELETE, vd "/brands" (khong kem query string). */
@@ -45,11 +50,17 @@ export function CrudTable({
   transformEdit?: (row: any) => any;
   /** Noi dung phu hien trong modal (vd o AI goi y phan khuc khi them laptop moi). */
   renderFormExtra?: (form: any) => ReactNode;
+  /** Goi sau khi luu thanh cong voi ban ghi server tra ve - de man cu the hien them thong bao
+   * rieng (vd Laptop canh bao "AI chi tin cay 45%, da dua vao hang doi can xac minh"). */
+  afterSave?: (saved: any) => void;
 }) {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  // Tang moi lan mo modal -> `renderFormExtra` duoc dung lai tu dau (key doi), khong con giu ket
+  // qua cu cua lan mo truoc (vd du doan AI cua may khac hien sai cho may dang sua).
+  const [formKey, setFormKey] = useState(0);
   const [searchText, setSearchText] = useState('');
   const [importing, setImporting] = useState(false);
   const [form] = Form.useForm();
@@ -74,6 +85,10 @@ export function CrudTable({
     const q = searchText.trim().toLowerCase();
     return rows.filter((row) =>
       fields.some((f) => {
+        if (f.tableValue) {
+          const v = f.tableValue(row);
+          if (typeof v === 'string' && v.toLowerCase().includes(q)) return true;
+        }
         const raw = row[f.key];
         // Truong 'select' (vd gpuId=14) phai so theo NHAN hien thi ("NVIDIA GeForce RTX 4070"),
         // khong phai so voi ID so - nguoi dung go ten may/linh kien, khong go ID.
@@ -88,6 +103,7 @@ export function CrudTable({
   function openCreate() {
     setEditing(null);
     form.resetFields();
+    setFormKey((k) => k + 1);
     setModalOpen(true);
   }
 
@@ -97,6 +113,7 @@ export function CrudTable({
   function openEdit(row: any) {
     setEditing(row);
     form.setFieldsValue(transformEdit ? transformEdit(row) : row);
+    setFormKey((k) => k + 1);
     setModalOpen(true);
   }
 
@@ -107,13 +124,11 @@ export function CrudTable({
     const values = await form.validateFields(); // nem loi neu co truong bat buoc con trong -> AntD tu hien loi tren tung o
     const payload = transformSubmit ? transformSubmit(values) : values;
     try {
-      if (editing) {
-        await api.put(`${endpoint}/${editing.id}`, payload);
-        message.success('Đã cập nhật.');
-      } else {
-        await api.post(endpoint, payload);
-        message.success('Đã thêm mới.');
-      }
+      const r = editing
+        ? await api.put(`${endpoint}/${editing.id}`, payload)
+        : await api.post(endpoint, payload);
+      message.success(editing ? 'Đã cập nhật.' : 'Đã thêm mới.');
+      afterSave?.(r.data.data);
       setModalOpen(false);
       load(); // tai lai danh sach de bang hien dung du lieu vua luu
     } catch (err: any) {
@@ -146,7 +161,14 @@ export function CrudTable({
   function handleExport() {
     const exportFields = fields.filter((f) => !f.hideInTable || f.key === 'id');
     const data = filteredRows.map((row) =>
-      Object.fromEntries(exportFields.map((f) => [f.label, exportLabel(f, row[f.key])]))
+      Object.fromEntries(
+        exportFields.map((f) => {
+          // Truong co tableValue dang chuoi (vd phan khuc nam long trong segmentLabel) -> xuat
+          // dung chuoi dang hien tren bang, neu khong se ra o trong vi row[f.key] khong ton tai
+          const shown = f.tableValue?.(row);
+          return [f.label, typeof shown === 'string' ? shown : exportLabel(f, row[f.key])];
+        })
+      )
     );
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
@@ -164,7 +186,10 @@ export function CrudTable({
       const wb = XLSX.read(buf, { type: 'array' });
       const sheet = wb.Sheets[wb.SheetNames[0]];
       const jsonRows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet);
-      const importFields = fields.filter((f) => !f.hideInForm);
+      // Nhap MOI cot da xuat, tru ID (ID do database cap). Khong loc theo hideInForm nua: vd
+      // Laptop an resWidth/resHeight khoi form (form dung 1 o "Do phan giai") nhung file xuat co 2
+      // cot nay - bo qua chung thi dong nhap vao thieu do phan giai va bi tu choi.
+      const importFields = fields.filter((f) => f.key !== 'id');
 
       let success = 0;
       let failed = 0;
@@ -174,7 +199,13 @@ export function CrudTable({
           const raw = jsonRow[f.label];
           if (raw === undefined || raw === '') continue;
           if (f.type === 'boolean') payload[f.key] = raw === 1 || raw === true || raw === 'Có';
-          else if (f.type === 'number' || f.type === 'select') payload[f.key] = Number(raw);
+          else if (f.type === 'select') {
+            // File xuat ra ghi o chon bang NHAN hien thi (vd "Intel Core i9-13900H"), khong phai
+            // ID - nen phai tra nguoc nhan -> gia tri. Truoc day ep thang Number(raw) nen file vua
+            // xuat ra nhap lai bi NaN. Van chap nhan file ghi san gia tri (ID hoac ma phan khuc).
+            const opt = f.options?.find((o) => o.label === String(raw) || String(o.value) === String(raw));
+            if (opt) payload[f.key] = opt.value;
+          } else if (f.type === 'number') payload[f.key] = Number(raw);
           else payload[f.key] = String(raw);
         }
         try {
@@ -205,8 +236,14 @@ export function CrudTable({
         key: f.key,
         // boolean -> "Co"/"Khong"; select -> tra nhan hien thi tu ID (vd 14 -> "RTX 4070");
         // con lai hien nguyen gia tri tho (text/number)
-        render: (v: any) =>
-          f.type === 'boolean' ? (v ? 'Có' : 'Không') : f.type === 'select' ? (f.options?.find((o) => o.value === v)?.label ?? v) : v,
+        render: (v: any, row: any) =>
+          f.tableValue
+            ? f.tableValue(row)
+            : f.type === 'boolean'
+              ? (v ? 'Có' : 'Không')
+              : f.type === 'select'
+                ? (f.options?.find((o) => o.value === v)?.label ?? v)
+                : v,
       })),
     {
       title: '',
@@ -285,7 +322,7 @@ export function CrudTable({
         maskClosable={false}
       >
         <Form form={form} layout="vertical">
-          {renderFormExtra?.(form)}
+          <div key={formKey}>{renderFormExtra?.(form)}</div>
           <div
             style={
               useGrid

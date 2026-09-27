@@ -93,7 +93,7 @@ def main():
         page.wait_for_timeout(600)
         page.screenshot(path=OUT / "10_dang_nhap_quan_tri.png")
         page.get_by_role("button", name="Đăng nhập").click()
-        page.wait_for_url("**/admin/**", timeout=10000)
+        page.wait_for_url(lambda url: "/admin/login" not in url and "/admin" in url, timeout=10000)
         page.wait_for_timeout(1500)
 
         # --- 10b: Hang may (co cot "Muc uy tin" - dac trung that cua Mo hinh B, moi bo sung) ---

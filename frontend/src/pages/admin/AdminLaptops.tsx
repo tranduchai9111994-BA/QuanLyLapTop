@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Spin } from 'antd';
+import { Spin, message } from 'antd';
+import { segmentColors } from '../../theme/tokens';
 import { api } from '../../lib/api';
 import { CrudTable, type CrudField } from '../../components/admin/CrudTable';
 import { SegmentSuggester } from '../../components/admin/SegmentSuggester';
@@ -14,6 +15,22 @@ import {
 
 const numOptions = (values: number[], suffix = '') =>
   values.map((v) => ({ label: `${v}${suffix}`, value: v }));
+
+// 4 phan khuc cho o chon "Phan khuc" (ma luu DB -> ten tieng Viet hien thi)
+const SEGMENT_OPTIONS = ['OFFICE', 'ULTRABOOK', 'GAMING', 'CREATOR'].map((s) => ({
+  label: segmentColors[s].label,
+  value: s,
+}));
+
+/** Chuoi hien trong cot "Phan khuc" cua bang: ten phan khuc + danh dau neu dang cho xac minh
+ * hoac chua co nhan (may chua co nhan se KHONG duoc goi y cho khach). Tra ve chuoi de o tim kiem
+ * va file Excel xuat ra dung duoc luon. */
+function segmentCell(row: any): string {
+  const l = row.segmentLabel;
+  if (!l) return 'Chưa có (chưa được gợi ý)';
+  const name = segmentColors[l.segment]?.label ?? l.segment;
+  return l.status === 'NEEDS_REVIEW' ? `${name} · cần xác minh` : name;
+}
 
 export function AdminLaptops() {
   const [fields, setFields] = useState<CrudField[] | null>(null);
@@ -80,6 +97,14 @@ export function AdminLaptops() {
           { key: 'weightKg', label: 'Trọng lượng (kg)', type: 'number', required: true, ...NUMERIC_LIMITS.weightKg },
           { key: 'batteryWh', label: 'Pin (Wh)', type: 'number', ...NUMERIC_LIMITS.batteryWh },
           { key: 'priceVnd', label: 'Giá (VND)', type: 'number', required: true, ...NUMERIC_LIMITS.priceVnd },
+          {
+            key: 'segment',
+            label: 'Phân khúc',
+            type: 'select',
+            options: SEGMENT_OPTIONS,
+            help: 'Bấm "AI gợi ý" để điền sẵn. Để trống thì AI tự gán khi lưu.',
+            tableValue: segmentCell,
+          },
         ]);
       }
     );
@@ -100,8 +125,19 @@ export function AdminLaptops() {
         const [w, h] = String(resolution).split('x').map(Number);
         return { ...rest, resWidth: w, resHeight: h };
       }}
-      // Khi sua: dung resWidth/resHeight co san de chon dung muc trong danh sach do phan giai
-      transformEdit={(row) => ({ ...row, resolution: `${row.resWidth}x${row.resHeight}` })}
+      // Khi sua: dung resWidth/resHeight co san de chon dung muc trong danh sach do phan giai;
+      // phan khuc nam trong segmentLabel nen phai lay ra de do vao o "Phan khuc"
+      transformEdit={(row) => ({
+        ...row,
+        resolution: `${row.resWidth}x${row.resHeight}`,
+        segment: row.segmentLabel?.segment,
+      })}
+      // Bao ro cho nhan vien nhan da duoc luu the nao (hoac vi sao chua gan duoc)
+      afterSave={(saved) => {
+        if (saved?.labelWarning) message.warning(saved.labelWarning, 6);
+        else if (saved?.segmentLabel)
+          message.info(`Đã gán phân khúc: ${segmentColors[saved.segmentLabel.segment]?.label ?? saved.segmentLabel.segment}`);
+      }}
     />
   );
 }

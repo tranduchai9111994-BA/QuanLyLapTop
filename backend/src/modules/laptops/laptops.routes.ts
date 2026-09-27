@@ -3,10 +3,10 @@ import { z } from 'zod';
 import { optionalAuth, requireAuth, requireRole } from '../../middlewares/auth';
 import { AppError } from '../../middlewares/error';
 import { prisma } from '../../lib/prisma';
-import { mlClient } from '../../lib/mlClient';
 import { snapshotSync } from '../jobs/snapshotSync';
 import * as laptopsService from './laptops.service';
 import * as priceService from './price.service';
+import { SEGMENTS, applySegmentLabel, predictSegment } from './segment.service';
 
 export const laptopsRouter = Router();
 
@@ -54,9 +54,14 @@ const laptopInputSchema = z.object({
   priceVnd: z.number().int().min(3_000_000, 'Giá tối thiểu 3 triệu').max(200_000_000, 'Giá tối đa 200 triệu'),
   imageUrl: z.string().nullable().optional(),
   sourceUrl: z.string().nullable().optional(),
+  // Phan khuc nguoi dung chon/chap nhan trong form. KHONG bat buoc: bo trong thi Mo hinh A tu
+  // gan (xem segment.service.ts). Khong phai cot cua bang Laptop - luu rieng vao SegmentLabel.
+  segment: z.enum(SEGMENTS).nullable().optional(),
 });
 
-async function computeAndUpsertLaptop(id: number | null, body: z.infer<typeof laptopInputSchema>) {
+async function computeAndUpsertLaptop(id: number | null, input: z.infer<typeof laptopInputSchema>) {
+  // Tach `segment` ra: day la du lieu cua bang SegmentLabel, Prisma se bao loi neu dua vao Laptop
+  const { segment: _segment, ...body } = input;
   const [cpu, gpu, agg] = await Promise.all([
     prisma.cpuBenchmark.findUniqueOrThrow({ where: { id: body.cpuId } }),
     prisma.gpuBenchmark.findUniqueOrThrow({ where: { id: body.gpuId } }),
@@ -157,12 +162,21 @@ laptopsRouter.get('/:id', async (req, res, next) => {
   }
 });
 
+/** Luu laptop roi GAN NHAN PHAN KHUC ngay sau do (buoc bi thieu truoc day khien laptop moi khong
+ * bao gio duoc goi y). Dong bo sang ML service SAU khi co nhan, de may moi vao ngay catalog goi y.
+ * Tra ve laptop kem nhan va `labelWarning` (vd do tin cay thap) cho giao dien hien thong bao. */
+async function saveLaptopWithLabel(id: number | null, input: z.infer<typeof laptopInputSchema>, userId?: number) {
+  const laptop = await computeAndUpsertLaptop(id, input);
+  const { label, warning } = await applySegmentLabel(laptop.id, input, input.segment ?? undefined, userId);
+  await snapshotSync();
+  return { ...laptop, segmentLabel: label, labelWarning: warning };
+}
+
 laptopsRouter.post('/', requireAuth, requireRole('STAFF', 'ADMIN'), async (req, res, next) => {
   try {
     const body = laptopInputSchema.parse(req.body);
-    const laptop = await computeAndUpsertLaptop(null, body);
-    await snapshotSync();
-    res.status(201).json({ success: true, data: laptop });
+    const data = await saveLaptopWithLabel(null, body, req.user?.id);
+    res.status(201).json({ success: true, data });
   } catch (err) {
     next(err);
   }
@@ -171,9 +185,8 @@ laptopsRouter.post('/', requireAuth, requireRole('STAFF', 'ADMIN'), async (req, 
 laptopsRouter.put('/:id', requireAuth, requireRole('STAFF', 'ADMIN'), async (req, res, next) => {
   try {
     const body = laptopInputSchema.parse(req.body);
-    const laptop = await computeAndUpsertLaptop(Number(req.params.id), body);
-    await snapshotSync();
-    res.json({ success: true, data: laptop });
+    const data = await saveLaptopWithLabel(Number(req.params.id), body, req.user?.id);
+    res.json({ success: true, data });
   } catch (err) {
     next(err);
   }
@@ -257,42 +270,11 @@ laptopsRouter.post('/bulk-price', requireAuth, requireRole('ADMIN'), async (req,
   }
 });
 
+// Nut "AI goi y phan khuc" trong form laptop: chi DU DOAN de nguoi dung xem truoc (khong luu).
+// Viec luu nhan xay ra khi bam Luu form (saveLaptopWithLabel), dung cung ham predictSegment.
 laptopsRouter.post('/predict-segment', requireAuth, requireRole('STAFF', 'ADMIN'), async (req, res, next) => {
   try {
-    const { cpuId, gpuId, ramGb, ssdGb, screenInch, resWidth, resHeight, refreshHz, srgb100, weightKg, batteryWh } =
-      req.body;
-    const [cpu, gpu] = await Promise.all([
-      prisma.cpuBenchmark.findUnique({ where: { id: cpuId } }),
-      prisma.gpuBenchmark.findUnique({ where: { id: gpuId } }),
-    ]);
-    // Bao loi ro rang thay vi 500 chung chung: hay gap khi trang dang mo tu truoc luc nap lai
-    // du lieu (ID trong dropdown da cu) - luc do nguoi dung chi can tai lai trang.
-    if (!cpu || !gpu) {
-      throw new AppError(
-        404,
-        'BENCHMARK_NOT_FOUND',
-        'Không tìm thấy CPU/GPU đã chọn. Dữ liệu có thể vừa được cập nhật — hãy tải lại trang rồi chọn lại.'
-      );
-    }
-    const ppi = laptopsService.computePpi(resWidth, resHeight, screenInch);
-    const r = await mlClient.post('/predict-segment', {
-      items: [
-        {
-          cpu_score: cpu.score,
-          gpu_score: gpu.score,
-          gpu_dedicated: gpu.dedicated ? 1 : 0,
-          ram_gb: ramGb,
-          ssd_gb: ssdGb,
-          screen_inch: screenInch,
-          ppi,
-          refresh_hz: refreshHz ?? 60,
-          srgb_100: srgb100 ? 1 : 0,
-          weight_kg: weightKg,
-          battery_wh: batteryWh ?? 55,
-        },
-      ],
-    });
-    res.json({ success: true, data: r.data.items[0] });
+    res.json({ success: true, data: await predictSegment(req.body) });
   } catch (err) {
     next(err);
   }
