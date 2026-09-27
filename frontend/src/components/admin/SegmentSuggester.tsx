@@ -20,9 +20,24 @@ export function SegmentSuggester({ form }: { form: FormInstance }) {
 
   async function suggest() {
     const v = form.getFieldsValue();
-    const required = ['cpuId', 'gpuId', 'ramGb', 'ssdGb', 'screenInch', 'resWidth', 'resHeight', 'weightKg'];
-    const missing = required.filter((k) => v[k] === undefined || v[k] === null || v[k] === '');
-    if (missing.length) {
+    // CHU Y: form CrudTable dung 1 o "resolution" gop (vd "2560x1440") khi dang THEM MOI - cac
+    // truong `resWidth`/`resHeight` rieng le CHI duoc tinh ra luc bam "Luu" (xem
+    // AdminLaptops.tsx transformSubmit), nen luc dang nhap (chua bam Luu) chung LUON undefined
+    // trong form. Truoc day ham nay kiem tra thang `resWidth`/`resHeight` nen luon bao "thieu du
+    // lieu" du da chon Do phan giai day du - phai tu tach `resolution` ra tai day, giong het cach
+    // transformSubmit lam, thi moi lay dung gia tri de goi API du doan.
+    let resWidth: number | undefined = v.resWidth;
+    let resHeight: number | undefined = v.resHeight;
+    if ((resWidth === undefined || resHeight === undefined) && v.resolution) {
+      const [w, h] = String(v.resolution).split('x').map(Number);
+      resWidth = w;
+      resHeight = h;
+    }
+
+    const requiredBase = ['cpuId', 'gpuId', 'ramGb', 'ssdGb', 'screenInch', 'weightKg'];
+    const missingBase = requiredBase.filter((k) => v[k] === undefined || v[k] === null || v[k] === '');
+    const missingResolution = resWidth === undefined || resHeight === undefined || Number.isNaN(resWidth) || Number.isNaN(resHeight);
+    if (missingBase.length || missingResolution) {
       message.warning('Hãy nhập đủ CPU, GPU, RAM, SSD, màn hình, độ phân giải và trọng lượng trước.');
       return;
     }
@@ -34,8 +49,8 @@ export function SegmentSuggester({ form }: { form: FormInstance }) {
         ramGb: v.ramGb,
         ssdGb: v.ssdGb,
         screenInch: v.screenInch,
-        resWidth: v.resWidth,
-        resHeight: v.resHeight,
+        resWidth,
+        resHeight,
         refreshHz: v.refreshHz ?? 60,
         srgb100: !!v.srgb100,
         weightKg: v.weightKg,

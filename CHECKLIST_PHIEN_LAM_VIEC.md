@@ -123,6 +123,40 @@
 12. [x] **MỚI**: tạo file `.md` lưu thông tin tài khoản đăng nhập demo — đã tạo
        [TAI_KHOAN_DANG_NHAP.md](TAI_KHOAN_DANG_NHAP.md) (3 tài khoản admin/staff/khách, cùng
        mật khẩu `Demo@123`, nguồn từ `backend/prisma/seed.ts`).
+13. [x] **MỚI**: tích hợp THẬT API DummyJSON để tải ảnh sản phẩm (bạn phát hiện 5 ảnh cũ chỉ được
+       tải tay 1 lần, không có script) — đã tạo
+       [scripts/fetch_brand_photos.py](scripts/fetch_brand_photos.py), chạy thành công, xác nhận
+       nội dung file trùng khớp 100% với bản cũ. Ghi nhận giới hạn thật: DummyJSON category
+       "laptops" chỉ có đúng 5 sản phẩm.
+14. [x] **MỚI**: CRUD lại toàn bộ trên browser để đảm bảo hệ thống chạy đúng (bạn yêu cầu) — đã
+       làm cả thủ công lẫn viết script Playwright tự động
+       [scripts/capture_crud_test.py](scripts/capture_crud_test.py) lưu ảnh bằng chứng vào
+       [crud_test_screenshots/](crud_test_screenshots/) (16 ảnh, mỗi thao tác chính 1 ảnh). Quá
+       trình này phát hiện và sửa được **3 lỗi thật** đang tồn tại trong code, không phải lỗi giả
+       định:
+       - **Hãng máy thiếu trường `tier` trong CRUD**: cả frontend (`AdminBrands.tsx`) lẫn backend
+         (`brands.routes.ts`) đều không cho xem/sửa mức uy tín thương hiệu — dù đây là đặc trưng
+         thật trong metric Mô hình B. Đã thêm dropdown "Mức uy tín" (1-5) + validate zod backend,
+         test sửa Acer 3→4→3 thành công qua UI thật.
+       - **Sửa laptop có sẵn bị lỗi "Dữ liệu gửi lên không hợp lệ"** khi trường optional đang
+         `null` (vd `batteryWh`) — do zod `.optional()` chỉ chấp nhận `undefined`, không chấp
+         nhận `null` (Prisma trả `null` cho cột nullable). Đã sửa `series`/`batteryWh`/`imageUrl`/
+         `sourceUrl` trong `laptopInputSchema` sang `.nullable().optional()`.
+       - **"AI gợi ý phân khúc" báo thiếu dữ liệu dù đã điền đủ** khi TẠO MỚI laptop (tiêu chí 3
+         của đồ án) — `SegmentSuggester.tsx` kiểm tra thẳng `resWidth`/`resHeight`, nhưng 2 trường
+         này CHỈ có giá trị lúc bấm Lưu (transformSubmit tách ra từ field `resolution`), nên luôn
+         báo thiếu trong lúc đang nhập. Đây là regression thật từ lúc gộp độ phân giải thành 1
+         dropdown. Đã sửa: tự tách `resolution` ngay trong `suggest()`.
+       - Đã xác nhận lại bằng ảnh: AI gợi ý phân khúc ra đúng "Gaming 71%" khi tạo máy mới, sửa
+         tên máy có `batteryWh=null` thành công ("Đã cập nhật"), sửa lượt bán ở Quản lý giá thành
+         công. `tsc --noEmit` sạch cả backend/frontend sau khi sửa.
+15. [x] **MỚI**: cập nhật lại TOÀN BỘ file `.md` trong repo (bạn yêu cầu) — đã viết lại
+       [README.md](README.md) (rất lỗi thời, còn ghi macro-F1 dữ liệu mô phỏng 315 mẫu cũ),
+       [ml-service/README.md](ml-service/README.md) (số liệu cũ 0,957/9 test),
+       [backend/README.md](backend/README.md), [frontend/README.md](frontend/README.md) (còn
+       nguyên template Vite mặc định, chưa từng sửa), [data/README.md](data/README.md) (còn ghi
+       `generate_mock_catalog.py`, 315 dòng cũ) — tất cả đã cập nhật khớp thực tế hiện tại và trỏ
+       đúng vào `KET_QUA_THUC_NGHIEM.md` làm nguồn số liệu duy nhất (tránh chép số bị lệch sau này).
 
 ## C. Việc CÒN THIẾU / cần làm tiếp (không được quên)
 

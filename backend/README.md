@@ -12,6 +12,7 @@ npm run dev                  # http://localhost:4000
 
 `.env.example` liệt kê biến môi trường cần có. `DATABASE_URL` mặc định trỏ tới SQL Server cục bộ
 (database `SmartLap`, login `smartlap_app`) — đã kiểm thử thật trên máy phát triển, không phải giả lập.
+Tài khoản demo (admin/staff/khách): xem [`../TAI_KHOAN_DANG_NHAP.md`](../TAI_KHOAN_DANG_NHAP.md).
 
 ## Đã kiểm thử thủ công (end-to-end với SQL Server + ML service thật)
 
@@ -21,6 +22,16 @@ npm run dev                  # http://localhost:4000
 - **Tắt ML service** → `POST /recommendations` vẫn trả `200` với `mode: "FALLBACK"` (xếp hạng theo
   `performanceIdx`/`valueIdx`) — **đạt tiêu chí nghiệm thu GĐ4 quan trọng nhất**.
 - `GET /dashboard/kpis` sau khi chạy `seed:telemetry` → số liệu hợp lý (403 phiên, likeRate 72,8%).
+- **CRUD admin (Hãng máy/Benchmark CPU-GPU/Laptop/Quản lý giá) đã kiểm thử THẬT trên browser**
+  bằng script Playwright tự động (`scripts/capture_crud_test.py`, chạy được, lưu ảnh bằng chứng
+  vào `crud_test_screenshots/`). Quá trình này phát hiện và đã sửa 2 lỗi thật:
+  1. Sửa (PUT) một laptop có sẵn với trường optional đang `null` (vd `batteryWh`) bị từ chối do
+     zod `.optional()` không chấp nhận `null` — đã sửa bằng `.nullable().optional()` cho
+     `series`/`batteryWh`/`imageUrl`/`sourceUrl` trong `laptopInputSchema`
+     ([laptops.routes.ts](src/modules/laptops/laptops.routes.ts)).
+  2. Route `/brands` trước đây bỏ qua hoàn toàn trường `tier` (uy tín thương hiệu — đặc trưng
+     thật trong Mô hình B) dù frontend có gửi lên — đã bổ sung validate + lưu `tier`, thêm
+     dropdown "Mức uy tín" vào màn Hãng máy.
 
 ## Việc còn thiếu / rút gọn so với đặc tả đầy đủ (docs/06)
 

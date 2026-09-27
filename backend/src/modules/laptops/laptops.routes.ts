@@ -19,7 +19,13 @@ const VALID_SSD = [128, 256, 512, 1024, 2048, 4096] as const;
 const laptopInputSchema = z.object({
   sku: z.string().min(2, 'Mã SKU quá ngắn').max(80),
   name: z.string().min(2, 'Tên máy quá ngắn').max(200),
-  series: z.string().max(80).optional(),
+  // CHU Y: cac truong duoi day la NULLABLE THAT trong Prisma schema (co dau `?`), nghia la khi
+  // doc tu DB ve, gia tri thieu se la `null` (KHONG PHAI `undefined`). `.optional()` cua zod CHI
+  // chap nhan `undefined`, se BAO LOI neu nhan `null` - day chinh la loi da bat duoc qua CRUD
+  // test tren browser (sua may co san `batteryWh = null` bi tra ve "Du lieu gui len khong hop
+  // le"). Phai dung `.nullable().optional()` (tuong duong `.nullish()`) cho MOI truong nullable
+  // that trong DB, khong chi optional o phia frontend.
+  series: z.string().max(80).nullable().optional(),
   brandId: z.number().int().positive(),
   cpuId: z.number().int().positive(),
   gpuId: z.number().int().positive(),
@@ -39,13 +45,15 @@ const laptopInputSchema = z.object({
   screenInch: z.number().min(10, 'Màn hình nhỏ hơn 10 inch là không hợp lệ').max(20),
   resWidth: z.number().int().min(1024).max(7680),
   resHeight: z.number().int().min(600).max(4320),
+  // refreshHz co @default(60) trong schema (KHONG co dau `?`) nen khong bao gio null - chi can
+  // .optional() la du
   refreshHz: z.number().int().min(30).max(500).optional(),
   srgb100: z.boolean().optional(),
   weightKg: z.number().min(0.8, 'Trọng lượng tối thiểu 0,8 kg').max(4.5, 'Trọng lượng tối đa 4,5 kg'),
-  batteryWh: z.number().min(20).max(120).optional(),
+  batteryWh: z.number().min(20).max(120).nullable().optional(),
   priceVnd: z.number().int().min(3_000_000, 'Giá tối thiểu 3 triệu').max(200_000_000, 'Giá tối đa 200 triệu'),
-  imageUrl: z.string().optional(),
-  sourceUrl: z.string().optional(),
+  imageUrl: z.string().nullable().optional(),
+  sourceUrl: z.string().nullable().optional(),
 });
 
 async function computeAndUpsertLaptop(id: number | null, body: z.infer<typeof laptopInputSchema>) {
