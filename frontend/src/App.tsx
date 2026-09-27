@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Drawer, Dropdown, Grid, Layout, Menu } from 'antd';
-import { MenuOutlined, UserOutlined } from '@ant-design/icons';
+import { HeartOutlined, MenuOutlined, UserOutlined } from '@ant-design/icons';
+import { useCompareIds } from './lib/compareList';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { Home } from './pages/Home';
 import { Catalog } from './pages/Catalog';
@@ -64,6 +65,7 @@ function TopNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const customer = useCustomerSession();
+  const compareIds = useCompareIds();
   const screens = Grid.useBreakpoint();
   const isMobile = !screens.md;
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -91,6 +93,29 @@ function TopNav() {
         <MenuOutlined style={{ fontSize: 20, color: t.textPrimary, cursor: 'pointer' }} onClick={() => setDrawerOpen(true)} />
         <Drawer title="Menu" open={drawerOpen} onClose={() => setDrawerOpen(false)} placement="right" width={280}>
           <Menu mode="inline" selectedKeys={[location.pathname]} items={navMenuItems} style={{ marginBottom: 16, border: 'none' }} />
+          {/* docs/07_UIUX.md muc 6.1: "So sanh (N)" + "♡" yeu thich la 2 lien ket nhanh luon co
+              mat tren TopNav, khong chi nam trong dropdown tai khoan - danh sach so sanh dung
+              chung toan app (lib/compareList.ts) nen co gia tri ngay ca khi chua dang nhap. */}
+          <Menu
+            mode="inline"
+            selectedKeys={[]}
+            style={{ border: 'none', marginBottom: 16 }}
+            items={[
+              {
+                key: 'compare',
+                label: (
+                  <Link to={`/compare?ids=${compareIds.join(',')}`} onClick={() => setDrawerOpen(false)}>
+                    So sánh {compareIds.length > 0 ? `(${compareIds.length})` : ''}
+                  </Link>
+                ),
+                disabled: compareIds.length === 0,
+              },
+              {
+                key: 'favorites-quick',
+                label: <Link to="/favorites" onClick={() => setDrawerOpen(false)}>♡ Máy yêu thích</Link>,
+              },
+            ]}
+          />
           {customer ? (
             <Menu
               mode="inline"
@@ -98,7 +123,6 @@ function TopNav() {
               style={{ border: 'none' }}
               items={[
                 { key: 'name', label: <span style={{ color: t.textTertiary }}><UserOutlined /> {customer.fullName}</span>, disabled: true },
-                { key: 'favorites', label: <Link to="/favorites" onClick={() => setDrawerOpen(false)}>Máy yêu thích</Link> },
                 { key: 'history', label: <Link to="/history" onClick={() => setDrawerOpen(false)}>Lịch sử tư vấn</Link> },
                 { key: 'logout', label: 'Đăng xuất', onClick: logout },
               ]}
@@ -146,11 +170,29 @@ function TopNav() {
         style={{ flex: 1, borderBottom: 'none' }}
         items={navMenuItems}
       />
+      {/* docs/07_UIUX.md muc 6.1: "So sanh (N)" + "♡" luon co mat NGAY TREN THANH nav (khong
+          chi trong dropdown tai khoan) - danh sach so sanh dung chung toan app nen co gia tri du
+          chua dang nhap. Chi hien link "So sanh" khi co it nhat 1 may (khong thi khong co gi de
+          bam vao). */}
+      {compareIds.length > 0 && (
+        <Link
+          to={`/compare?ids=${compareIds.join(',')}`}
+          style={{ color: t.primary700, fontSize: 14, fontWeight: 600, marginRight: 20 }}
+        >
+          So sánh ({compareIds.length})
+        </Link>
+      )}
+      <Link
+        to="/favorites"
+        title="Máy yêu thích"
+        style={{ color: t.textSecondary, fontSize: 18, marginRight: 20, display: 'flex', alignItems: 'center' }}
+      >
+        <HeartOutlined />
+      </Link>
       {customer ? (
         <Dropdown
           menu={{
             items: [
-              { key: 'favorites', label: <Link to="/favorites">Máy yêu thích</Link> },
               { key: 'history', label: <Link to="/history">Lịch sử tư vấn</Link> },
               { type: 'divider' },
               { key: 'logout', label: 'Đăng xuất', onClick: logout },

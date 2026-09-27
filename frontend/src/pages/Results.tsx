@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Button, Empty, Result, Segmented, Skeleton, Space, Spin } from 'antd';
+import { Button, Card, Empty, Grid, Result, Segmented, Skeleton, Space, Spin } from 'antd';
 import { RecommendationCard } from '../components/smart/RecommendationCard';
 import { ExplainDrawer } from '../components/smart/ExplainDrawer';
+import { RadarComparison } from '../components/smart/RadarComparison';
 import { FallbackBanner, BudgetRelaxedBanner } from '../components/smart/FallbackBanner';
 import { LoadingMessages } from '../components/smart/LoadingMessages';
 import { api } from '../lib/api';
 import { t } from '../theme/tokens';
+import { toggleCompareId, useCompareIds } from '../lib/compareList';
 import type { RecommendationItemDto, RecommendationResult } from '../types';
 
 // FR-02: cho phep xem 3-10 ket qua thay vi co dinh 5 - tang dan de tranh danh sach qua dai
@@ -23,6 +25,10 @@ const LOADING_MESSAGES = [
 export function Results() {
   const location = useLocation();
   const navigate = useNavigate();
+  // docs/07_UIUX.md muc 6.3: >=992px (lg) hien luoi ket qua 2 cot + 1 panel radar dinh ben phai;
+  // duoi 992px (kem md 768) hien 2 cot khong panel; duoi md la 1 cot (mac dinh cua CSS grid o
+  // duoi khi khong ep gridTemplateColumns).
+  const screens = Grid.useBreakpoint();
   const initialState = location.state as
     | { result?: RecommendationResult; requestBody?: Record<string, unknown> }
     | null;
@@ -56,7 +62,15 @@ export function Results() {
   }, []);
 
   const [explainItem, setExplainItem] = useState<RecommendationItemDto | null>(null);
-  const [compareIds, setCompareIds] = useState<number[]>([]);
+  // Panel radar dinh (lg/xl) doi theo may GAN NHAT nguoi dung bam "Vi sao goi y?" - CO CHU Y
+  // tach rieng khoi `explainItem` (dieu khien Drawer): neu dung chung 1 state, panel se quay ve
+  // may #1 NGAY khi dong Drawer (vi luc do explainItem=null), khien tinh nang "doi theo may dang
+  // xem" gan nhu vo hinh trong thuc te (Drawer che mat panel trong khi no dang thuc su khac #1).
+  const [panelFocusId, setPanelFocusId] = useState<number | null>(null);
+  // Danh sach so sanh dung CHUNG toan app (localStorage, xem lib/compareList.ts) - chon o day
+  // van con nguyen khi chuyen sang trang khac, TopNav hien duoc "So sanh (N)" (docs/07_UIUX.md
+  // muc 6.1), khac voi truoc day chi la state cuc bo mat ngay khi roi trang Ket qua.
+  const compareIds = useCompareIds();
 
   // FR-02: cac nhan "Nhe nhat/Manh nhat/Dang tien nhat" duoc tinh TU CHINH TAP KET QUA DANG
   // HIEN THI (top N may nguoi dung dang xem), khong dung nguong co dinh trong toan bo CSDL -
@@ -131,7 +145,7 @@ export function Results() {
 
   function toggleCompare(id: number) {
     const adding = !compareIds.includes(id);
-    setCompareIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id].slice(0, 3)));
+    toggleCompareId(id);
     // Ghi lai su kien "them vao so sanh" (hanh vi ngam dinh, khong can nguoi dung bam Thich) -
     // day la 1 tin hieu tot de biet may nao dang duoc quan tam, dung cho UC-15/hoc them.
     if (adding && result) {
@@ -158,8 +172,33 @@ export function Results() {
     }
   }
 
+  // docs/07_UIUX.md muc 6.3: tu >=992px (lg), them 1 panel radar DINH ben phai so sanh "ho so ly
+  // tuong" voi may dang duoc chu y - mac dinh may hang #1 (goi y tot nhat), doi sang may nguoi
+  // dung vua bam "Vi sao goi y?" de xem chi tiet hon o Drawer.
+  const focusedItem = result.items.find((it) => it.laptopId === panelFocusId) ?? result.items[0] ?? null;
+  const showRadarPanel = screens.lg && focusedItem;
+
+  const itemsGrid = (
+    <div style={{ display: 'grid', gridTemplateColumns: screens.md ? 'repeat(2, 1fr)' : '1fr', gap: 12, alignItems: 'start' }}>
+      {result.items.map((item) => (
+        <RecommendationCard
+          key={item.laptopId}
+          item={item}
+          sessionId={result.sessionId}
+          badges={badgesByLaptopId.get(item.laptopId)}
+          onExplain={() => {
+            setExplainItem(item);
+            setPanelFocusId(item.laptopId);
+          }}
+          onCompareToggle={() => toggleCompare(item.laptopId)}
+          isComparing={compareIds.includes(item.laptopId)}
+        />
+      ))}
+    </div>
+  );
+
   return (
-    <div style={{ maxWidth: 1200, margin: '24px auto', padding: '0 24px' }}>
+    <div style={{ maxWidth: showRadarPanel ? 1320 : 1200, margin: '24px auto', padding: '0 24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <h1 style={{ margin: 0 }}>Kết quả gợi ý</h1>
         {requestBody && (
@@ -203,20 +242,24 @@ export function Results() {
             <Button onClick={() => navigate('/laptops')}>Tự xem danh mục</Button>
           </Space>
         </Empty>
-      ) : (
-        <div style={{ display: 'grid', gap: 12 }}>
-          {result.items.map((item) => (
-            <RecommendationCard
-              key={item.laptopId}
-              item={item}
-              sessionId={result.sessionId}
-              badges={badgesByLaptopId.get(item.laptopId)}
-              onExplain={() => setExplainItem(item)}
-              onCompareToggle={() => toggleCompare(item.laptopId)}
-              isComparing={compareIds.includes(item.laptopId)}
-            />
-          ))}
+      ) : showRadarPanel ? (
+        <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>{itemsGrid}</div>
+          <Card
+            title={`Hồ sơ lý tưởng vs ${focusedItem.laptop.name}`}
+            style={{ flex: '0 0 320px', position: 'sticky', top: 24 }}
+            styles={{ body: { padding: 12 } }}
+          >
+            <RadarComparison ideal={result.ideal} laptop={focusedItem.laptop} height={220} />
+            <div style={{ fontSize: 12, color: t.textTertiary, marginTop: 4 }}>
+              {panelFocusId != null
+                ? 'Máy vừa xem "Vì sao gợi ý?" gần nhất'
+                : 'Máy hạng #1 — bấm "Vì sao gợi ý?" ở máy khác để xem'}
+            </div>
+          </Card>
         </div>
+      ) : (
+        itemsGrid
       )}
 
       {compareIds.length >= 2 && (

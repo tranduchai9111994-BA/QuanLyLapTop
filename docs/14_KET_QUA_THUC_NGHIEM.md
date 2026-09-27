@@ -532,6 +532,47 @@ suốt các giai đoạn trước, số tài khoản test tích lũy đã vượ
 tsconfig.app.json --noEmit` sạch ở frontend, `npx tsc --noEmit` sạch ở backend, `pytest` ml-service
 35/35 pass.
 
+### 5.11 Bố cục lớn — Giai đoạn 10 (hoàn tất rà soát docs/07_UIUX.md)
+
+Giai đoạn cuối cùng động vào 3 điểm bố cục lớn nhất còn thiếu ở mục 6:
+
+- **TopNav "So sánh (N)" + "♡" (mục 6.1)**: trước đây danh sách so sánh là **state cục bộ của
+  `Results.tsx`**, chọn xong rời trang là mất, nên TopNav không có gì để hiển thị. Tạo mới
+  `frontend/src/lib/compareList.ts` — danh sách so sánh chuyển thành trạng thái **dùng chung toàn
+  app** lưu `localStorage` (giống giỏ hàng), phát sự kiện tuỳ chỉnh để mọi nơi đang mở (TopNav,
+  `Results.tsx`) cập nhật ngay. TopNav nay luôn có icon "♡" (dẫn tới `/favorites`, hoạt động cả khi
+  chưa đăng nhập — trang đích tự xử lý việc mời đăng nhập) và chỉ hiện link "So sánh (N)" khi đã
+  chọn ít nhất 1 máy.
+- **Sidebar quản trị nhóm 4 nhóm (mục 6.2)**: trước là danh sách phẳng 11 mục. Đã nhóm bằng
+  `type: 'group'` của antd Menu thành đúng 4 nhóm có tên ("Tổng quan", "Dữ liệu", "✨ Trí tuệ",
+  "Hệ thống" — nhóm "Trí tuệ" mang icon ✨ đúng yêu cầu), thêm icon cho từng mục (cần thiết để chế
+  độ thu gọn còn nhìn được), đổi `Sider` sang rộng 240px (đúng thay vì 220px) với `collapsedWidth`
+  72px và nút thu gọn hoạt động thật (lưu lựa chọn vào `localStorage` để giữ nguyên qua lần tải
+  lại). Menu điều hướng trên Drawer di động (Giai đoạn 7) dùng lại đúng cấu trúc nhóm này.
+- **Lưới kết quả 2 cột + panel radar dính (mục 6.3)**: `Results.tsx` trước đây LUÔN 1 cột bất kể độ
+  rộng màn hình. Tách logic vẽ radar thành component dùng chung mới
+  `frontend/src/components/smart/RadarComparison.tsx` (trước đây viết trùng lặp ngay trong
+  `ExplainDrawer.tsx`), rồi dùng `Grid.useBreakpoint()` để: <768px giữ 1 cột, ≥768px (md) lên 2
+  cột, ≥992px (lg) thêm 1 panel `Card` **dính** (`position: sticky`) bên phải hiện radar "hồ sơ lý
+  tưởng vs máy đang chú ý" — mặc định máy hạng #1, đổi sang máy vừa bấm "Vì sao gợi ý?". **Phát
+  hiện và sửa 1 lỗi UX trong lúc code**: lần đầu dùng chung 1 state với Drawer khiến panel
+  **quay về máy #1 ngay khi đóng Drawer** (vì lúc đó state đó bị reset về `null`), làm tính năng
+  gần như vô hình trong thực tế (Drawer che mất panel đúng lúc nó khác #1). Đã tách riêng
+  `panelFocusId` khỏi state điều khiển Drawer — panel giữ nguyên máy vừa xem sau khi đóng Drawer.
+
+**Đã kiểm thử trên browser** (`scripts/capture_phase10_layout.py`, ảnh
+`crud_test_screenshots/phase10_*.png`): xác nhận cả 6 điểm trên hoạt động đúng, bao gồm việc dựng
+lại đúng kịch bản phát hiện lỗi panel-quay-về-#1 để chứng minh đã sửa. Chạy lại 6 kịch bản Giai
+đoạn 3–9 (43 lượt kiểm) xác nhận không hồi quy — kể cả kịch bản 375px của Giai đoạn 7, nơi
+`showRadarPanel` tự tắt đúng như thiết kế (chỉ bật từ `lg` trở lên). `npx tsc -p tsconfig.app.json
+--noEmit` sạch ở frontend, `npx tsc --noEmit` sạch ở backend, `pytest` ml-service 35/35 pass.
+
+Đến đây, toàn bộ rà soát `docs/07_UIUX.md` (Giai đoạn 8–10) đã hoàn tất: nền tảng token/CSS/a11y,
+8 component đặc trưng ở mục 7, và 3 điểm bố cục lớn ở mục 6. Điểm duy nhất còn khác biệt có chủ ý
+với văn bản đặc tả: quy tắc cấm hex dùng script Node thay ESLint (dự án chọn `oxlint` từ trước,
+không hỗ trợ rule tuỳ chỉnh — xem mục 5.9), và `LaptopThumbnail.tsx` được loại trừ khỏi quy tắc đó
+vì chứa màu logo thương hiệu thật, không phải màu giao diện.
+
 ## 6. Độ đo thực tế — công sức tìm kiếm
 
 Đo bằng **số máy người dùng phải xem qua** trước khi gặp máy phù hợp (máy thuộc nhóm 20% hài lòng

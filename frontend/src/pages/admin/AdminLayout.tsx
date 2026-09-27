@@ -1,6 +1,22 @@
 import { useEffect, useState } from 'react';
 import { Badge, Button, Drawer, Grid, Layout, Menu } from 'antd';
-import { LogoutOutlined, EyeOutlined, MenuOutlined } from '@ant-design/icons';
+import type { MenuProps } from 'antd';
+import {
+  LogoutOutlined,
+  EyeOutlined,
+  MenuOutlined,
+  DashboardOutlined,
+  TagsOutlined,
+  ThunderboltOutlined,
+  BarChartOutlined,
+  LaptopOutlined,
+  DollarOutlined,
+  CheckCircleOutlined,
+  ExperimentOutlined,
+  SettingOutlined,
+  CommentOutlined,
+  TeamOutlined,
+} from '@ant-design/icons';
 import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { t } from '../../theme/tokens';
@@ -61,6 +77,9 @@ export function AdminLayout() {
   const screens = Grid.useBreakpoint();
   const isMobile = !screens.md;
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // docs/07_UIUX.md muc 6.2: Sider "thu gon 72px" - luu lua chon vao localStorage de giu nguyen
+  // qua lan tai lai trang (nguoi dung quen thu gon thi khong phai bam lai moi lan vao khu quan tri).
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('smartlap_admin_sider_collapsed') === '1');
 
   if (!isAllowed) return <Navigate to="/admin/login" replace />;
 
@@ -70,32 +89,68 @@ export function AdminLayout() {
     navigate('/admin/login');
   }
 
-  const menuItems = [
+  function toggleCollapsed(next: boolean) {
+    setCollapsed(next);
+    localStorage.setItem('smartlap_admin_sider_collapsed', next ? '1' : '0');
+  }
+
+  // docs/07_UIUX.md muc 6.2: Sider nhom theo 4 nhom co dat ten - "Trí tuệ" mang icon ✨ de hoi
+  // dong thay ngay phan thong minh cua he thong. Dung `type: 'group'` cua antd Menu (khong phai
+  // component <Menu.ItemGroup> rieng - da bi loai bo trong cach dung `items` prop). Moi item co
+  // icon de RENDER DUOC hop ly khi Sider thu gon con 72px (chi icon, an het chu).
+  const menuItems: MenuProps['items'] = [
     // Dashboard/Mo hinh/Tri thuc/Phan hoi CHI danh cho ADMIN o phia backend (requireRole('ADMIN')
     // - khong nhan STAFF) - an luon o menu voi STAFF de tranh nhan vien bam vao roi gap loi 403.
     ...(user?.role === 'ADMIN'
-      ? [{ key: '/admin/dashboard', label: <Link to="/admin/dashboard">Dashboard</Link> }]
+      ? [
+          {
+            key: 'grp-overview',
+            type: 'group' as const,
+            label: 'Tổng quan',
+            children: [{ key: '/admin/dashboard', icon: <DashboardOutlined />, label: <Link to="/admin/dashboard">Dashboard</Link> }],
+          },
+        ]
       : []),
-    { key: '/admin/brands', label: <Link to="/admin/brands">Hãng máy</Link> },
-    { key: '/admin/benchmarks/cpu', label: <Link to="/admin/benchmarks/cpu">Benchmark CPU</Link> },
-    { key: '/admin/benchmarks/gpu', label: <Link to="/admin/benchmarks/gpu">Benchmark GPU</Link> },
-    { key: '/admin/laptops', label: <Link to="/admin/laptops">Laptop</Link> },
-    { key: '/admin/prices', label: <Link to="/admin/prices">Quản lý giá</Link> },
     {
-      key: '/admin/review-queue',
-      label: (
-        <Link to="/admin/review-queue">
-          Duyệt nhãn{' '}
-          {pendingCount > 0 && <Badge count={pendingCount} style={{ marginLeft: 4 }} />}
-        </Link>
-      ),
+      key: 'grp-data',
+      type: 'group' as const,
+      label: 'Dữ liệu',
+      children: [
+        { key: '/admin/brands', icon: <TagsOutlined />, label: <Link to="/admin/brands">Hãng máy</Link> },
+        { key: '/admin/benchmarks/cpu', icon: <ThunderboltOutlined />, label: <Link to="/admin/benchmarks/cpu">Benchmark CPU</Link> },
+        { key: '/admin/benchmarks/gpu', icon: <BarChartOutlined />, label: <Link to="/admin/benchmarks/gpu">Benchmark GPU</Link> },
+        { key: '/admin/laptops', icon: <LaptopOutlined />, label: <Link to="/admin/laptops">Laptop</Link> },
+        { key: '/admin/prices', icon: <DollarOutlined />, label: <Link to="/admin/prices">Quản lý giá</Link> },
+        {
+          key: '/admin/review-queue',
+          icon: <CheckCircleOutlined />,
+          label: (
+            <Link to="/admin/review-queue">
+              Duyệt nhãn{' '}
+              {pendingCount > 0 && <Badge count={pendingCount} style={{ marginLeft: 4 }} />}
+            </Link>
+          ),
+        },
+      ],
     },
     ...(user?.role === 'ADMIN'
       ? [
-          { key: '/admin/models', label: <Link to="/admin/models">Quản lý mô hình</Link> },
-          { key: '/admin/knowledge', label: <Link to="/admin/knowledge">Cấu hình tri thức</Link> },
-          { key: '/admin/feedback', label: <Link to="/admin/feedback">Phân tích phản hồi</Link> },
-          { key: '/admin/users', label: <Link to="/admin/users">Người dùng & nhật ký</Link> },
+          {
+            key: 'grp-intel',
+            type: 'group' as const,
+            label: '✨ Trí tuệ',
+            children: [
+              { key: '/admin/models', icon: <ExperimentOutlined />, label: <Link to="/admin/models">Quản lý mô hình</Link> },
+              { key: '/admin/knowledge', icon: <SettingOutlined />, label: <Link to="/admin/knowledge">Cấu hình tri thức</Link> },
+              { key: '/admin/feedback', icon: <CommentOutlined />, label: <Link to="/admin/feedback">Phân tích phản hồi</Link> },
+            ],
+          },
+          {
+            key: 'grp-system',
+            type: 'group' as const,
+            label: 'Hệ thống',
+            children: [{ key: '/admin/users', icon: <TeamOutlined />, label: <Link to="/admin/users">Người dùng & nhật ký</Link> }],
+          },
         ]
       : []),
   ];
@@ -103,10 +158,17 @@ export function AdminLayout() {
   return (
     <Layout style={{ minHeight: '100vh' }}>
       {!isMobile && (
-        <Sider width={220} theme="light">
-          <div style={{ padding: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <img src="/logo-mark.png" alt="" style={{ height: 30, width: 'auto' }} />
-            <span style={{ fontWeight: 700, color: t.primary500 }}>SmartLap · Quản trị</span>
+        <Sider
+          width={240}
+          collapsedWidth={72}
+          collapsible
+          collapsed={collapsed}
+          onCollapse={toggleCollapsed}
+          theme="light"
+        >
+          <div style={{ padding: 16, display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
+            <img src="/logo-mark.png" alt="" style={{ height: 30, width: 'auto', flexShrink: 0 }} />
+            {!collapsed && <span style={{ fontWeight: 700, color: t.primary500, whiteSpace: 'nowrap' }}>SmartLap · Quản trị</span>}
           </div>
           <Menu mode="inline" selectedKeys={[location.pathname]} items={menuItems} />
         </Sider>
