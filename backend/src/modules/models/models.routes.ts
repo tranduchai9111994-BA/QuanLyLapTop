@@ -4,6 +4,7 @@ import { requireAuth, requireRole } from '../../middlewares/auth';
 import { AppError } from '../../middlewares/error';
 import { mlClient } from '../../lib/mlClient';
 import { toJson, fromJson } from '../../lib/json';
+import { writeAudit } from '../../lib/audit';
 
 // Quan ly VONG DOI MO HINH (docs/09_VONG_DOI_TRI_TUE.md): moi lan train ra 1 "challenger" (ung
 // vien) - KHONG tu dong thay the mo hinh dang chay ("champion") ma phai qua buoc "promote" co
@@ -98,6 +99,13 @@ modelsRouter.post('/:version/promote', requireAuth, requireRole('ADMIN'), async 
         data: { status: 'CHAMPION', promotedAt: new Date(), promotedById: req.user!.id },
       }),
     ]);
+    await writeAudit({
+      userId: req.user!.id,
+      action: 'PROMOTE_MODEL',
+      entity: 'ModelVersion',
+      entityId: challenger.version,
+      detail: { previousChampion: champion?.version ?? null, f1Macro: challengerF1 },
+    });
     res.json({ success: true, data: { version: challenger.version } });
   } catch (err) {
     next(err);
@@ -113,6 +121,12 @@ modelsRouter.post('/:version/rollback', requireAuth, requireRole('ADMIN'), async
       prisma.modelVersion.updateMany({ where: { status: 'CHAMPION' }, data: { status: 'ARCHIVED' } }),
       prisma.modelVersion.update({ where: { id: target.id }, data: { status: 'CHAMPION' } }),
     ]);
+    await writeAudit({
+      userId: req.user!.id,
+      action: 'ROLLBACK_MODEL',
+      entity: 'ModelVersion',
+      entityId: target.version,
+    });
     res.json({ success: true, data: { version: target.version } });
   } catch (err) {
     next(err);

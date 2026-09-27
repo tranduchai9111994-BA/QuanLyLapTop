@@ -22,6 +22,7 @@ import { AdminModels } from './pages/admin/AdminModels';
 import { AdminKnowledge } from './pages/admin/AdminKnowledge';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AdminFeedback } from './pages/admin/AdminFeedback';
+import { AdminUsers } from './pages/admin/AdminUsers';
 import { t } from './theme/tokens';
 
 const { Header, Content } = Layout;
@@ -158,6 +159,7 @@ export default function App() {
           <Route path="knowledge" element={<AdminKnowledge />} />
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="feedback" element={<AdminFeedback />} />
+          <Route path="users" element={<AdminUsers />} />
         </Route>
       </Routes>
     );

@@ -81,6 +81,7 @@ export function AdminLayout() {
                   { key: '/admin/models', label: <Link to="/admin/models">Quản lý mô hình</Link> },
                   { key: '/admin/knowledge', label: <Link to="/admin/knowledge">Cấu hình tri thức</Link> },
                   { key: '/admin/feedback', label: <Link to="/admin/feedback">Phân tích phản hồi</Link> },
+                  { key: '/admin/users', label: <Link to="/admin/users">Người dùng & nhật ký</Link> },
                 ]
               : []),
           ]}

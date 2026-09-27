@@ -344,6 +344,43 @@ tới `/admin/laptops` → bị chuyển hướng về `/admin/login` (xác nh�
 động). `tsc --noEmit` sạch ở backend/frontend, `pytest` ml-service 35/35 pass (không đổi ML ở
 giai đoạn này).
 
+### 5.7 Quản lý người dùng & nhật ký hệ thống — UC-16
+
+Trước Giai đoạn 6: bảng `AuditLog` đã tồn tại từ migration đầu tiên nhưng **chưa từng có dòng nào
+được ghi** — không route nào gọi tới nó. Cũng chưa có API/màn hình nào để quản trị viên xem hay
+tạo tài khoản `STAFF`/`ADMIN` khác (chỉ có 2 tài khoản demo tạo qua seed).
+
+**Đã bổ sung:**
+
+- **`backend/src/lib/audit.ts`** (mới): hàm `writeAudit()` dùng chung — ghi 1 dòng `AuditLog`,
+  không bao giờ làm hỏng request chính nếu ghi thất bại (chỉ log cảnh báo), vì đây là dữ liệu truy
+  vết phụ trợ chứ không phải nghiệp vụ chính.
+- **`backend/src/modules/users/users.routes.ts`** (mới): `GET/POST /users` (danh sách + tạo tài
+  khoản nội bộ), `PATCH /users/:id` (đổi họ tên/vai trò/mật khẩu/khoá-mở khoá) — **chặn tự sửa
+  chính tài khoản đang đăng nhập** (không tự khoá hoặc tự hạ quyền), tránh tình huống quản trị viên
+  duy nhất tự khoá tài khoản của mình rồi không ai còn quyền mở lại. Tài khoản `CUSTOMER` (tự đăng
+  ký ở `/login`) không quản lý ở đây — 2 luồng tách biệt hoàn toàn theo đúng UC-07 (khách hàng) và
+  UC-16 (nội bộ).
+- **`GET /audit-logs`** (mới): đã gắn `writeAudit()` vào mọi hành động "nhạy cảm" theo đúng
+  docs/09 §5 ("Mọi thay đổi tri thức, promote, rollback → AuditLog: Truy vết"): sửa cấu hình tri
+  thức (`PUT /knowledge/config/:key`), ghim/cấm/gỡ máy (`POST`/`DELETE /knowledge/pins`), đưa mô
+  hình vào sử dụng và quay lại phiên bản cũ (`/models/:version/promote`, `/rollback`), tạo/sửa tài
+  khoản nội bộ.
+- **`AdminUsers.tsx`** (mới, route `/admin/users`, chỉ hiện menu với `ADMIN`): 2 tab — "Tài khoản
+  nội bộ" (bảng có `Select` đổi vai trò và `Switch` khoá/mở trực tiếp trên từng dòng, dòng của
+  chính người đang đăng nhập bị vô hiệu hoá cả hai) và "Nhật ký hệ thống" (bảng audit log, mới nhất
+  trước, kèm tên người thực hiện + chi tiết JSON rút gọn).
+
+**Đã kiểm thử trên browser** (`scripts/capture_phase6_users_audit.py`, ảnh
+`crud_test_screenshots/phase6_*.png`, và kiểm qua API bằng `curl` trước khi viết giao diện): tạo
+tài khoản `STAFF` mới → xuất hiện ngay trong bảng; đổi vai trò sang `ADMIN` và khoá tài khoản đó
+qua `Switch` → thành công; xác nhận dòng tài khoản `ADMIN` đang đăng nhập bị vô hiệu hoá cả ô vai
+trò lẫn công tắc hoạt động (không tự sửa được chính mình — kiểm cả qua API: gọi
+`PATCH /users/1 {isActive:false}` trả về lỗi `CANNOT_MODIFY_SELF` thay vì thực hiện); tab "Nhật ký
+hệ thống" hiện đầy đủ các hành động tạo/sửa tài khoản và sửa cấu hình tri thức vừa thực hiện, đúng
+thứ tự thời gian. `tsc --noEmit` sạch ở backend/frontend, `pytest` ml-service 35/35 pass (không
+đổi ML ở giai đoạn này).
+
 ## 6. Độ đo thực tế — công sức tìm kiếm
 
 Đo bằng **số máy người dùng phải xem qua** trước khi gặp máy phù hợp (máy thuộc nhóm 20% hài lòng

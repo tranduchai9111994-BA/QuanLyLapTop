@@ -3,6 +3,7 @@ import { prisma } from '../../lib/prisma';
 import { requireAuth, requireRole } from '../../middlewares/auth';
 import { toJson } from '../../lib/json';
 import { AppError } from '../../middlewares/error';
+import { writeAudit } from '../../lib/audit';
 
 // 2 nhom API: "config" (cau hinh tri thuc dang key-value tuy y, vd nguong canh bao dashboard -
 // luu JSON trong `valueJson` vi SQL Server khong ho tro kieu Json cua Prisma, xem lib/json.ts)
@@ -27,6 +28,13 @@ knowledgeRouter.put('/config/:key', requireAuth, requireRole('ADMIN'), async (re
       create: { key: req.params.key, valueJson: toJson(req.body.value), updatedBy: req.user!.id },
       update: { valueJson: toJson(req.body.value), updatedBy: req.user!.id },
     });
+    await writeAudit({
+      userId: req.user!.id,
+      action: 'UPDATE_CONFIG',
+      entity: 'KnowledgeConfig',
+      entityId: req.params.key,
+      detail: req.body.value,
+    });
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -47,6 +55,13 @@ knowledgeRouter.post('/pins', requireAuth, requireRole('ADMIN'), async (req, res
     const data = await prisma.laptopPin.create({
       data: { laptopId, action, segment, reason, expiresAt: expiresAt ? new Date(expiresAt) : null, createdBy: req.user!.id },
     });
+    await writeAudit({
+      userId: req.user!.id,
+      action: action === 'BAN' ? 'BAN_LAPTOP' : 'PIN_LAPTOP',
+      entity: 'LaptopPin',
+      entityId: data.id,
+      detail: { laptopId, action, segment, reason },
+    });
     res.status(201).json({ success: true, data });
   } catch (err) {
     next(err);
@@ -55,7 +70,14 @@ knowledgeRouter.post('/pins', requireAuth, requireRole('ADMIN'), async (req, res
 
 knowledgeRouter.delete('/pins/:id', requireAuth, requireRole('ADMIN'), async (req, res, next) => {
   try {
-    await prisma.laptopPin.delete({ where: { id: Number(req.params.id) } });
+    const pin = await prisma.laptopPin.delete({ where: { id: Number(req.params.id) } });
+    await writeAudit({
+      userId: req.user!.id,
+      action: 'UNPIN_LAPTOP',
+      entity: 'LaptopPin',
+      entityId: pin.id,
+      detail: { laptopId: pin.laptopId, action: pin.action },
+    });
     res.json({ success: true, data: null });
   } catch (err) {
     next(err);
