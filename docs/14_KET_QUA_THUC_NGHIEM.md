@@ -298,6 +298,52 @@ Ghim/Cấm qua API: tạo → hiện trong danh sách → xoá → danh sách r�
 `pytest` ml-service 35/35 pass (thêm `baseWeightsOverride` là tham số optional, không ảnh hưởng
 hành vi mặc định khi không truyền).
 
+### 5.6 Tài khoản khách hàng — UC-07, UC-08
+
+Trước Giai đoạn 5: bảng `User` và các API `/me/favorites`, `/me/sessions` đã tồn tại từ trước,
+nhưng **không có cách nào để một khách hàng thực sự đăng nhập** — `AdminLogin.tsx` là màn đăng
+nhập DUY NHẤT trong hệ thống và nó chủ động từ chối tài khoản `CUSTOMER`; cũng chưa có API đăng ký.
+Nghĩa là 2 API kể trên tồn tại nhưng không thể gọi tới được từ giao diện.
+
+**Đã bổ sung:**
+
+- **`POST /auth/register`** (`auth.routes.ts` + `auth.service.ts`, mới): tạo tài khoản `CUSTOMER`
+  (không cho tự chọn vai trò khác qua API công khai này), trả JWT ngay để tự động đăng nhập.
+- **`CustomerLogin.tsx`** (mới, route `/login`): 2 tab Đăng nhập/Tạo tài khoản — ngược với
+  `AdminLogin.tsx`, màn này từ chối tài khoản `STAFF`/`ADMIN` (hướng họ sang `/admin/login`).
+- **`Favorites.tsx`** (UC-07, route `/favorites`) và **`History.tsx`** (UC-08, route `/history`):
+  yêu cầu đăng nhập, nếu chưa có token thì hiện màn mời đăng nhập (kèm redirect quay lại đúng
+  trang sau khi đăng nhập) thay vì gọi thẳng API rồi nhận lỗi 401. `History.tsx` dựng lại
+  `RecommendationResult` từ dữ liệu **đã lưu** của phiên cũ (không gọi lại thuật toán), tái dùng
+  nguyên `Results.tsx`/`RecommendationCard.tsx` để xem lại — phải sửa `sessionsRouter` (
+  `favorites.routes.ts`) include đầy đủ quan hệ `brand/cpu/gpu/segmentLabel` của laptop (trước đây
+  chỉ include laptop nông, thiếu quan hệ sẽ vỡ `RecommendationCard` với lỗi
+  "Cannot read properties of undefined").
+- **Nút yêu thích (trái tim)** thêm vào `Detail.tsx`: bấm khi chưa đăng nhập → điều hướng sang
+  `/login` kèm đường quay lại; khi đã đăng nhập → gọi `POST /me/favorites` + ghi sự kiện
+  `ADD_FAVORITE` (cho UC-15) đồng thời.
+- **`TopNav` (`App.tsx`)**: thêm trạng thái đăng nhập khách hàng — dùng chung `localStorage` key
+  với khu quản trị (một trình duyệt chỉ mang một danh tính tại một thời điểm, giống phần lớn
+  trang TMDT), cập nhật ngay bằng sự kiện tuỳ chỉnh `smartlap:customer-auth-changed` (không cần tải
+  lại trang sau khi đăng nhập/đăng xuất).
+- **Vá lỗ hổng UX phát hiện trong lúc làm**: vì đăng nhập khách hàng và quản trị dùng chung khoá
+  `localStorage`, một khách hàng đã đăng nhập tự gõ thẳng URL `/admin/...` trước đây sẽ **lọt qua**
+  được `AdminLayout` (nó chỉ kiểm tra "có token hay không", không kiểm tra vai trò) và thấy khung
+  sườn quản trị trống (mọi API đều 403) — không rò rỉ dữ liệu nhưng gây khó hiểu. Đã sửa
+  `AdminLayout.tsx` kiểm tra thêm `user.role !== 'CUSTOMER'`.
+
+**Đã kiểm thử trên browser** (`scripts/capture_phase5_customer_account.py`, ảnh
+`crud_test_screenshots/phase5_*.png`): đăng ký tài khoản mới → tự động đăng nhập, TopNav đổi tên;
+yêu thích 1 máy ở trang Chi tiết → xuất hiện đúng trong `/favorites`; bỏ thích → danh sách rỗng lại
+(**phát hiện và sửa 1 lỗi thật khi viết kịch bản test**: nút "Bỏ thích" nằm trong `Card` có
+`onClick` điều hướng riêng, click vào nút bị nổi bọt (bubble) lên `Card` khiến vừa xoá vừa điều
+hướng sang trang Chi tiết của chính máy vừa xoá — đã thêm `e.stopPropagation()`); tạo 1 lượt tư vấn
+mới → xuất hiện trong `/history`, bấm vào xem lại đúng kết quả cũ; đăng xuất → TopNav trở lại
+"Đăng nhập", `/favorites`/`/history` yêu cầu đăng nhập lại; khách hàng đã đăng xuất tự điều hướng
+tới `/admin/laptops` → bị chuyển hướng về `/admin/login` (xác nhận bản vá lỗ hổng ở trên hoạt
+động). `tsc --noEmit` sạch ở backend/frontend, `pytest` ml-service 35/35 pass (không đổi ML ở
+giai đoạn này).
+
 ## 6. Độ đo thực tế — công sức tìm kiếm
 
 Đo bằng **số máy người dùng phải xem qua** trước khi gặp máy phù hợp (máy thuộc nhóm 20% hài lòng

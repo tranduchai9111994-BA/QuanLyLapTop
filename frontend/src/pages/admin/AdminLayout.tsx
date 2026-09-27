@@ -7,16 +7,19 @@ import { api } from '../../lib/api';
 const { Sider, Content, Header } = Layout;
 
 /** Khung sidebar dung chung cho toan bo khu quan tri (Outlet render trang con tuong ung route).
- * Tu kiem tra dang nhap ngay tai day (khong phai o tung trang con) - chua co token thi chuyen
- * huong ve /admin/login LUON, dam bao khong trang quan tri nao lot qua duoc khi chua dang nhap. */
+ * Tu kiem tra dang nhap ngay tai day (khong phai o tung trang con) - chua co token HOAC token
+ * do la cua tai khoan KHACH HANG (dang nhap tu /login, xem App.tsx) deu chuyen huong ve
+ * /admin/login LUON - vi 2 luong dang nhap dung chung 1 localStorage key, neu chi kiem tra "co
+ * token hay khong" thi 1 khach hang da dang nhap tu dieu huong thang toi /admin/... se lot qua
+ * duoc (thay sidebar rong, moi API con lai deu 403 tu backend - trai nghiem xau du khong ho lo
+ * du lieu gi). */
 export function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const token = localStorage.getItem('smartlap_token');
-  if (!token) return <Navigate to="/admin/login" replace />;
-
   const userRaw = localStorage.getItem('smartlap_user');
   const user = userRaw ? JSON.parse(userRaw) : null;
+  if (!token || user?.role === 'CUSTOMER') return <Navigate to="/admin/login" replace />;
 
   // So may dang cho xac minh (UC-10) - hien so tren menu de nhan vien biet CO viec can lam ma
   // khong phai tu vao tung man kiem tra. Chi doc 1 lan khi vao khu quan tri (khong tu lam moi

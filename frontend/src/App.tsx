@@ -1,11 +1,16 @@
-import { Layout, Menu } from 'antd';
-import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Dropdown, Layout, Menu } from 'antd';
+import { UserOutlined } from '@ant-design/icons';
+import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { Home } from './pages/Home';
 import { Catalog } from './pages/Catalog';
 import { Wizard } from './pages/Wizard';
 import { Results } from './pages/Results';
 import { Detail } from './pages/Detail';
 import { Compare } from './pages/Compare';
+import { CustomerLogin } from './pages/CustomerLogin';
+import { Favorites } from './pages/Favorites';
+import { History } from './pages/History';
 import { AdminLogin } from './pages/admin/AdminLogin';
 import { AdminLayout } from './pages/admin/AdminLayout';
 import { AdminBrands } from './pages/admin/AdminBrands';
@@ -27,8 +32,39 @@ const { Header, Content } = Layout;
 // Kiem tra `location.pathname.startsWith('/admin')` ngay trong component App() (thay vi long
 // Route binh thuong) de mount HAN TOAN KHAC layout (khong dung chung TopNav/Menu khach hang).
 
+/** Doc trang thai dang nhap KHACH HANG tu localStorage - dung CHUNG key voi khu quan tri
+ * (`smartlap_token`/`smartlap_user`, xem AdminLogin.tsx) vi day la 1 trinh duyet chi dang nhap
+ * MOT danh tinh tai 1 thoi diem (giong da so trang TMDT: hoac la nhan vien, hoac la khach hang).
+ * Lang nghe su kien tuy chinh 'smartlap:customer-auth-changed' (CustomerLogin.tsx phat ra sau
+ * khi dang nhap/dang ky) de menu cap nhat NGAY, khong can tai lai trang. */
+function useCustomerSession() {
+  const [user, setUser] = useState<{ fullName: string; role: string } | null>(() => {
+    const raw = localStorage.getItem('smartlap_user');
+    return raw ? JSON.parse(raw) : null;
+  });
+  useEffect(() => {
+    function sync() {
+      const raw = localStorage.getItem('smartlap_user');
+      setUser(raw ? JSON.parse(raw) : null);
+    }
+    window.addEventListener('smartlap:customer-auth-changed', sync);
+    return () => window.removeEventListener('smartlap:customer-auth-changed', sync);
+  }, []);
+  return user?.role === 'CUSTOMER' ? user : null;
+}
+
 function TopNav() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const customer = useCustomerSession();
+
+  function logout() {
+    localStorage.removeItem('smartlap_token');
+    localStorage.removeItem('smartlap_user');
+    window.dispatchEvent(new Event('smartlap:customer-auth-changed'));
+    navigate('/');
+  }
+
   return (
     <Header style={{ display: 'flex', alignItems: 'center', borderBottom: `1px solid ${t.border}` }}>
       <Link
@@ -47,6 +83,26 @@ function TopNav() {
           { key: '/laptops', label: <Link to="/laptops">Danh mục</Link> },
         ]}
       />
+      {customer ? (
+        <Dropdown
+          menu={{
+            items: [
+              { key: 'favorites', label: <Link to="/favorites">Máy yêu thích</Link> },
+              { key: 'history', label: <Link to="/history">Lịch sử tư vấn</Link> },
+              { type: 'divider' },
+              { key: 'logout', label: 'Đăng xuất', onClick: logout },
+            ],
+          }}
+        >
+          <span style={{ cursor: 'pointer', color: t.primary700, display: 'flex', alignItems: 'center', gap: 6, marginRight: 24 }}>
+            <UserOutlined /> {customer.fullName}
+          </span>
+        </Dropdown>
+      ) : (
+        <Link to="/login" style={{ color: t.primary700, fontSize: 14, fontWeight: 600, marginRight: 24 }}>
+          Đăng nhập
+        </Link>
+      )}
       <Link to="/admin/login" style={{ color: t.textTertiary, fontSize: 13 }}>
         Quản trị viên / Nhân viên
       </Link>
@@ -66,6 +122,9 @@ function CustomerApp() {
           <Route path="/results" element={<Results />} />
           <Route path="/laptop/:id" element={<Detail />} />
           <Route path="/compare" element={<Compare />} />
+          <Route path="/login" element={<CustomerLogin />} />
+          <Route path="/favorites" element={<Favorites />} />
+          <Route path="/history" element={<History />} />
         </Routes>
       </Content>
     </Layout>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, Skeleton, Result, Card, Tag } from 'antd';
+import { Button, Skeleton, Result, Card, Tag, message } from 'antd';
+import { HeartOutlined, HeartFilled } from '@ant-design/icons';
 import { api } from '../lib/api';
 import type { Laptop } from '../types';
 import { SegmentTag } from '../components/smart/SegmentTag';
@@ -20,6 +21,11 @@ export function Detail() {
   const [similar, setSimilar] = useState<{ laptopId: number; distance: number; laptop: Laptop }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favBusy, setFavBusy] = useState(false);
+  const token = localStorage.getItem('smartlap_token');
+  const userRaw = localStorage.getItem('smartlap_user');
+  const isCustomer = (userRaw ? JSON.parse(userRaw) : null)?.role === 'CUSTOMER';
 
   useEffect(() => {
     setLoading(true);
@@ -40,7 +46,41 @@ export function Detail() {
       .finally(() => setLoading(false));
 
     api.post('/events', { laptopId: Number(id), type: 'VIEW_DETAIL' }).catch(() => null);
+
+    // Kiem tra may nay DA duoc yeu thich chua (chi khi da dang nhap voi tai khoan khach hang) -
+    // de nut trai tim hien dung trang thai ngay tu dau, khong phai bam thu moi biet.
+    if (token && isCustomer) {
+      api
+        .get('/me/favorites')
+        .then((r) => setIsFavorite(r.data.data.some((f: { laptopId: number }) => f.laptopId === Number(id))))
+        .catch(() => undefined);
+    } else {
+      setIsFavorite(false);
+    }
   }, [id]);
+
+  async function toggleFavorite() {
+    if (!token || !isCustomer) {
+      navigate('/login', { state: { from: `/laptop/${id}` } });
+      return;
+    }
+    setFavBusy(true);
+    try {
+      if (isFavorite) {
+        await api.delete(`/me/favorites/${id}`);
+        setIsFavorite(false);
+      } else {
+        await api.post('/me/favorites', { laptopId: Number(id) });
+        await api.post('/events', { laptopId: Number(id), type: 'ADD_FAVORITE' }).catch(() => undefined);
+        setIsFavorite(true);
+        message.success('Đã thêm vào máy yêu thích.');
+      }
+    } catch {
+      message.error('Không thực hiện được, thử lại sau.');
+    } finally {
+      setFavBusy(false);
+    }
+  }
 
   if (loading) return <div style={{ maxWidth: 900, margin: '32px auto' }}><Skeleton active /></div>;
   if (error || !laptop)
@@ -56,7 +96,17 @@ export function Detail() {
   return (
     <div style={{ maxWidth: 1200, margin: '24px auto', padding: '0 24px' }}>
       <LaptopThumbnail imageUrl={laptop.imageUrl} segment={laptop.segmentLabel?.segment} brand={laptop.brand?.name} name={laptop.name} width={320} height={240} />
-      <h1>{laptop.name}</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+        <h1 style={{ margin: 0 }}>{laptop.name}</h1>
+        <Button
+          shape="circle"
+          size="large"
+          icon={isFavorite ? <HeartFilled /> : <HeartOutlined />}
+          loading={favBusy}
+          onClick={toggleFavorite}
+          style={{ color: isFavorite ? t.error : undefined }}
+        />
+      </div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         {laptop.segmentLabel && <SegmentTag segment={laptop.segmentLabel.segment} />}
         <Tag>{laptop.brand.name}</Tag>

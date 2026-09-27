@@ -54,7 +54,16 @@ sessionsRouter.get('/', requireAuth, async (req, res, next) => {
       where: { userId: req.user!.id },
       orderBy: { createdAt: 'desc' },
       take: 20,
-      include: { items: { include: { laptop: true } } },
+      // Include day du quan he cua laptop (khong chi cac truong vo huong) - man Lich su tu van
+      // (History.tsx) tai dung lai RecommendationCard, component nay doc laptop.cpu.displayName/
+      // laptop.gpu.displayName/laptop.brand/laptop.segmentLabel nen thieu quan he nao se vo bao
+      // loi "Cannot read properties of undefined".
+      include: {
+        items: {
+          include: { laptop: { include: { brand: true, cpu: true, gpu: true, segmentLabel: true } } },
+          orderBy: { rank: 'asc' },
+        },
+      },
     });
     res.json({ success: true, data });
   } catch (err) {
