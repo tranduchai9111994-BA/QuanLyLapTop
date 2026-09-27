@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Button, Empty, Result, Segmented, Space, Spin } from 'antd';
+import { Button, Empty, Result, Segmented, Skeleton, Space, Spin } from 'antd';
 import { RecommendationCard } from '../components/smart/RecommendationCard';
 import { ExplainDrawer } from '../components/smart/ExplainDrawer';
 import { FallbackBanner, BudgetRelaxedBanner } from '../components/smart/FallbackBanner';
+import { LoadingMessages } from '../components/smart/LoadingMessages';
 import { api } from '../lib/api';
 import { t } from '../theme/tokens';
 import type { RecommendationItemDto, RecommendationResult } from '../types';
@@ -11,6 +12,13 @@ import type { RecommendationItemDto, RecommendationResult } from '../types';
 // FR-02: cho phep xem 3-10 ket qua thay vi co dinh 5 - tang dan de tranh danh sach qua dai
 // mac dinh nhung van du lua chon cho nguoi thich xem nhieu.
 const TOPN_OPTIONS = [3, 5, 8, 10];
+
+// docs/07_UIUX.md muc 8 "Dang tai ket qua": dong chu luan phien, KHONG phai 1 cau tinh.
+const LOADING_MESSAGES = [
+  'Đang so sánh 1.000 mẫu laptop…',
+  'Đang tìm máy gần nhu cầu của bạn…',
+  'Đang tính điểm phù hợp cho từng máy…',
+];
 
 export function Results() {
   const location = useLocation();
@@ -23,6 +31,29 @@ export function Results() {
   const requestBody = initialState?.requestBody;
   const [topN, setTopN] = useState(requestBody?.topN as number ?? 5);
   const [reloading, setReloading] = useState(false);
+
+  // Wizard.tsx nay CHUYEN TRANG NGAY khi bam "Xem ket qua" (khong doi API tra ve truoc), chi
+  // truyen `requestBody` - man nay tu goi API luc mount va tu hien trang thai "dang tai" (Skeleton
+  // + dong chu luan phien) trong luc cho, thay vi Wizard dung yen voi 1 vong xoay tren nut.
+  const [initialLoading, setInitialLoading] = useState(!!requestBody && !initialState?.result);
+  const [initialError, setInitialError] = useState(false);
+
+  function loadInitial() {
+    if (!requestBody) return;
+    setInitialLoading(true);
+    setInitialError(false);
+    api
+      .post<{ success: boolean; data: RecommendationResult }>('/recommendations', requestBody)
+      .then((r) => setResult(r.data.data))
+      .catch(() => setInitialError(true))
+      .finally(() => setInitialLoading(false));
+  }
+
+  useEffect(() => {
+    if (!requestBody || initialState?.result) return;
+    loadInitial();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [explainItem, setExplainItem] = useState<RecommendationItemDto | null>(null);
   const [compareIds, setCompareIds] = useState<number[]>([]);
@@ -46,6 +77,40 @@ export function Results() {
 
     return map;
   }, [result]);
+
+  if (initialLoading) {
+    return (
+      <div style={{ maxWidth: 1200, margin: '24px auto', padding: '0 24px' }}>
+        <h1>Kết quả gợi ý</h1>
+        {/* Skeleton 3 the + dong chu luan phien (docs/07_UIUX.md muc 8) */}
+        <div style={{ display: 'grid', gap: 12 }}>
+          {[1, 2, 3].map((i) => (
+            <div key={i} style={{ background: t.bgSurface, borderRadius: 16, border: `1px solid ${t.border}`, padding: 16 }}>
+              <Skeleton active avatar paragraph={{ rows: 3 }} />
+            </div>
+          ))}
+        </div>
+        <LoadingMessages messages={LOADING_MESSAGES} />
+      </div>
+    );
+  }
+
+  if (initialError) {
+    return (
+      <div style={{ maxWidth: 600, margin: '60px auto' }}>
+        <Result
+          status="error"
+          title="Không kết nối được máy chủ"
+          subTitle="Kiểm tra mạng và thử lại."
+          extra={
+            <Button type="primary" onClick={loadInitial}>
+              Thử lại
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
 
   if (!result) {
     return (
@@ -168,6 +233,7 @@ export function Results() {
         item={explainItem}
         ideal={result.ideal}
         modelVersion={result.modelVersion}
+        segment={result.segment}
       />
     </div>
   );

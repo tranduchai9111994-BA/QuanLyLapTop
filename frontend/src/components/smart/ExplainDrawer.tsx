@@ -1,4 +1,4 @@
-import { Drawer, Table } from 'antd';
+import { Drawer, Table, Tag } from 'antd';
 import {
   Radar,
   RadarChart,
@@ -8,8 +8,8 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import type { RecommendationItemDto } from '../../types';
-import { t } from '../../theme/tokens';
+import type { RecommendationItemDto, RecommendationResult } from '../../types';
+import { segmentColors, t } from '../../theme/tokens';
 import { explainText } from '../../utils/explainText';
 
 // Cac dac trung dua vao bieu do RADAR (FR-04) - chi chon nhung truc CANG CAO CANG TOT de viec
@@ -49,12 +49,14 @@ export function ExplainDrawer({
   item,
   ideal,
   modelVersion,
+  segment,
 }: {
   open: boolean;
   onClose: () => void;
   item: RecommendationItemDto | null;
   ideal: Record<string, number>;
   modelVersion: string | null;
+  segment?: RecommendationResult['segment'];
 }) {
   if (!item) return null;
   const laptop = item.laptop;
@@ -120,6 +122,30 @@ export function ExplainDrawer({
               </li>
             ))}
           </ul>
+        </>
+      )}
+
+      {/* docs/07_UIUX.md muc 7.5: khoi "Phan khuc duoc chon vi..." - CHI hien khi phan khuc dang
+          dung DUOC SUY RA tu hoat dong (nguoi dung chon "Chua ro"), khong hien khi nguoi dung tu
+          chon ro rang mot phan khuc cu the (luc do khong co "ly do AI" nao de giai thich). */}
+      {segment?.inferred && segment.neighbors && segment.neighbors.length > 0 && (
+        <>
+          <h4 style={{ marginTop: 20 }}>Phân khúc được chọn vì…</h4>
+          <div style={{ fontSize: 13, color: t.textSecondary, marginBottom: 8 }}>
+            Từ hoạt động bạn chọn, Mô hình A xếp vào{' '}
+            <strong style={{ color: segmentColors[segment.inferred]?.color }}>
+              {segmentColors[segment.inferred]?.label ?? segment.inferred}
+            </strong>{' '}
+            (độ tin cậy {Math.round((segment.confidence ?? 0) * 100)}%) — dựa trên{' '}
+            {segment.neighbors.length} máy gần nhất trong dữ liệu huấn luyện đã "bỏ phiếu":
+          </div>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
+            {segment.neighbors.map((n, i) => (
+              <Tag key={i} color={segmentColors[n.label]?.color} style={{ fontSize: 11, margin: 0 }}>
+                #{i + 1} {segmentColors[n.label]?.label ?? n.label} · khoảng cách {n.distance.toFixed(2)}
+              </Tag>
+            ))}
+          </div>
         </>
       )}
 

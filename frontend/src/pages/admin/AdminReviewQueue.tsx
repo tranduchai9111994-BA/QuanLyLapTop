@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Alert, Button, Card, Empty, Progress, Select, Space, Tag, message } from 'antd';
+import { Alert, Button, Card, Empty, Select, Space, message } from 'antd';
 import { CheckCircleOutlined } from '@ant-design/icons';
 import { api } from '../../lib/api';
 import { segmentColors, t } from '../../theme/tokens';
 import { formatVnd } from '../../utils/format';
+import { ConfidenceIndicator } from '../../components/smart/ConfidenceIndicator';
 
 interface QueueItem {
   laptopId: number;
@@ -96,18 +97,7 @@ export function AdminReviewQueue() {
                 </div>
 
                 <div style={{ flex: '1 1 260px', minWidth: 220 }}>
-                  <div style={{ fontSize: 13, color: t.textSecondary, marginBottom: 4 }}>
-                    AI tạm gán <Tag color={segmentColors[item.segment]?.color}>{segmentColors[item.segment]?.label}</Tag>
-                    với độ tin cậy <strong>{Math.round((item.confidence ?? 0) * 100)}%</strong>
-                  </div>
-                  {Object.entries(item.distribution)
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([seg, p]) => (
-                      <div key={seg} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-                        <span style={{ width: 130 }}>{segmentColors[seg]?.label ?? seg}</span>
-                        <Progress percent={Math.round(p * 100)} size="small" strokeColor={segmentColors[seg]?.color} style={{ flex: 1, margin: 0 }} />
-                      </div>
-                    ))}
+                  <ConfidenceIndicator distribution={item.distribution} />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 220 }}>

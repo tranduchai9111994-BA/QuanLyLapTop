@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Button, Card, Checkbox, Radio, Select, Slider, Space, Spin, Tag, message } from 'antd';
+import { Alert, Button, Card, Checkbox, Radio, Select, Slider, Space, Tag } from 'antd';
 import {
   ThunderboltOutlined,
   RocketOutlined,
@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { PrioritySlider } from '../components/smart/PrioritySlider';
 import { NeedTextInput, type ParsedNeed } from '../components/smart/NeedTextInput';
 import { api } from '../lib/api';
-import type { Priorities, RecommendationResult, Segment } from '../types';
+import type { Priorities, Segment } from '../types';
 import { formatVnd, formatShortVnd } from '../utils/format';
 import { segmentColors, t } from '../theme/tokens';
 
@@ -55,7 +55,6 @@ export function Wizard() {
   const [brandIds, setBrandIds] = useState<number[]>([]);
   const [brands, setBrands] = useState<{ id: number; name: string }[]>([]);
   const [priorities, setPriorities] = useState<Priorities>({ performance: 3, mobility: 3, display: 3, price: 3 });
-  const [loading, setLoading] = useState(false);
   // Ket qua doc cau tu do (Mo hinh C) - dung de gui kem telemetry va truyen trong so thuong hieu
   const [parsedNeed, setParsedNeed] = useState<{ need: ParsedNeed; text: string } | null>(null);
   // FR-01: Mo hinh A suy phan khuc tu cac HOAT DONG da chon (doc lap voi phan khuc nguoi dung
@@ -97,11 +96,13 @@ export function Wizard() {
     if (need.must.ramMin) setRamMin(need.must.ramMin);
   }
 
-  async function handleSubmit() {
-    setLoading(true);
+  function handleSubmit() {
     // Luu lai NGUYEN VAN phan than request (khong chi ket qua) - Results.tsx can goi lai dung
     // request nay voi topN khac khi nguoi dung doi "So luong ket qua" (FR-02), khong bat nguoi
-    // dung phai quay lai Wizard dien lai tu dau.
+    // dung quay lai Wizard dien lai tu dau. CHUYEN TRANG NGAY (khong doi API tra ve o day nua) -
+    // Results.tsx tu goi API va hien Skeleton + dong chu luan phien trong luc cho (docs/07_UIUX.md
+    // muc 8 "Dang tai ket qua"), thay vi nguoi dung chi thay 1 vong xoay tren nut trong khi man
+    // hinh Wizard dung yen.
     const requestBody = {
       segment: segmentChoice === 'unknown' ? null : segmentChoice,
       activities,
@@ -118,14 +119,7 @@ export function Wizard() {
       needText: parsedNeed?.text,
       needLabel: parsedNeed?.need.label,
     };
-    try {
-      const r = await api.post<{ success: boolean; data: RecommendationResult }>('/recommendations', requestBody);
-      navigate('/results', { state: { result: r.data.data, requestBody } });
-    } catch {
-      message.error('Không kết nối được máy chủ. Kiểm tra mạng và thử lại.');
-    } finally {
-      setLoading(false);
-    }
+    navigate('/results', { state: { requestBody } });
   }
 
   // FR-01: goi y nhe khi nguoi dung TU chon 1 phan khuc ro rang nhung khac voi du doan tu hoat
@@ -313,8 +307,8 @@ export function Wizard() {
         onChange={(v) => setPriorities({ ...priorities, price: v })}
       />
 
-      <Button type="primary" size="large" block onClick={handleSubmit} disabled={loading}>
-            {loading ? <Spin size="small" /> : 'Xem kết quả'}
+      <Button type="primary" size="large" block onClick={handleSubmit}>
+            Xem kết quả
           </Button>
         </div>
 

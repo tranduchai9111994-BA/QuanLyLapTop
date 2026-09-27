@@ -48,8 +48,22 @@ def infer_segment(model, catalog: pd.DataFrame, activities: list[str]) -> dict:
     proba = model.predict_proba(X)[0]
     labels = model.classes_
     order = proba.argsort()[::-1]
+
+    # docs/07_UIUX.md muc 7.5 "Phan khuc duoc chon vi..." can chinh k lang gieng da BO PHIEU,
+    # khong chi con so xac suat kho hieu - cung cach lay nhu /predict-segment (main.py), ap dung
+    # cho "may trong mo" duoc dung tu cac hoat dong da chon thay vi 1 cau hinh may that.
+    prep = model.named_steps["prep"]
+    knn = model.named_steps["knn"]
+    neigh_dist, neigh_idx = knn.kneighbors(prep.transform(X))
+    train_labels = knn.classes_[knn._y]
+    neighbors = [
+        {"label": str(train_labels[j]), "distance": round(float(d), 4)}
+        for j, d in zip(neigh_idx[0], neigh_dist[0])
+    ]
+
     return {
         "segment": labels[order[0]],
         "confidence": float(proba[order[0]]),
         "distribution": {labels[i]: float(proba[i]) for i in order},
+        "neighbors": neighbors,
     }

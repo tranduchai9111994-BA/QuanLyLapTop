@@ -17,19 +17,27 @@ export function PrioritySlider({
   onChange: (v: number) => void;
 }) {
   return (
-    <div style={{ marginBottom: 20 }}>
+    // marginBottom 36 (thay vi 20 truoc day): docs/07_UIUX.md muc 7.6 yeu cau nguyen van 3 nhan
+    // "Khong quan trong / Binh thuong / Rat quan trong" (dai hon nhieu "It/Vua/Cao" da dung tam
+    // truoc do de tranh xuong dong de len thanh truot ke tiep) - danh them khong gian doc de
+    // nhan xuong 2 dong (o do rong ~340px cua sidebar Wizard) khong con chong len phan tu ben
+    // duoi.
+    <div style={{ marginBottom: 36 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, color: t.textPrimary, fontWeight: 600 }}>
         {icon} {label}
       </div>
-      {/* Nhan RAT NGAN: nhan dai ("Rat quan trong") bi xuong 3 dong va de len thanh truot ke duoi */}
       <Slider
         min={1}
         max={5}
         value={value}
         onChange={onChange}
-        marks={{ 1: 'Ít', 3: 'Vừa', 5: 'Cao' }}
+        marks={{
+          1: { style: { fontSize: 12, width: 70 }, label: 'Không quan trọng' },
+          3: { style: { fontSize: 12 }, label: 'Bình thường' },
+          5: { style: { fontSize: 12, width: 70, marginLeft: -46 }, label: 'Rất quan trọng' },
+        }}
         tooltip={{ formatter: (v) => `${v}/5` }}
-        style={{ marginBottom: 20 }}
+        style={{ marginBottom: 8 }}
       />
     </div>
   );

@@ -41,13 +41,25 @@ async function getDefaultWeights(): Promise<Record<string, Record<string, number
   return fromJson<Record<string, Record<string, number>>>(row.valueJson, undefined as any) ?? undefined;
 }
 
+interface InferredNeighbor {
+  label: string;
+  distance: number;
+}
+
 async function inferSegment(activities: string[]) {
   try {
     const r = await mlClient.post('/infer-segment', { activities });
-    return { segment: r.data.segment as Segment, confidence: r.data.confidence as number, mode: 'ML' as const };
+    return {
+      segment: r.data.segment as Segment,
+      confidence: r.data.confidence as number,
+      // docs/07_UIUX.md muc 7.5: khoi "Phan khuc duoc chon vi..." trong ExplainDrawer can chinh
+      // k lang gieng da bo phieu, khong chi con so xac suat - xem segment_inference.py.
+      neighbors: (r.data.neighbors ?? []) as InferredNeighbor[],
+      mode: 'ML' as const,
+    };
   } catch (err) {
     logger.warn('infer-segment that bai, dung mac dinh OFFICE', err);
-    return { segment: 'OFFICE' as Segment, confidence: 0, mode: 'FALLBACK' as const };
+    return { segment: 'OFFICE' as Segment, confidence: 0, neighbors: [] as InferredNeighbor[], mode: 'FALLBACK' as const };
   }
 }
 
@@ -115,6 +127,7 @@ export async function recommend(body: RecommendRequestBody) {
   let usedSegment = body.segment;
   let inferredSegment: Segment | null = null;
   let inferredConf: number | null = null;
+  let inferredNeighbors: InferredNeighbor[] = [];
 
   // ---- BUOC 1: suy phan khuc neu nguoi dung chua noi ro ----
   if (!usedSegment) {
@@ -122,6 +135,7 @@ export async function recommend(body: RecommendRequestBody) {
     usedSegment = inferred.segment;
     inferredSegment = inferred.segment;
     inferredConf = inferred.confidence;
+    inferredNeighbors = inferred.neighbors;
   }
 
   // ---- BUOC 2 + 3: loc cung, tu dong noi rong ngan sach neu qua it ket qua ----
@@ -239,6 +253,9 @@ export async function recommend(body: RecommendRequestBody) {
       used: usedSegment,
       inferred: inferredSegment,
       confidence: inferredConf,
+      // docs/07_UIUX.md muc 7.5 "Phan khuc duoc chon vi..." - chi co gia tri khi phan khuc DUOC
+      // SUY RA tu hoat dong (nguoi dung chon "Chua ro"); rong neu nguoi dung tu chon ro rang.
+      neighbors: inferredNeighbors,
     },
     mode,
     budgetRelaxed,

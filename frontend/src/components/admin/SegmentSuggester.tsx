@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Alert, Button, Form, Progress, Space, Tag, message } from 'antd';
+import { Alert, Button, Form, Space, Tag, message } from 'antd';
 import { ExperimentOutlined } from '@ant-design/icons';
 import type { FormInstance } from 'antd';
 import { api } from '../../lib/api';
 import { segmentColors, t } from '../../theme/tokens';
+import { ConfidenceIndicator } from '../smart/ConfidenceIndicator';
 
 interface Prediction {
   label: string;
@@ -87,23 +88,7 @@ export function SegmentSuggester({ form }: { form: FormInstance }) {
 
       {pred && (
         <div style={{ marginTop: 10 }}>
-          <div style={{ marginBottom: 6 }}>
-            Mô hình kNN dự đoán:{' '}
-            <Tag color={segmentColors[pred.label]?.color}>{segmentColors[pred.label]?.label ?? pred.label}</Tag>
-            <strong>{Math.round(pred.proba * 100)}%</strong>
-          </div>
-
-          {Object.entries(pred.distribution).map(([seg, p]) => (
-            <div key={seg} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-              <span style={{ width: 130 }}>{segmentColors[seg]?.label ?? seg}</span>
-              <Progress
-                percent={Math.round(p * 100)}
-                size="small"
-                strokeColor={segmentColors[seg]?.color}
-                style={{ flex: 1, margin: 0 }}
-              />
-            </div>
-          ))}
+          <ConfidenceIndicator distribution={pred.distribution} />
 
           {/* FR-09: cho thay LY DO du doan - chinh k may gan nhat da bo phieu, khong phai hop den */}
           <div style={{ marginTop: 8, fontSize: 12, color: t.textSecondary }}>

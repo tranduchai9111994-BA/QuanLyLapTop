@@ -490,6 +490,48 @@ bộ 4 kịch bản Giai đoạn 3–7 (28 lượt kiểm) xác nhận không h�
 frontend (lệnh đúng, không phải lệnh sai đã dùng trước đó), `npx tsc --noEmit` sạch ở backend,
 `pytest` ml-service 35/35 pass.
 
+### 5.10 Component đặc trưng còn thiếu/sai — Giai đoạn 9
+
+Tiếp tục rà soát `docs/07_UIUX.md` mục 7, bổ sung 4 điểm còn lại:
+
+- **`PrioritySlider` (mục 7.6)**: nhãn mốc trước là "Ít/Vừa/Cao" (rút gọn có chủ ý để tránh nhãn
+  dài "Rất quan trọng" xuống 3 dòng đè lên thanh trượt kế tiếp — một quyết định lấy ngắn hạn thay
+  vì sửa đúng nguyên nhân). Đã sửa đúng nguyên văn "Không quan trọng / Bình thường / Rất quan
+  trọng" bằng cách tăng khoảng cách dọc giữa các thanh trượt (`marginBottom` 20 → 36px) và ghim
+  vị trí 2 mốc đầu/cuối bằng CSS để nhãn 2 dòng không chồng lấn.
+- **`ConfidenceIndicator` (mục 7.8, trước đây thiếu hoàn toàn)**: tạo mới
+  `frontend/src/components/smart/ConfidenceIndicator.tsx` — thanh ngang chia 4 đoạn màu phân khúc,
+  độ rộng theo đúng xác suất Mô hình A dự đoán, kèm Tag "Cần xác minh" khi xác suất cao nhất dưới
+  ngưỡng. Thay thế 2 nơi trước đây tự vẽ 4 thanh `Progress` xếp chồng rời rạc (khó so sánh tương
+  quan cùng lúc): `SegmentSuggester.tsx` (màn Thêm laptop) và `AdminReviewQueue.tsx` (hàng đợi
+  "Cần xác minh").
+- **Khối "Phân khúc được chọn vì…" (mục 7.5, trước đây thiếu hoàn toàn trong `ExplainDrawer`)**:
+  cần luồng dữ liệu mới xuyên 3 tầng — `ml-service/app/segment_inference.py` (`infer_segment()`)
+  trước chỉ trả `{segment, confidence, distribution}`, thiếu đúng phần "vì sao" (k láng giềng đã
+  bỏ phiếu) mà `/predict-segment` (dùng ở màn quản trị) đã có sẵn; bổ sung cùng cách trích xuất
+  qua `knn.kneighbors()`. `recommend.service.ts` forward `neighbors` này vào
+  `RecommendationResult.segment`. `ExplainDrawer.tsx` hiện khối mới — **chỉ khi phân khúc đang
+  dùng được SUY RA từ hoạt động** (người dùng chọn "Chưa rõ"), không hiện khi người dùng tự chọn
+  rõ một phân khúc (lúc đó không có "lý do AI" nào để giải thích).
+- **Trạng thái tải (mục 8, trước đây Skeleton tĩnh không có dòng chữ luân phiên)**: đổi kiến trúc
+  nhỏ — trước đây `Wizard.tsx` tự gọi API và CHỜ xong mới điều hướng sang `/results` kèm kết quả
+  đầy đủ (người dùng chỉ thấy 1 vòng xoay trên nút bấm); nay bấm "Xem kết quả" điều hướng NGAY với
+  `requestBody`, và `Results.tsx` tự gọi API lúc mount, hiện Skeleton 3 thẻ + component mới
+  `LoadingMessages.tsx` (đổi câu mỗi 1,1 giây, đúng ví dụ trong docs: "Đang so sánh 1.000 mẫu
+  laptop…", "Đang tìm máy gần nhu cầu của bạn…") trong lúc chờ; lỗi mạng lúc này hiện màn lỗi kèm
+  nút "Thử lại" riêng (trước đây lỗi mạng ở bước này chỉ hiện `message.error` thoáng qua rồi đứng
+  yên ở Wizard).
+
+**Đã kiểm thử trên browser** (`scripts/capture_phase9_ui_components.py`, ảnh
+`crud_test_screenshots/phase9_*.png`): xác nhận đủ 4 điểm trên hoạt động đúng, bao gồm chụp được
+đúng khoảnh khắc Skeleton+chữ luân phiên xuất hiện trước khi kết quả thật render. Chạy lại 5 kịch
+bản Giai đoạn 3–4, 7–8 xác nhận không hồi quy (kịch bản Giai đoạn 6 báo lỗi không tìm thấy tài
+khoản vừa tạo trên trang 1 của bảng — **không phải hồi quy**: sau nhiều lần chạy lại kịch bản này
+suốt các giai đoạn trước, số tài khoản test tích lũy đã vượt quá `pageSize` mặc định của bảng,
+đẩy bản ghi mới nhất sang trang 2; không liên quan tới thay đổi ở Giai đoạn 9). `npx tsc -p
+tsconfig.app.json --noEmit` sạch ở frontend, `npx tsc --noEmit` sạch ở backend, `pytest` ml-service
+35/35 pass.
+
 ## 6. Độ đo thực tế — công sức tìm kiếm
 
 Đo bằng **số máy người dùng phải xem qua** trước khi gặp máy phù hợp (máy thuộc nhóm 20% hài lòng

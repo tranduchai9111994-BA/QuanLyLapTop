@@ -51,9 +51,21 @@ export interface RecommendationItemDto {
 }
 
 /** Ket qua tra ve tu POST /recommendations - "goi" day du de hien Ket qua + Vi sao goi y. */
+export interface SegmentNeighbor {
+  label: string;
+  distance: number;
+}
+
 export interface RecommendationResult {
   sessionId: string;
-  segment: { used: Segment; inferred: Segment | null; confidence: number | null };
+  segment: {
+    used: Segment;
+    inferred: Segment | null;
+    confidence: number | null;
+    // docs/07_UIUX.md muc 7.5 "Phan khuc duoc chon vi..." - k lang gieng da bo phieu khi phan
+    // khuc duoc SUY RA tu hoat dong; rong neu nguoi dung tu chon ro rang (khong suy luan).
+    neighbors?: SegmentNeighbor[];
+  };
   // 'ML' = kNN that su (goi ML service thanh cong); 'FALLBACK' = ML service loi/tat, xep hang
   // tam theo performanceIdx/valueIdx co san trong DB (xem FallbackBanner.tsx)
   mode: 'ML' | 'FALLBACK';
