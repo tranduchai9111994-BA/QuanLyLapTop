@@ -90,9 +90,16 @@
        ô nhập tự do, thêm bước chụp màn Quản lý giá mới `12b_quan_ly_gia_khuyen_mai.png`) — 16
        ảnh mới trong `screenshots/`, đã xem lại 2 ảnh tiêu biểu xác nhận hiển thị đúng badge
        khuyến mãi/lượt bán.
-9. [~] Đang làm: comment code đầy đủ — ĐÃ xong `retriever.py`, `classifier.py`,
-       `text_classifier.py`, `features.py`, đang làm `recommend.service.ts`. CÒN THIẾU:
-       `price.service.ts`, `main.py` (ML), `AdminPrices.tsx`, `CrudTable.tsx`.
+9. [x] Comment code đầy đủ — đã xong toàn bộ: `retriever.py`, `classifier.py`,
+       `text_classifier.py`, `features.py`, `recommend.service.ts`, và 4 file còn thiếu vừa làm
+       xong trong lượt này: `price.service.ts` (giải thích từng bước tính lại chỉ số, so sánh
+       giá trị mới/cũ, lý do dùng `any[]` cho transaction), `main.py` (ML — thêm docstring module
+       giải thích vai trò `_state` làm bộ nhớ tạm, comment từng endpoint theo đúng bước xử lý),
+       `AdminPrices.tsx` (giải thích các `InputNumber` formatter/parser, lý do đặt `min` chặn giá
+       gốc ≤ giá bán), `CrudTable.tsx` (giải thích cơ chế sinh cột tự động, `transformEdit`/
+       `transformSubmit`, vì sao dùng lưới 2 cột khi form nhiều trường). Đã xác nhận không phá vỡ
+       gì: `tsc --noEmit` sạch cả backend/frontend, `python -c "import app.main"` chạy được,
+       pytest 34/34 pass sau khi thêm comment.
 10. [x] **MỚI**: bổ sung khuyến mãi (`originalPriceVnd`) + lượt bán (`salesCount`) — máy giá
        gốc cao hơn nhưng giảm giá sâu + bán chạy hơn vẫn có thể được xếp hạng cao hơn (đưa vào
        metric kNN thật, không chỉ hiển thị). ĐÃ XONG: schema + migrate + data generator +

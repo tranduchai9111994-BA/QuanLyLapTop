@@ -24,21 +24,27 @@ export async function updatePrice(
   originalPriceVnd?: number | null,
   salesCount?: number
 ) {
+  // Lay may hien tai (kem CPU/GPU vi computeIndices can diem hieu nang cua 2 linh kien nay)
   const laptop = await prisma.laptop.findUnique({
     where: { id: laptopId },
     include: { cpu: true, gpu: true },
   });
   if (!laptop) throw new AppError(404, 'NOT_FOUND', 'Không tìm thấy laptop');
 
+  // So sanh gia tri MOI voi gia tri DANG CO trong DB de biet co thuc su thay doi gi khong -
+  // tranh ghi lich su/tinh lai chi so mot cach thua khi nguoi dung bam luu nhung khong sua gi.
   const promotionChanged =
     (originalPriceVnd !== undefined && originalPriceVnd !== laptop.originalPriceVnd) ||
     (salesCount !== undefined && salesCount !== laptop.salesCount);
   const priceChanged = newPrice !== laptop.priceVnd;
 
+  // Khong co gi thay doi thi thoat som, khong dong cham gi vao DB
   if (!priceChanged && !promotionChanged) {
     return { laptop, changed: false, oldPrice: laptop.priceVnd };
   }
 
+  // Can biet RAM/SSD lon nhat toan catalog de tinh valueIdx (chi so "hieu nang/trieu dong")
+  // theo thang do TUONG DOI so voi may manh nhat dang co, khong phai theo thang tuyet doi
   const agg = await prisma.laptop.aggregate({ _max: { ramGb: true, ssdGb: true } });
   const { performanceIdx, valueIdx } = computeIndices({
     cpuScore: laptop.cpu.score,
@@ -50,6 +56,8 @@ export async function updatePrice(
     maxSsdGb: agg._max.ssdGb ?? laptop.ssdGb,
   });
 
+  // Luon ghi gia + 2 chi so vua tinh lai; chi ghi originalPriceVnd/salesCount NEU nguoi goi ham
+  // co truyen vao (dung `!== undefined` de phan biet "khong truyen" voi "truyen null de xoa")
   const data: Record<string, unknown> = { priceVnd: newPrice, performanceIdx, valueIdx };
   if (originalPriceVnd !== undefined) data.originalPriceVnd = originalPriceVnd;
   if (salesCount !== undefined) data.salesCount = salesCount;
@@ -65,16 +73,18 @@ export async function updatePrice(
   return { laptop: updated, changed: true, oldPrice: laptop.priceVnd, note };
 }
 
+/** Lay toan bo lich su gia cua 1 may (de ve bieu do LineChart tren man Quan ly gia) kem vai
+ * con so tom tat (gia thap nhat/cao nhat tung co, tang/giam bao nhieu % so voi lan dau). */
 export async function getPriceHistory(laptopId: number) {
   const rows = await prisma.priceHistory.findMany({
     where: { laptopId },
-    orderBy: { changedAt: 'asc' },
+    orderBy: { changedAt: 'asc' }, // sap CU -> MOI de ve bieu do theo dung chieu thoi gian
   });
   if (rows.length === 0) return { points: [], summary: null };
 
   const prices = rows.map((r) => r.priceVnd);
-  const first = prices[0];
-  const last = prices[prices.length - 1];
+  const first = prices[0]; // gia GHI NHAN dau tien (khong han la gia "goc" that su, chi la
+  const last = prices[prices.length - 1]; // moc som nhat he thong con luu lich su)
   return {
     points: rows.map((r) => ({ priceVnd: r.priceVnd, changedAt: r.changedAt })),
     summary: {
@@ -83,7 +93,9 @@ export async function getPriceHistory(laptopId: number) {
       highest: Math.max(...prices),
       firstRecorded: first,
       changeVsFirst: last - first,
+      // Neu chua co ban ghi nao (first = 0/undefined) thi tranh chia cho 0
       changePercent: first ? Number((((last - first) / first) * 100).toFixed(1)) : 0,
+      // So lan DOI gia = so ban ghi TRU 1 (ban ghi dau tien la gia khoi tao, chua tinh la "doi")
       timesChanged: rows.length - 1,
     },
   };
@@ -103,6 +115,8 @@ export async function bulkAdjustPrice(params: {
     throw new AppError(400, 'INVALID_PERCENT', 'Phần trăm điều chỉnh chỉ cho phép trong khoảng -90% đến +200%');
   }
 
+  // Loc theo hang va/hoac phan khuc NEU nguoi dung co chon; khong chon gi = ap dung cho TAT CA
+  // may dang ban (isActive). Day la ly do can 2 tham so loc rieng thay vi 1 dieu kien gop.
   const where: any = { isActive: true };
   if (brandId) where.brandId = brandId;
   if (segment) where.segmentLabel = { segment };
@@ -116,12 +130,16 @@ export async function bulkAdjustPrice(params: {
   }
 
   const agg = await prisma.laptop.aggregate({ _max: { ramGb: true, ssdGb: true } });
+  // percent=5 -> factor=1.05 (tang 5%); percent=-10 -> factor=0.9 (giam 10%)
   const factor = 1 + percent / 100;
 
+  // Lay 5 may DAU TIEN lam vi du minh hoa cho man "Xem truoc" - khong can tinh het ca danh sach,
+  // chi de nguoi dung "cam nhan" duoc muc thay doi truoc khi bam ap dung that
   const samples = laptops.slice(0, 5).map((l) => ({
     id: l.id,
     name: l.name,
     oldPrice: l.priceVnd,
+    // Lam tron ve boi so 10.000d cho de doc (gia laptop VN thuong khong le den tung dong)
     newPrice: Math.round((l.priceVnd * factor) / 10_000) * 10_000,
   }));
 
@@ -179,12 +197,16 @@ export async function recentPriceChanges(limit = 30) {
 
   for (const { laptopId } of recent) {
     if (results.length >= limit) break;
+    // Lay 2 ban ghi GAN NHAT cua RIENG may nay (moi vong lap 1 truy van nho, thay vi 1 truy van
+    // lon roi tu gom nhom - danh doi hieu nang lay do dung, vi day chi la man quan tri xem qua)
     const [current, previous] = await prisma.priceHistory.findMany({
       where: { laptopId },
       orderBy: { changedAt: 'desc' },
       take: 2,
       include: { laptop: { include: { brand: true } } },
     });
+    // Chi co 1 ban ghi (chua tung doi gia) hoac gia khong doi giua 2 ban ghi -> bo qua, khong
+    // tinh la "bien dong"
     if (!previous || previous.priceVnd === current.priceVnd) continue;
 
     results.push({

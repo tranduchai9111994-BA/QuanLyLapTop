@@ -54,6 +54,8 @@ export function CrudTable({
   const [importing, setImporting] = useState(false);
   const [form] = Form.useForm();
 
+  /** Tai lai danh sach tu API (goi lai sau moi lan them/sua/xoa/nhap Excel thanh cong, de bang
+   * luon khop voi du lieu that tren server, khong tu suy doan cap nhat state cuc bo). */
   function load() {
     setLoading(true);
     api
@@ -63,6 +65,8 @@ export function CrudTable({
       .finally(() => setLoading(false));
   }
 
+  // Tai lai neu component duoc dung cho MOT thuc the khac (vd chuyen tu man Brand sang man
+  // Laptop - cung 1 component CrudTable nhung endpoint doi) - khong chi chay 1 lan luc mount
   useEffect(load, [endpoint, listEndpoint]);
 
   const filteredRows = useMemo(() => {
@@ -79,20 +83,28 @@ export function CrudTable({
     );
   }, [rows, searchText, fields]);
 
+  /** Mo modal o che do THEM MOI: `editing = null` bao cho `handleSubmit` biet phai goi POST
+   * (khong phai PUT), va xoa trang form cu (neu lan truoc dang sua do dang dang do). */
   function openCreate() {
     setEditing(null);
     form.resetFields();
     setModalOpen(true);
   }
 
+  /** Mo modal o che do SUA: do san du lieu cua dong dang chon vao form. `transformEdit` (neu co)
+   * dung de "giai nen" du lieu truoc khi hien - vd Laptop luu resWidth/resHeight rieng trong DB
+   * nhung form chi co 1 o chon "Do phan giai" ghep ca 2, nen phai ghep lai truoc khi do vao form. */
   function openEdit(row: any) {
     setEditing(row);
     form.setFieldsValue(transformEdit ? transformEdit(row) : row);
     setModalOpen(true);
   }
 
+  /** Luu form (dung chung cho ca THEM MOI va SUA - phan biet bang `editing` co gia tri hay
+   * khong). `transformSubmit` (neu co) lam nguoc lai `transformEdit`: bien gia tri form ve dung
+   * dinh dang API can (vd tach "Do phan giai" da chon thanh resWidth/resHeight rieng). */
   async function handleSubmit() {
-    const values = await form.validateFields();
+    const values = await form.validateFields(); // nem loi neu co truong bat buoc con trong -> AntD tu hien loi tren tung o
     const payload = transformSubmit ? transformSubmit(values) : values;
     try {
       if (editing) {
@@ -103,7 +115,7 @@ export function CrudTable({
         message.success('Đã thêm mới.');
       }
       setModalOpen(false);
-      load();
+      load(); // tai lai danh sach de bang hien dung du lieu vua luu
     } catch (err: any) {
       message.error(err?.response?.data?.error?.message ?? 'Không lưu được, vui lòng thử lại.');
     }
@@ -119,12 +131,18 @@ export function CrudTable({
     }
   }
 
+  /** Chuyen 1 gia tri THO trong du lieu (vd `gpuId = 14`, `srgb100 = true`) thanh dang DE DOC
+   * trong file Excel xuat ra (vd "NVIDIA GeForce RTX 4070", "1") - nguoi dung mo file Excel xem
+   * bang mat thuong, khong phai lap trinh vien doc JSON. */
   function exportLabel(f: CrudField, value: any) {
     if (f.type === 'boolean') return value ? 1 : 0;
     if (f.type === 'select') return f.options?.find((o) => o.value === value)?.label ?? value;
     return value;
   }
 
+  /** Xuat TOAN BO du lieu dang loc (filteredRows - neu dang go tim kiem thi chi xuat ket qua
+   * dang loc, khong xuat het bang goc) ra file .xlsx, 1 sheet, ten sheet = ten man (cat con 31
+   * ky tu vi Excel gioi han do dai ten sheet). */
   function handleExport() {
     const exportFields = fields.filter((f) => !f.hideInTable || f.key === 'id');
     const data = filteredRows.map((row) =>
@@ -176,6 +194,8 @@ export function CrudTable({
     return false; // ngan Upload tu upload len server mac dinh
   }
 
+  // Dung TU DONG sinh cot bang tu khai bao `fields` - them 1 truong moi vao `fields` la du, KHONG
+  // can sua rieng phan hien thi bang o day (tranh quen sua 1 trong 2 cho, dan den lech du lieu)
   const columns = [
     ...fields
       .filter((f) => !f.hideInTable)
@@ -183,6 +203,8 @@ export function CrudTable({
         title: f.label,
         dataIndex: f.key,
         key: f.key,
+        // boolean -> "Co"/"Khong"; select -> tra nhan hien thi tu ID (vd 14 -> "RTX 4070");
+        // con lai hien nguyen gia tri tho (text/number)
         render: (v: any) =>
           f.type === 'boolean' ? (v ? 'Có' : 'Không') : f.type === 'select' ? (f.options?.find((o) => o.value === v)?.label ?? v) : v,
       })),
@@ -207,6 +229,8 @@ export function CrudTable({
   ];
 
   const formFields = fields.filter((f) => !f.hideInForm);
+  // Form nhieu truong (vd Laptop co ~15 truong) hien theo LUOI 2 cot cho gon, thay vi 1 cot dai
+  // le xuong het man hinh; form it truong (vd Brand chi co ten+tier) van giu 1 cot cho don gian
   const useGrid = formFields.length > 4;
 
   return (

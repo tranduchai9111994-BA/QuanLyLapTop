@@ -20,6 +20,11 @@ import { t } from '../../theme/tokens';
 import { formatVnd, formatShortVnd } from '../../utils/format';
 import { NUMERIC_LIMITS } from '../../constants/laptopSpecs';
 
+/**
+ * Kieu du lieu 1 dong trong bang Quan ly gia - chi lay dung nhung truong man hinh nay can hien
+ * thi/sua (khong phai toan bo model Laptop). `?` = truong co the thieu (vd may chua tung giam gia
+ * thi khong co `originalPriceVnd`).
+ */
 interface LaptopRow {
   id: number;
   sku: string;
@@ -37,6 +42,8 @@ interface LaptopRow {
   segmentLabel?: { segment: string } | null;
 }
 
+/** 1 dong trong the "Bien dong gia gan day" - lay tu API GET /laptops/price-changes, da duoc
+ * backend tinh san chenh lech (diff/percent) giua 2 lan doi gia gan nhat cua 1 may. */
 interface PriceChange {
   laptopId: number;
   name: string;
@@ -67,8 +74,13 @@ export function AdminPrices() {
   const [bulkPreview, setBulkPreview] = useState<any>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
 
+  /** Tai lai TOAN BO du lieu man hinh (danh sach may, danh sach hang, bien dong gia gan day)
+   * cung 1 luc - goi lai ham nay sau MOI lan sua gia/khuyen mai/luot ban thanh cong de bang
+   * luon hien dung du lieu moi nhat tu server (khong tu sua state cuc bo, tranh lech du lieu). */
   function load() {
     setLoading(true);
+    // pageSize=1000: man Quan ly gia can XEM/SUA duoc CA catalog cung luc (khong phan trang o
+    // server), phan trang chi lam o giao dien (Table pagination) cho de nhin
     Promise.all([
       api.get('/laptops?pageSize=1000&sort=price_desc'),
       api.get('/brands'),
@@ -94,6 +106,8 @@ export function AdminPrices() {
     return [...set.keys()].sort().map((v) => ({ label: v, value: v }));
   }, [rows]);
 
+  // Loc danh sach hien thi tren TRINH DUYET (khong goi lai API) - vi da tai het pageSize=1000 ve
+  // may nguoi dung, loc/tim kiem tren client cho phan hoi tuc thi khi go tung ky tu
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
@@ -103,6 +117,8 @@ export function AdminPrices() {
     });
   }, [rows, search, seriesFilter]);
 
+  /** Luu gia BAN moi cho 1 may (o "Gia moi" trong bang). Bo qua neu nguoi dung khong sua gi
+   * (gia go vao = gia dang co) de tranh goi API + ghi lich su gia mot cach thua. */
   async function savePrice(row: LaptopRow, newPrice: number) {
     if (newPrice === row.priceVnd) return;
     try {
@@ -126,6 +142,9 @@ export function AdminPrices() {
     }
   }
 
+  /** Mo Drawer "Lich su gia" cho 1 may - dat `historyOf` truoc (de Drawer hien ngay voi trang
+   * thai "Dang tai...") roi moi goi API, thay vi doi API xong moi mo Drawer (cam giac phan hoi
+   * nhanh hon). */
   async function openHistory(row: LaptopRow) {
     setHistoryOf(row);
     setHistory(null);
@@ -133,6 +152,10 @@ export function AdminPrices() {
     setHistory(r.data.data);
   }
 
+  /** Chay dieu chinh gia hang loat. `dryRun=true` chi XEM TRUOC (khong doi gi trong DB, server
+   * tra ve vai vi du minh hoa); `dryRun=false` moi thuc su ap dung - bat buoc nguoi dung phai
+   * bam "Xem truoc" it nhat 1 lan truoc khi nut "Ap dung that" duoc bat (xem `okButtonProps`
+   * ben duoi: `disabled: !bulkPreview`). */
   async function runBulk(dryRun: boolean) {
     setBulkBusy(true);
     try {
@@ -236,6 +259,10 @@ export function AdminPrices() {
             render: (v: number) => v?.toFixed(2),
           },
           {
+            // Cot "Gia goc (khuyen mai)": de trong = may khong giam gia. `min` = gia hien tai +
+            // 10.000d de nguoi dung KHONG THE nhap gia goc <= gia ban (khong hop ly - da la
+            // "khuyen mai" thi gia goc phai cao hon gia dang ban). Day la lop chan phia CLIENT,
+            // server (laptops.routes.ts) van kiem tra lai lan nua cho chac.
             title: 'Giá gốc (khuyến mãi)',
             key: 'originalPrice',
             width: 190,
@@ -247,11 +274,15 @@ export function AdminPrices() {
                 max={NUMERIC_LIMITS.priceVnd.max}
                 step={100_000}
                 style={{ width: '100%' }}
+                // formatter: them dau "." ngan cach hang nghin khi HIEN THI (vd 85000000 ->
+                // "85.000.000") cho de doc; parser: lam nguoc lai khi doc gia tri nguoi go vao
                 formatter={(v) => (v ? `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '')}
                 parser={(v) => Number((v ?? '').replace(/\./g, ''))}
                 onBlur={(e) => {
                   const raw = e.target.value.replace(/\./g, '');
+                  // O trong (raw === '') nghia la nguoi dung XOA het -> HUY khuyen mai (gui null)
                   const val = raw === '' ? null : Number(raw);
+                  // Khong doi gi hoac nhap gia tri khong hop le (NaN) thi bo qua, khong goi API
                   if (val === row.originalPriceVnd || (val !== null && Number.isNaN(val))) return;
                   savePromotion(row, { originalPriceVnd: val });
                 }}
@@ -277,6 +308,9 @@ export function AdminPrices() {
             ),
           },
           {
+            // Cot "Gia moi": sua duoc CA khi roi khoi o (onBlur) LAN khi nhan Enter
+            // (onPressEnter) - tien loi hon cho nguoi dung go nhanh nhieu dong lien tiep bang
+            // ban phim ma khong can bam chuot ra ngoai o.
             title: 'Giá mới',
             key: 'edit',
             width: 200,
