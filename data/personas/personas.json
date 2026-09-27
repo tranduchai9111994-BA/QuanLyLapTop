@@ -11,7 +11,7 @@
       ],
       "budget": [
         11000000,
-        14150000
+        14600000
       ],
       "priorities": {
         "performance": 1,
@@ -25,7 +25,7 @@
       "segment_in": [
         "OFFICE"
       ],
-      "all_price_lte": 15565000
+      "all_price_lte": 16060000
     }
   },
   {
@@ -40,7 +40,7 @@
       ],
       "budget": [
         11000000,
-        14150000
+        14600000
       ],
       "priorities": {
         "performance": 2,
@@ -54,7 +54,7 @@
       "segment_in": [
         "OFFICE"
       ],
-      "all_price_lte": 15565000
+      "all_price_lte": 16060000
     }
   },
   {
@@ -69,8 +69,8 @@
         "di_chuyen_nhieu"
       ],
       "budget": [
-        15000000,
-        27000000
+        14000000,
+        28000000
       ],
       "priorities": {
         "performance": 2,
@@ -84,7 +84,7 @@
       "segment_in": [
         "ULTRABOOK"
       ],
-      "all_price_lte": 29700000
+      "all_price_lte": 30800000
     }
   },
   {
@@ -99,8 +99,8 @@
         "do_hoa"
       ],
       "budget": [
-        32000000,
-        45000000
+        31950000,
+        43000000
       ],
       "priorities": {
         "performance": 4,
@@ -114,7 +114,7 @@
       "segment_in": [
         "CREATOR"
       ],
-      "all_price_lte": 49500000
+      "all_price_lte": 47300000
     }
   },
   {
@@ -128,7 +128,7 @@
         "choi_game"
       ],
       "budget": [
-        28000000,
+        27000000,
         45000000
       ],
       "priorities": {
@@ -161,7 +161,7 @@
         "choi_game"
       ],
       "budget": [
-        28000000,
+        27000000,
         45000000
       ],
       "priorities": {
@@ -194,8 +194,8 @@
         "di_chuyen_nhieu"
       ],
       "budget": [
-        15000000,
-        27000000
+        14000000,
+        28000000
       ],
       "priorities": {
         "performance": 2,
@@ -209,7 +209,7 @@
       "segment_in": [
         "ULTRABOOK"
       ],
-      "all_price_lte": 29700000
+      "all_price_lte": 30800000
     }
   },
   {
@@ -224,8 +224,8 @@
         "thiet_ke"
       ],
       "budget": [
-        32000000,
-        45000000
+        31950000,
+        43000000
       ],
       "priorities": {
         "performance": 5,
@@ -241,7 +241,7 @@
       "segment_in": [
         "CREATOR"
       ],
-      "all_price_lte": 49500000,
+      "all_price_lte": 47300000,
       "all_ram_gte": 16
     }
   },
@@ -256,7 +256,7 @@
         "choi_game"
       ],
       "budget": [
-        33950000,
+        33300000,
         45000000
       ],
       "priorities": {
@@ -289,8 +289,8 @@
         "di_chuyen_nhieu"
       ],
       "budget": [
-        15000000,
-        27000000
+        14000000,
+        28000000
       ],
       "priorities": {
         "performance": 2,
@@ -304,7 +304,7 @@
       "segment_in": [
         "ULTRABOOK"
       ],
-      "all_price_lte": 29700000
+      "all_price_lte": 30800000
     }
   },
   {
@@ -318,8 +318,8 @@
         "lap_trinh"
       ],
       "budget": [
-        25000000,
-        45000000
+        26000000,
+        43000000
       ],
       "priorities": {
         "performance": 5,
@@ -335,7 +335,7 @@
       "segment_in": [
         "CREATOR"
       ],
-      "all_price_lte": 49500000,
+      "all_price_lte": 47300000,
       "all_ram_gte": 32
     }
   },
@@ -352,7 +352,7 @@
       ],
       "budget": [
         11000000,
-        14150000
+        14600000
       ],
       "priorities": {
         "performance": 1,
@@ -366,7 +366,7 @@
       "segment_in": [
         "OFFICE"
       ],
-      "all_price_lte": 15565000
+      "all_price_lte": 16060000
     }
   },
   {
@@ -380,8 +380,8 @@
         "do_hoa"
       ],
       "budget": [
-        32000000,
-        45000000
+        31950000,
+        43000000
       ],
       "priorities": {
         "performance": 4,
@@ -397,7 +397,7 @@
       "segment_in": [
         "CREATOR"
       ],
-      "all_price_lte": 49500000,
+      "all_price_lte": 47300000,
       "all_ram_gte": 16
     }
   },
@@ -413,7 +413,7 @@
       ],
       "budget": [
         11000000,
-        18000000
+        19000000
       ],
       "priorities": {
         "performance": 2,
@@ -427,7 +427,7 @@
       "segment_in": [
         "OFFICE"
       ],
-      "all_price_lte": 19800000
+      "all_price_lte": 20900000
     }
   },
   {
@@ -441,8 +441,8 @@
         "do_hoa"
       ],
       "budget": [
-        32000000,
-        45000000
+        31950000,
+        43000000
       ],
       "priorities": {
         "performance": 5,
@@ -458,7 +458,7 @@
       "segment_in": [
         "CREATOR"
       ],
-      "all_price_lte": 49500000,
+      "all_price_lte": 47300000,
       "all_ram_gte": 16
     }
   },
@@ -475,7 +475,7 @@
       ],
       "budget": [
         11000000,
-        18000000
+        19000000
       ],
       "priorities": {
         "performance": 3,
@@ -489,7 +489,7 @@
       "segment_in": [
         "OFFICE"
       ],
-      "all_price_lte": 19800000
+      "all_price_lte": 20900000
     }
   },
   {
@@ -504,8 +504,8 @@
         "dung_video"
       ],
       "budget": [
-        32000000,
-        45000000
+        31950000,
+        43000000
       ],
       "priorities": {
         "performance": 5,
@@ -521,7 +521,7 @@
       "segment_in": [
         "CREATOR"
       ],
-      "all_price_lte": 49500000,
+      "all_price_lte": 47300000,
       "all_ram_gte": 16
     }
   },
@@ -538,7 +538,7 @@
       ],
       "budget": [
         11000000,
-        18000000
+        19000000
       ],
       "priorities": {
         "performance": 3,
@@ -552,7 +552,7 @@
       "segment_in": [
         "OFFICE"
       ],
-      "all_price_lte": 19800000
+      "all_price_lte": 20900000
     }
   },
   {
@@ -566,8 +566,8 @@
         "lap_trinh"
       ],
       "budget": [
-        25000000,
-        45000000
+        26000000,
+        43000000
       ],
       "priorities": {
         "performance": 4,
@@ -583,7 +583,7 @@
       "segment_in": [
         "CREATOR"
       ],
-      "all_price_lte": 49500000,
+      "all_price_lte": 47300000,
       "all_ram_gte": 16
     }
   },
@@ -600,7 +600,7 @@
       ],
       "budget": [
         11000000,
-        14150000
+        14600000
       ],
       "priorities": {
         "performance": 2,
@@ -614,7 +614,7 @@
       "segment_in": [
         "OFFICE"
       ],
-      "all_price_lte": 15565000
+      "all_price_lte": 16060000
     }
   },
   {
@@ -629,7 +629,7 @@
       ],
       "budget": [
         11000000,
-        18000000
+        19000000
       ],
       "priorities": {
         "performance": 3,
@@ -645,7 +645,7 @@
       "segment_in": [
         "OFFICE"
       ],
-      "all_price_lte": 19800000,
+      "all_price_lte": 20900000,
       "all_ram_gte": 16
     }
   },
@@ -661,8 +661,8 @@
         "hoc_tap"
       ],
       "budget": [
-        25000000,
-        45000000
+        26000000,
+        43000000
       ],
       "priorities": {
         "performance": 4,
@@ -678,7 +678,7 @@
       "segment_in": [
         "CREATOR"
       ],
-      "all_price_lte": 49500000,
+      "all_price_lte": 47300000,
       "all_ram_gte": 16
     }
   },
@@ -694,8 +694,8 @@
         "di_chuyen_nhieu"
       ],
       "budget": [
-        15000000,
-        27000000
+        14000000,
+        28000000
       ],
       "priorities": {
         "performance": 3,
@@ -711,7 +711,7 @@
       "segment_in": [
         "ULTRABOOK"
       ],
-      "all_price_lte": 29700000,
+      "all_price_lte": 30800000,
       "all_ram_gte": 16
     }
   },
@@ -726,8 +726,8 @@
         "choi_game"
       ],
       "budget": [
-        28000000,
-        35650000
+        27000000,
+        35100000
       ],
       "priorities": {
         "performance": 4,
@@ -741,7 +741,7 @@
       "segment_in": [
         "GAMING"
       ],
-      "all_price_lte": 39215000
+      "all_price_lte": 38610000
     }
   },
   {
@@ -756,7 +756,7 @@
         "do_hoa"
       ],
       "budget": [
-        33950000,
+        33300000,
         45000000
       ],
       "priorities": {
@@ -789,8 +789,8 @@
         "di_chuyen_nhieu"
       ],
       "budget": [
-        19200000,
-        27000000
+        18900000,
+        28000000
       ],
       "priorities": {
         "performance": 3,
@@ -804,7 +804,7 @@
       "segment_in": [
         "ULTRABOOK"
       ],
-      "all_price_lte": 29700000
+      "all_price_lte": 30800000
     }
   },
   {
@@ -819,7 +819,7 @@
       ],
       "budget": [
         11000000,
-        14150000
+        14600000
       ],
       "priorities": {
         "performance": 1,
@@ -833,7 +833,7 @@
       "segment_in": [
         "OFFICE"
       ],
-      "all_price_lte": 15565000
+      "all_price_lte": 16060000
     }
   },
   {
@@ -847,8 +847,8 @@
         "thiet_ke"
       ],
       "budget": [
-        25000000,
-        45000000
+        26000000,
+        43000000
       ],
       "priorities": {
         "performance": 4,
@@ -862,7 +862,7 @@
       "segment_in": [
         "CREATOR"
       ],
-      "all_price_lte": 49500000
+      "all_price_lte": 47300000
     }
   },
   {
@@ -876,7 +876,7 @@
         "choi_game"
       ],
       "budget": [
-        28000000,
+        27000000,
         45000000
       ],
       "priorities": {
@@ -909,8 +909,8 @@
         "di_chuyen_nhieu"
       ],
       "budget": [
-        15000000,
-        27000000
+        14000000,
+        28000000
       ],
       "priorities": {
         "performance": 2,
@@ -924,7 +924,7 @@
       "segment_in": [
         "ULTRABOOK"
       ],
-      "all_price_lte": 29700000
+      "all_price_lte": 30800000
     }
   }
 ]

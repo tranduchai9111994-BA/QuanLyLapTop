@@ -1,7 +1,7 @@
 {
   "model_a": {
-    "cv_f1_macro_mean": 0.7656,
-    "cv_f1_macro_std": 0.0267,
+    "cv_f1_macro_mean": 0.7729,
+    "cv_f1_macro_std": 0.0436,
     "labels": [
       "CREATOR",
       "GAMING",
@@ -10,92 +10,92 @@
     ],
     "confusion_matrix": [
       [
-        71,
-        41,
-        6,
-        10
+        53,
+        49,
+        11,
+        7
       ],
       [
-        23,
-        255,
+        13,
+        314,
+        8,
+        0
+      ],
+      [
+        1,
         7,
-        1
+        314,
+        22
       ],
       [
         2,
-        4,
-        307,
-        39
-      ],
-      [
         0,
-        1,
-        69,
-        164
+        51,
+        148
       ]
     ],
     "report": {
       "CREATOR": {
-        "precision": 0.7395833333333334,
-        "recall": 0.5546875,
-        "f1-score": 0.6339285714285714,
-        "support": 128.0
+        "precision": 0.7681159420289855,
+        "recall": 0.44166666666666665,
+        "f1-score": 0.5608465608465608,
+        "support": 120.0
       },
       "GAMING": {
-        "precision": 0.8471760797342193,
-        "recall": 0.8916083916083916,
-        "f1-score": 0.868824531516184,
-        "support": 286.0
+        "precision": 0.8486486486486486,
+        "recall": 0.9373134328358209,
+        "f1-score": 0.8907801418439716,
+        "support": 335.0
       },
       "OFFICE": {
-        "precision": 0.7892030848329049,
-        "recall": 0.8721590909090909,
-        "f1-score": 0.8286099865047234,
-        "support": 352.0
+        "precision": 0.8177083333333334,
+        "recall": 0.9127906976744186,
+        "f1-score": 0.8626373626373627,
+        "support": 344.0
       },
       "ULTRABOOK": {
-        "precision": 0.7663551401869159,
-        "recall": 0.7008547008547008,
-        "f1-score": 0.7321428571428571,
-        "support": 234.0
+        "precision": 0.8361581920903954,
+        "recall": 0.736318407960199,
+        "f1-score": 0.783068783068783,
+        "support": 201.0
       },
-      "accuracy": 0.797,
+      "accuracy": 0.829,
       "macro avg": {
-        "precision": 0.7855794095218434,
-        "recall": 0.7548274208430459,
-        "f1-score": 0.7658764866480839,
+        "precision": 0.8176577790253408,
+        "recall": 0.7570223012842763,
+        "f1-score": 0.7743332120991695,
         "support": 1000.0
       },
       "weighted avg": {
-        "precision": 0.7940856141355742,
-        "recall": 0.797,
-        "f1-score": 0.792618816977577,
+        "precision": 0.8258306736176118,
+        "recall": 0.829,
+        "f1-score": 0.819857012963396,
         "support": 1000.0
       }
     }
   },
   "model_b": {
     "kNN one-sided (Mo hinh B)": {
-      "precision_at_5": 0.4533,
-      "ndcg_at_5": 0.7881,
+      "precision_at_5": 0.4333,
+      "ndcg_at_5": 0.7374,
       "budget_compliance": 1.0,
       "n_personas": 30
     },
     "Baseline: gia tang dan": {
-      "precision_at_5": 0.0733,
-      "ndcg_at_5": 0.5405,
+      "precision_at_5": 0.1533,
+      "ndcg_at_5": 0.6124,
       "budget_compliance": 1.0,
       "n_personas": 30
     },
     "Baseline: value_index": {
-      "precision_at_5": 0.2267,
-      "ndcg_at_5": 0.6785,
+      "precision_at_5": 0.2467,
+      "ndcg_at_5": 0.6402,
       "budget_compliance": 1.0,
       "n_personas": 30
     },
     "Baseline: ngau nhien": {
-      "precision_at_5": 0.1533,
-      "ndcg_at_5": 0.6268,
+      "precision_at_5": 0.1133,
+      "ndcg_at_5": 0.6494,
       "budget_compliance": 1.0,
       "n_personas": 30
     }
@@ -172,10 +172,10 @@
   },
   "search_effort": {
     "n_personas": 30,
-    "manual_avg_items_viewed": 19.5,
-    "manual_median_items_viewed": 9.0,
-    "system_avg_items_viewed": 1.4,
-    "system_hit_rate_top5": 0.6667,
-    "speedup_times": 14.0
+    "manual_avg_items_viewed": 19.7,
+    "manual_median_items_viewed": 12.0,
+    "system_avg_items_viewed": 1.92,
+    "system_hit_rate_top5": 0.8,
+    "speedup_times": 10.3
   }
 }

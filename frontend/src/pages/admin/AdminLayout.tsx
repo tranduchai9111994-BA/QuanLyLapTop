@@ -22,7 +22,10 @@ export function AdminLayout() {
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider width={220} theme="light">
-        <div style={{ padding: 16, fontWeight: 700, color: '#1A73E8' }}>SmartLap · Quản trị</div>
+        <div style={{ padding: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <img src="/logo-mark.png" alt="" style={{ height: 30, width: 'auto' }} />
+          <span style={{ fontWeight: 700, color: '#1A73E8' }}>SmartLap · Quản trị</span>
+        </div>
         <Menu
           mode="inline"
           selectedKeys={[location.pathname]}
@@ -31,6 +34,7 @@ export function AdminLayout() {
             { key: '/admin/benchmarks/cpu', label: <Link to="/admin/benchmarks/cpu">Benchmark CPU</Link> },
             { key: '/admin/benchmarks/gpu', label: <Link to="/admin/benchmarks/gpu">Benchmark GPU</Link> },
             { key: '/admin/laptops', label: <Link to="/admin/laptops">Laptop</Link> },
+            { key: '/admin/prices', label: <Link to="/admin/prices">Quản lý giá</Link> },
           ]}
         />
       </Sider>

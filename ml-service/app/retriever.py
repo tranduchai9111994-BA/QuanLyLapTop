@@ -28,7 +28,13 @@ GROUPS = {
     # tiet kiem vua muon re, vua muon dang tien - hai mat cua cung mot nhu cau.
     "price": ["price_vnd", "value_index"],
     "brand": ["brand_tier"],
+    # "Do pho bien": may giam gia sau + ban chay se duoc nang len trong xep hang, giong hanh
+    # vi mua sam that (nguoi mua co xu huong tin tuong san pham nhieu nguoi da mua + dang sale).
+    # Trong so CO DINH (khong gan voi thanh truot nao nguoi dung tu chinh), luon co mat o muc
+    # vua phai de KHONG lan at cac tieu chi chinh (hieu nang/gia/di dong/man hinh).
+    "popularity": ["discount_percent", "sales_score"],
 }
+POPULARITY_WEIGHT = 0.12
 
 BASE_WEIGHT_BY_SEGMENT = {
     "GAMING": {"performance": 1.3, "mobility": 0.7, "display": 1.0, "price": 1.0, "brand": 0.5},
@@ -54,6 +60,8 @@ FEATURE_DIRECTION: dict[str, int] = {
     "brand_tier": +1,
     "gpu_dedicated": +1,
     "value_index": +1,  # cang dang tien cang tot; dang tien hon muc mong muon khong bi phat
+    "discount_percent": +1,  # giam gia cang sau cang tot, khong bi phat neu giam nhieu hon can
+    "sales_score": +1,       # ban cang chay cang duoc tin tuong, khong bi phat neu ban rat chay
     "weight_kg": -1,
     "price_vnd": -1,
     "screen_inch": 0,
@@ -80,16 +88,36 @@ def fit_scaler(catalog: pd.DataFrame) -> StandardScaler:
 def build_ideal_vector(
     candidates: pd.DataFrame, priorities: dict, must: dict, budget: dict, segment: str
 ) -> dict:
-    """Ho so 'ly tuong' q: moi muc uu tien 1..5 -> mot phan vi trong tap ung vien."""
+    """Dung VECTOR NHU CAU LY TUONG q - "chiec may trong mo" ma nguoi dung dang tim.
+
+    q KHONG PHAI la mot laptop co that trong catalog. No la mot diem duoc "may do" tu chinh
+    tap ung vien: voi moi dac trung, ta tra loi cau hoi "nguoi dung muon gia tri nay o MUC NAO
+    so voi cac may khac dang co san?" bang cach lay PHAN VI (percentile) trong `candidates`.
+
+    Vi du de hieu: nguoi dung chon "hieu nang" = 5/5 (rat quan trong). Tra bang
+    PERCENTILE_BY_PRIORITY, muc 5 tuong ung phan vi 90. Nghia la q["cpu_score"] = gia tri CPU
+    o VI TRI 90% (chi 10% may trong tap ung vien co CPU manh hon) - the hien "toi muon mot
+    trong nhung may manh nhat". Nguoc lai muc 1/5 chi can phan vi 25 (trung binh yeu cung duoc).
+
+    Sau khi co q, Mo hinh B (ham `recommend` ben duoi) se tim CAC MAY GAN q NHAT trong khong
+    gian da chieu - do la ban chat cua "kNN truy hoi": khong tim may giong q nhat theo TUNG dac
+    trung rieng le, ma tim may co TONG khoang cach (co trong so) toi q la nho nhat.
+    """
     q: dict[str, float] = {}
+
+    # Nhom HIEU NANG: cpu/gpu/ram/ssd deu dung CHUNG mot muc uu tien "performance"
     for feat in ["cpu_score", "gpu_score", "ram_gb", "ssd_gb"]:
         p = priorities.get("performance", 3)
         q[feat] = float(candidates[feat].quantile(PERCENTILE_BY_PRIORITY[p] / 100))
 
+    # Nhom DI DONG: can nang la "cang THAP cang tot" nen phai LAT nguoc phan vi
+    # (uu tien di dong cao -> muon may o phan vi THAP cua can nang, tuc la NHE)
     p_mob = priorities.get("mobility", 3)
     q["weight_kg"] = float(candidates["weight_kg"].quantile((100 - PERCENTILE_BY_PRIORITY[p_mob]) / 100))
     q["battery_wh"] = float(candidates["battery_wh"].quantile(PERCENTILE_BY_PRIORITY[p_mob] / 100))
 
+    # Nhom MAN HINH: do phan giai (ppi) va tan so quet cang cao cang tot; sRGB 100% chi "bat"
+    # (=1) khi nguoi dung thuc su quan tam man hinh (muc >= 4/5), con lai khong doi hoi
     p_disp = priorities.get("display", 3)
     for feat in ["ppi", "refresh_hz"]:
         q[feat] = float(candidates[feat].quantile(PERCENTILE_BY_PRIORITY[p_disp] / 100))
@@ -107,6 +135,11 @@ def build_ideal_vector(
     q["screen_inch"] = float(candidates["screen_inch"].median())
     q["gpu_dedicated"] = 1 if segment == "GAMING" else int(candidates["gpu_dedicated"].median())
     q["brand_tier"] = float(candidates["brand_tier"].quantile(0.5))
+    # "Do pho bien" luon huong toi muc CAO (khong co thanh truot rieng cho nguoi dung chinh) -
+    # dat q o phan vi 80: mong muon may giam gia sau + ban chay, nhung khong doi hoi PHAI la
+    # may giam gia/ban chay NHAT catalog (qua khat khe se lam mat nhieu may tot khac).
+    q["discount_percent"] = float(candidates["discount_percent"].quantile(0.80))
+    q["sales_score"] = float(candidates["sales_score"].quantile(0.80))
 
     ram_min = must.get("ramMin")
     if ram_min:
@@ -115,17 +148,40 @@ def build_ideal_vector(
 
 
 def build_weights(priorities: dict, segment: str, brand_weight: float = 1.0) -> dict:
+    """Tinh trong so w_j cho tung dac trung, dung trong cong thuc khoang cach co trong so.
+
+    Cach tinh (vi du de hieu): neu nguoi dung dat "hieu nang" = 5/5, va phan khuc GAMING co
+    trong so nen mac dinh cho nhom hieu nang la 1.3, thi trong so tho cua nhom nay = 5 * 1.3 = 6.5.
+    Nhom "hieu nang" gom 4 dac trung (cpu_score, gpu_score, ram_gb, ssd_gb) nen moi dac trung
+    nhan 6.5/4 = 1.625. Cuoi cung TAT CA trong so (moi nhom cong lai) duoc CHIA cho tong, de
+    tong luon bang 1 (dieu kien bat buoc cua cong thuc Euclidean co trong so).
+
+    => Ket qua: nguoi dung keo thanh truot cang cao, nhom dac trung do cang "nang ky" trong
+    viec xep hang, dong thoi van giu duoc dac thu tung phan khuc (vd GAMING luon coi trong
+    hieu nang hon OFFICE ngay ca khi ca hai nguoi dung deu chon muc 3/5).
+    """
+    # base: trong so "nen" mac dinh cua tung phan khuc (vd GAMING coi trong hieu nang hon OFFICE)
     base = BASE_WEIGHT_BY_SEGMENT.get(segment, BASE_WEIGHT_BY_SEGMENT["OFFICE"])
+
+    # man hinh (screen_inch) va gpu_dedicated luon co mot chut trong so co dinh, khong phu
+    # thuoc muc uu tien nguoi dung chon (vd kich thuoc man hinh it lien quan den 4 nhom chinh)
     raw: dict[str, float] = {"screen_inch": SCREEN_INCH_WEIGHT, "gpu_dedicated": 0.06}
+
     for group, feats in GROUPS.items():
-        if group == "brand":
+        if group == "popularity":
+            w_group = POPULARITY_WEIGHT
+        elif group == "brand":
+            # Nhom thuong hieu KHONG co thanh truot rieng cho nguoi dung keo - no chi tang len
+            # khi cau noi tu do co tu khoa "ben", "uy tin" (xem text_classifier.py PRIORITY_HINTS)
             w_group = base[group] * brand_weight
         else:
-            p = priorities.get(group, 3)
+            p = priorities.get(group, 3)  # muc uu tien 1..5 nguoi dung chon (mac dinh 3 = vua)
             w_group = p * base[group]
-        per_feat = w_group / len(feats)
+        per_feat = w_group / len(feats)  # chia deu cho cac dac trung trong cung nhom
         for f in feats:
             raw[f] = per_feat
+
+    # Chuan hoa de tong trong so = 1 (bat buoc cho cong thuc khoang cach Euclidean co trong so)
     total = sum(raw.values())
     return {k: v / total for k, v in raw.items()}
 

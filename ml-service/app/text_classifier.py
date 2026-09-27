@@ -92,7 +92,31 @@ def normalize_text(text: str) -> str:
 
 
 def build_text_pipeline(n_neighbors: int = 5) -> Pipeline:
-    """TF-IDF (ket hop word + char n-gram) roi kNN cosine - kNN la LOI phan loai."""
+    """Xay "day chuyen" bien mot CAU VAN thanh MOT NHAN NHU CAU, gom 2 buoc:
+
+    BUOC 1 - TF-IDF: doi cau van (chuoi ky tu) thanh MOT VECTOR SO, vi may tinh khong the so
+    sanh truc tiep 2 cau van ban. TF-IDF (Term Frequency - Inverse Document Frequency) cho
+    diem cao cho cac TU/KY TU xuat hien NHIEU trong cau nay nhung HIEM trong toan bo tap du
+    lieu (vd "ke toan" dac trung hon "may tinh" vi tu "may tinh" xuat hien o hau het moi cau).
+
+    O day dung DONG THOI 2 loai TF-IDF (ket hop bang FeatureUnion):
+      - "word" (tu, 1-2 tu lien tiep): bat cum tu co nghia nhu "ke toan", "choi game"
+      - "char_wb" (chum 3-5 KY TU, khong xuyen qua khoang trang): bat duoc TU GAN GIONG nhau
+        du go sai chinh ta hoac KHONG DAU, vi du "kê toán" va "ke toan" co chung nhieu chum
+        ky tu con nhu "e to", " to", "toan" -> vector TF-IDF cua 2 cau se gan nhau ngay ca khi
+        khong co tu nao khop CHINH XAC 100%. Day la ly do he thong hieu duoc ca cau khong dau.
+
+    BUOC 2 - kNN (K-Nearest Neighbors) voi metric COSINE: sau khi co vector, tim k CAU DA HOC
+    (trong data/need_phrases.json) co vector GAN NHAT voi cau nguoi dung vua nhap, roi lay
+    NHAN xuat hien nhieu nhat trong k cau do lam ket qua du doan (giong het co che cua Mo hinh
+    A trong classifier.py, chi khac dau vao la vector TF-IDF thay vi cau hinh may).
+
+    Dung "cosine" (do goc giua 2 vector) thay vi Euclidean (khoang cach thang) vi voi du lieu
+    van ban, DO DAI cau khong quan trong bang HUONG noi dung - hai cau mot ngan mot dai nhung
+    cung chu de van nen duoc coi la "gan nhau".
+
+    `weights="distance"`: cau hoc gan giong hon co "phieu bau" nang hon khi quyet dinh nhan.
+    """
     return Pipeline([
         (
             "tfidf",

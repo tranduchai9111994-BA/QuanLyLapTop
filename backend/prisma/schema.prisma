@@ -59,6 +59,8 @@ model Laptop {
   id             Int      @id @default(autoincrement())
   sku            String   @unique @db.NVarChar(80)
   name           String   @db.NVarChar(200)
+  /// Dong san pham (vd "Legion", "TUF Gaming") - gia ban gan voi tung dong/model cu the
+  series         String?  @db.NVarChar(80)
   brandId        Int
   cpuId          Int
   gpuId          Int
@@ -74,6 +76,14 @@ model Laptop {
   weightKg       Float
   batteryWh      Float?
   priceVnd       Int
+  /// Gia niem yet TRUOC khuyen mai (null = khong dang giam gia). priceVnd luon la GIA HIEN
+  /// TAI (da giam neu co) - discountPercent tinh tu 2 cot nay, khong luu rieng de tranh lech
+  /// du lieu khi mot trong hai gia thay doi.
+  originalPriceVnd Int?
+  /// So luot da ban - dung lam tin hieu "do pho bien" trong xep hang Mo hinh B, tuong tu cac
+  /// san Thuong mai dien tu that (may ban chay duoc uu tien hien thi ngay ca khi khong phai
+  /// khop nhu cau hoan hao nhat).
+  salesCount     Int      @default(0)
   imageUrl       String?  @db.NVarChar(500)
   sourceUrl      String?  @db.NVarChar(500)
   performanceIdx Float

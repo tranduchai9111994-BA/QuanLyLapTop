@@ -66,8 +66,79 @@ def main():
         page.wait_for_timeout(500)
         page.screenshot(path=OUT / "07_so_sanh.png", full_page=True)
 
+        # --- 08: Danh muc voi tab phan khuc + anh dai dien ---
+        page.goto(f"{BASE}/laptops")
+        page.wait_for_timeout(1200)
+        page.screenshot(path=OUT / "08_danh_muc.png")
+
+        page.get_by_text("Gaming (", exact=False).first.click()
+        page.wait_for_timeout(1000)
+        page.screenshot(path=OUT / "09_danh_muc_loc_gaming.png")
+
+        # --- 10+: Khu quan tri ---
+        page.goto(f"{BASE}/admin/login")
+        page.wait_for_timeout(600)
+        page.screenshot(path=OUT / "10_dang_nhap_quan_tri.png")
+        page.get_by_role("button", name="Đăng nhập").click()
+        page.wait_for_url("**/admin/**", timeout=10000)
+        page.wait_for_timeout(1500)
+
+        page.goto(f"{BASE}/admin/laptops")
+        page.wait_for_timeout(2500)
+        page.screenshot(path=OUT / "11_quan_tri_crud_laptop.png")
+
+        # Tim kiem trong CRUD
+        page.get_by_placeholder("Tìm kiếm...").fill("RTX 4070")
+        page.wait_for_timeout(800)
+        page.screenshot(path=OUT / "12_quan_tri_tim_kiem.png")
+        page.get_by_placeholder("Tìm kiếm...").fill("")
+
+        # --- Man Quan ly gia: khuyen mai (gia goc gach ngang) + luot ban - tinh nang MOI ---
+        page.goto(f"{BASE}/admin/prices")
+        page.wait_for_timeout(1500)
+        page.screenshot(path=OUT / "12b_quan_ly_gia_khuyen_mai.png", full_page=True)
+
+        # Quay lai man CRUD laptop cho cac buoc tiep theo (tao may moi)
+        page.goto(f"{BASE}/admin/laptops")
+        page.wait_for_timeout(1500)
+        page.wait_for_timeout(500)
+
+        # --- TIEU CHI 3: AI goi y phan khuc cho may moi ---
+        page.get_by_text("+ Thêm mới").click()
+        page.wait_for_timeout(800)
+        page.screenshot(path=OUT / "13_them_laptop_form.png")
+
+        # RAM/SSD/Man hinh/Do phan giai/Tan so quet la du lieu CHUAN nen la dropdown (Select),
+        # khong con o nhap tu do - phai click mo dropdown roi chon dung option (xem
+        # constants/laptopSpecs.ts va checklist muc C0.6: chan nhap sai kieu RAM=-2).
+        def choose(label: str, option_text: str):
+            page.get_by_label(label).click()
+            page.get_by_title(option_text).click()
+
+        choose("RAM (GB)", "32")
+        choose("SSD (GB)", "1024")
+        choose("Màn hình (inch)", '16"')
+        choose("Độ phân giải", "2560 x 1440 (QHD)")
+        choose("Tần số quét (Hz)", "240 Hz")
+        page.get_by_label("Trọng lượng (kg)").fill("2.6")
+
+        page.get_by_label("CPU").click()
+        page.keyboard.type("i9-13900H")
+        page.wait_for_timeout(500)
+        page.keyboard.press("Enter")
+        page.get_by_label("GPU").click()
+        page.keyboard.type("RTX 4070")
+        page.wait_for_timeout(500)
+        page.keyboard.press("Enter")
+
+        page.get_by_text("AI gợi ý phân khúc từ cấu hình").click()
+        page.wait_for_timeout(1500)
+        page.screenshot(path=OUT / "14_ai_goi_y_phan_khuc.png")
+
         browser.close()
         print(f"Da luu anh vao {OUT}")
+        for f in sorted(OUT.glob("*.png")):
+            print(f"  {f.name}")
 
 
 if __name__ == "__main__":

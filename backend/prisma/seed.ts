@@ -163,6 +163,7 @@ async function seedCatalog(cpuMap: Map<string, number>, gpuMap: Map<string, numb
       create: {
         sku: row.sku,
         name: row.name,
+        series: row.series || null,
         brandId,
         cpuId,
         gpuId,
@@ -177,12 +178,20 @@ async function seedCatalog(cpuMap: Map<string, number>, gpuMap: Map<string, numb
         weightKg: Number(row.weight_kg),
         batteryWh: Number(row.battery_wh),
         priceVnd: Number(row.price_vnd),
+        originalPriceVnd: row.original_price_vnd ? Number(row.original_price_vnd) : null,
+        salesCount: row.sales_count ? Number(row.sales_count) : 0,
         imageUrl: row.image_url || null,
         sourceUrl: row.source_url || null,
         performanceIdx,
         valueIdx,
       },
-      update: { performanceIdx, valueIdx },
+      update: {
+        performanceIdx,
+        valueIdx,
+        series: row.series || null,
+        originalPriceVnd: row.original_price_vnd ? Number(row.original_price_vnd) : null,
+        salesCount: row.sales_count ? Number(row.sales_count) : 0,
+      },
     });
 
     await prisma.segmentLabel.upsert({

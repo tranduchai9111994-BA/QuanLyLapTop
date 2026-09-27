@@ -6,26 +6,44 @@ import { prisma } from '../../lib/prisma';
 import { mlClient } from '../../lib/mlClient';
 import { snapshotSync } from '../jobs/snapshotSync';
 import * as laptopsService from './laptops.service';
+import * as priceService from './price.service';
 
 export const laptopsRouter = Router();
 
+// Cac gia tri chuan + nguong hop le. Phai khop voi frontend/src/constants/laptopSpecs.ts va
+// ml-service/app/data_check.py. Day la TUYEN PHONG THU CUOI: giao dien da cho chon san, nhung
+// API van phai tu chan du lieu vo ly (vd RAM am, gia 0 dong) du ai goi truc tiep.
+const VALID_RAM = [4, 8, 12, 16, 24, 32, 64, 96, 128] as const;
+const VALID_SSD = [128, 256, 512, 1024, 2048, 4096] as const;
+
 const laptopInputSchema = z.object({
-  sku: z.string(),
-  name: z.string(),
-  brandId: z.number(),
-  cpuId: z.number(),
-  gpuId: z.number(),
-  ramGb: z.number(),
+  sku: z.string().min(2, 'Mã SKU quá ngắn').max(80),
+  name: z.string().min(2, 'Tên máy quá ngắn').max(200),
+  series: z.string().max(80).optional(),
+  brandId: z.number().int().positive(),
+  cpuId: z.number().int().positive(),
+  gpuId: z.number().int().positive(),
+  ramGb: z
+    .number()
+    .int()
+    .refine((v) => (VALID_RAM as readonly number[]).includes(v), {
+      message: `RAM phải thuộc: ${VALID_RAM.join(', ')} GB`,
+    }),
   ramUpgradable: z.boolean().optional(),
-  ssdGb: z.number(),
-  screenInch: z.number(),
-  resWidth: z.number(),
-  resHeight: z.number(),
-  refreshHz: z.number().optional(),
+  ssdGb: z
+    .number()
+    .int()
+    .refine((v) => (VALID_SSD as readonly number[]).includes(v), {
+      message: `SSD phải thuộc: ${VALID_SSD.join(', ')} GB`,
+    }),
+  screenInch: z.number().min(10, 'Màn hình nhỏ hơn 10 inch là không hợp lệ').max(20),
+  resWidth: z.number().int().min(1024).max(7680),
+  resHeight: z.number().int().min(600).max(4320),
+  refreshHz: z.number().int().min(30).max(500).optional(),
   srgb100: z.boolean().optional(),
-  weightKg: z.number(),
-  batteryWh: z.number().optional(),
-  priceVnd: z.number(),
+  weightKg: z.number().min(0.8, 'Trọng lượng tối thiểu 0,8 kg').max(4.5, 'Trọng lượng tối đa 4,5 kg'),
+  batteryWh: z.number().min(20).max(120).optional(),
+  priceVnd: z.number().int().min(3_000_000, 'Giá tối thiểu 3 triệu').max(200_000_000, 'Giá tối đa 200 triệu'),
   imageUrl: z.string().optional(),
   sourceUrl: z.string().optional(),
 });
@@ -48,9 +66,18 @@ async function computeAndUpsertLaptop(id: number | null, body: z.infer<typeof la
   });
   const data = { ...body, ppi, performanceIdx, valueIdx };
   if (id) {
-    return prisma.laptop.update({ where: { id }, data });
+    // Ghi LICH SU GIA neu gia thay doi - de moi duong sua gia deu duoc luu vet, khong chi
+    // rieng man "Quan ly gia" (PATCH /:id/price)
+    const current = await prisma.laptop.findUnique({ where: { id }, select: { priceVnd: true } });
+    const updated = await prisma.laptop.update({ where: { id }, data });
+    if (current && current.priceVnd !== body.priceVnd) {
+      await prisma.priceHistory.create({ data: { laptopId: id, priceVnd: body.priceVnd } });
+    }
+    return updated;
   }
-  return prisma.laptop.create({ data });
+  const created = await prisma.laptop.create({ data });
+  await prisma.priceHistory.create({ data: { laptopId: created.id, priceVnd: body.priceVnd } });
+  return created;
 }
 
 const listSchema = z.object({
@@ -92,6 +119,17 @@ laptopsRouter.get('/compare', async (req, res, next) => {
   }
 });
 
+// CHU Y: route TINH phai khai bao TRUOC route dong '/:id', neu khong Express se coi
+// "price-changes" la gia tri cua :id (loi da tung gap: Number("price-changes") = NaN).
+laptopsRouter.get('/price-changes', requireAuth, requireRole('STAFF', 'ADMIN'), async (req, res, next) => {
+  try {
+    const limit = Number(req.query.limit ?? 30);
+    res.json({ success: true, data: await priceService.recentPriceChanges(limit) });
+  } catch (err) {
+    next(err);
+  }
+});
+
 laptopsRouter.get('/:id', async (req, res, next) => {
   try {
     const data = await laptopsService.getLaptopDetail(Number(req.params.id));
@@ -128,6 +166,70 @@ laptopsRouter.delete('/:id', requireAuth, requireRole('STAFF', 'ADMIN'), async (
     await prisma.laptop.update({ where: { id: Number(req.params.id) }, data: { isActive: false } });
     await snapshotSync();
     res.json({ success: true, data: null });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Quan ly gia (gia nha cung cap thay doi lien tuc)
+// ---------------------------------------------------------------------------
+const priceSchema = z.object({
+  priceVnd: z.number().int().min(3_000_000, 'Giá tối thiểu 3 triệu').max(200_000_000, 'Giá tối đa 200 triệu'),
+  note: z.string().max(300).optional(),
+  // Khuyen mai + luot ban: null cho originalPriceVnd = "khong con khuyen mai" (khac voi undefined
+  // = "khong doi truong nay"), nen dung .nullable().optional() thay vi chi .optional().
+  originalPriceVnd: z
+    .number()
+    .int()
+    .min(3_000_000, 'Giá gốc tối thiểu 3 triệu')
+    .max(200_000_000, 'Giá gốc tối đa 200 triệu')
+    .nullable()
+    .optional(),
+  salesCount: z.number().int().min(0, 'Lượt bán không được âm').max(1_000_000).optional(),
+});
+
+laptopsRouter.patch('/:id/price', requireAuth, requireRole('STAFF', 'ADMIN'), async (req, res, next) => {
+  try {
+    const body = priceSchema.parse(req.body);
+    if (body.originalPriceVnd != null && body.originalPriceVnd <= body.priceVnd) {
+      throw new AppError(400, 'INVALID_ORIGINAL_PRICE', 'Giá gốc khuyến mãi phải lớn hơn giá bán hiện tại');
+    }
+    const result = await priceService.updatePrice(
+      Number(req.params.id),
+      body.priceVnd,
+      body.note,
+      body.originalPriceVnd,
+      body.salesCount
+    );
+    await snapshotSync(); // day gia moi sang ML service ngay, khong doi cron
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+laptopsRouter.get('/:id/price-history', async (req, res, next) => {
+  try {
+    res.json({ success: true, data: await priceService.getPriceHistory(Number(req.params.id)) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+const bulkPriceSchema = z.object({
+  percent: z.number().min(-90).max(200),
+  brandId: z.number().int().positive().optional(),
+  segment: z.enum(['OFFICE', 'ULTRABOOK', 'GAMING', 'CREATOR']).optional(),
+  dryRun: z.boolean().optional(),
+});
+
+laptopsRouter.post('/bulk-price', requireAuth, requireRole('ADMIN'), async (req, res, next) => {
+  try {
+    const body = bulkPriceSchema.parse(req.body);
+    const result = await priceService.bulkAdjustPrice(body);
+    if (!result.dryRun && result.affected > 0) await snapshotSync();
+    res.json({ success: true, data: result });
   } catch (err) {
     next(err);
   }

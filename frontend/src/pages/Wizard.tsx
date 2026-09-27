@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Checkbox, InputNumber, Radio, Select, Spin, message } from 'antd';
+import { Button, Card, Checkbox, InputNumber, Radio, Select, Spin, Tag, message } from 'antd';
 import {
   ThunderboltOutlined,
   RocketOutlined,
@@ -11,6 +11,8 @@ import { PrioritySlider } from '../components/smart/PrioritySlider';
 import { NeedTextInput, type ParsedNeed } from '../components/smart/NeedTextInput';
 import { api } from '../lib/api';
 import type { Priorities, RecommendationResult } from '../types';
+import { formatVnd } from '../utils/format';
+import { t } from '../theme/tokens';
 
 const ACTIVITY_OPTIONS = [
   { value: 'van_phong', label: 'Văn phòng / soạn thảo' },
@@ -69,10 +71,15 @@ export function Wizard() {
   }
 
   return (
-    <div style={{ maxWidth: 640, margin: '40px auto', padding: '0 16px' }}>
+    <div style={{ maxWidth: 1240, margin: '24px auto', padding: '0 24px' }}>
       <h1>Cho chúng tôi biết nhu cầu của bạn</h1>
 
       <NeedTextInput onParsed={applyParsedNeed} />
+
+      {/* Bo cuc 2 COT tren man rong: form ben trai, tom tat lua chon ben phai -
+          truoc day form chi rong 640px nen man 1920px trong hai ben rat nhieu. */}
+      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 560px', minWidth: 320 }}>
 
       <div style={{ textAlign: 'center', color: '#64748B', marginBottom: 20 }}>
         — hoặc chọn thủ công bên dưới —
@@ -157,8 +164,64 @@ export function Wizard() {
       />
 
       <Button type="primary" size="large" block onClick={handleSubmit} disabled={loading}>
-        {loading ? <Spin size="small" /> : 'Xem kết quả'}
-      </Button>
+            {loading ? <Spin size="small" /> : 'Xem kết quả'}
+          </Button>
+        </div>
+
+        {/* Panel tom tat: nguoi dung thay ngay he thong dang hieu gi ve minh */}
+        <Card
+          title="Tóm tắt lựa chọn của bạn"
+          style={{ flex: '0 1 340px', minWidth: 280, position: 'sticky', top: 24 }}
+          styles={{ body: { padding: 16 } }}
+        >
+          {parsedNeed && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 13, color: t.textSecondary }}>Nhóm nhu cầu (AI nhận diện)</div>
+              <Tag color="blue">{parsedNeed.need.labelText}</Tag>
+            </div>
+          )}
+
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 13, color: t.textSecondary }}>Ngân sách</div>
+            <div style={{ fontWeight: 600 }}>
+              {formatVnd(budget[0])} – {formatVnd(budget[1])}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 13, color: t.textSecondary, marginBottom: 4 }}>Nhu cầu sử dụng</div>
+            {activities.length === 0 ? (
+              <span style={{ color: t.textTertiary }}>Chưa chọn</span>
+            ) : (
+              activities.map((a) => (
+                <Tag key={a}>{ACTIVITY_OPTIONS.find((o) => o.value === a)?.label ?? a}</Tag>
+              ))
+            )}
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 13, color: t.textSecondary, marginBottom: 4 }}>Mức ưu tiên</div>
+            {[
+              ['Hiệu năng', priorities.performance],
+              ['Di động & pin', priorities.mobility],
+              ['Màn hình', priorities.display],
+              ['Tiết kiệm chi phí', priorities.price],
+            ].map(([label, val]) => (
+              <div key={label as string} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                <span>{label}</span>
+                <span style={{ fontWeight: 600, color: t.primary700 }}>{val}/5</span>
+              </div>
+            ))}
+          </div>
+
+          {ramMin && (
+            <div>
+              <div style={{ fontSize: 13, color: t.textSecondary }}>Bắt buộc</div>
+              <Tag color="orange">RAM ≥ {ramMin} GB</Tag>
+            </div>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }

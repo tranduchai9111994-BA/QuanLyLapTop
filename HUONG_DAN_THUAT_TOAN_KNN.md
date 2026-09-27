@@ -1,8 +1,23 @@
 # Giải thích thuật toán kNN trong SmartLap (kèm dẫn chứng code + cách kiểm tra)
 
-> Tài liệu này giải thích **cách thuật toán kNN thực sự chạy trong code** (không chỉ lý thuyết suông),
-> để bạn có thể đọc lại, kiểm tra, và trả lời chất vấn của hội đồng. Toàn bộ đường dẫn file đều
-> tính từ gốc repo (`D:\QL_Laptop`). Xem thêm lý thuyết gốc ở [docs/04_MO_HINH_KNN.md](docs/04_MO_HINH_KNN.md).
+> **LƯU Ý (đọc trước)**: file này được viết ở một giai đoạn SỚM của đồ án (khi dữ liệu còn là bản
+> mô phỏng đầu tiên). Sau đó dữ liệu và thuật toán đã được sửa nhiều lần theo góp ý giảng viên
+> (khoảng cách một phía, thêm khuyến mãi/lượt bán, k tối ưu đổi từ 1 → 7...). Tài liệu **cập nhật
+> và đầy đủ nhất** hiện nay là [GIAI_THICH_THUAT_TOAN_KNN.md](GIAI_THICH_THUAT_TOAN_KNN.md) — bắt
+> đầu đọc từ đó. File này được GIỮ LẠI vì vẫn còn vài đoạn giải thích code hữu ích (chuẩn bị đặc
+> trưng Mô hình A, cách dò tham số bằng GridSearchCV, danh sách test), nhưng 2 điểm sau ĐÃ LỖI
+> THỜI so với code hiện tại, đừng dùng khi trả lời hội đồng:
+> - Mục 2.3 mô tả "mẹo nhân `sqrt(w)`" — code HIỆN TẠI không dùng mẹo này nữa, mà truyền thẳng một
+>   hàm khoảng cách MỘT PHÍA tuỳ biến vào `NearestNeighbors(metric=callable)` (xem
+>   [GIAI_THICH_THUAT_TOAN_KNN.md](GIAI_THICH_THUAT_TOAN_KNN.md) mục 4.2 và
+>   [ml-service/app/retriever.py:214-229](ml-service/app/retriever.py)).
+> - Mục 1.3 nói `k=1` là tham số tốt nhất — đây là số liệu CŨ trên dữ liệu mô phỏng đầu tiên. Sau
+>   khi dữ liệu được làm thực tế hơn (phân khúc chồng lấn, nhiễu gán nhãn hợp lý), tham số tốt
+>   nhất hiện tại là `k=7, metric=euclidean, weights=uniform` (xem
+>   [KET_QUA_THUC_NGHIEM.md](KET_QUA_THUC_NGHIEM.md) mục 2).
+
+Toàn bộ đường dẫn file đều tính từ gốc repo (`D:\QL_Laptop`). Xem thêm lý thuyết gốc ở
+[docs/04_MO_HINH_KNN.md](docs/04_MO_HINH_KNN.md).
 
 ## 0. Vì sao có 2 mô hình kNN, không phải 1?
 

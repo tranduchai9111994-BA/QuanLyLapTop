@@ -3,6 +3,17 @@ import { Spin } from 'antd';
 import { api } from '../../lib/api';
 import { CrudTable, type CrudField } from '../../components/admin/CrudTable';
 import { SegmentSuggester } from '../../components/admin/SegmentSuggester';
+import {
+  NUMERIC_LIMITS,
+  RAM_OPTIONS,
+  REFRESH_HZ_OPTIONS,
+  RESOLUTION_OPTIONS,
+  SCREEN_INCH_OPTIONS,
+  SSD_OPTIONS,
+} from '../../constants/laptopSpecs';
+
+const numOptions = (values: number[], suffix = '') =>
+  values.map((v) => ({ label: `${v}${suffix}`, value: v }));
 
 export function AdminLaptops() {
   const [fields, setFields] = useState<CrudField[] | null>(null);
@@ -26,6 +37,7 @@ export function AdminLaptops() {
             label: 'CPU',
             type: 'select',
             required: true,
+            help: 'Chọn từ bảng benchmark đã có — điểm PassMark lấy tự động',
             options: cpus.data.data.map((c: any) => ({ label: c.displayName, value: c.id })),
           },
           {
@@ -33,18 +45,41 @@ export function AdminLaptops() {
             label: 'GPU',
             type: 'select',
             required: true,
+            help: 'Chọn từ bảng benchmark đã có',
             options: gpus.data.data.map((g: any) => ({ label: g.displayName, value: g.id })),
           },
-          { key: 'ramGb', label: 'RAM (GB)', type: 'number', required: true },
-          { key: 'ssdGb', label: 'SSD (GB)', type: 'number', required: true },
-          { key: 'screenInch', label: 'Màn hình (inch)', type: 'number', required: true },
-          { key: 'resWidth', label: 'Độ phân giải rộng', type: 'number', required: true },
-          { key: 'resHeight', label: 'Độ phân giải cao', type: 'number', required: true },
-          { key: 'refreshHz', label: 'Tần số quét (Hz)', type: 'number' },
+          // Cac thong so duoi day chi co mot tap gia tri chuan tren thi truong -> cho CHON,
+          // khong cho go tay (truoc day go tay nen nhap duoc RAM = -2, SSD = 0).
+          { key: 'ramGb', label: 'RAM (GB)', type: 'select', required: true, options: numOptions(RAM_OPTIONS) },
+          { key: 'ssdGb', label: 'SSD (GB)', type: 'select', required: true, options: numOptions(SSD_OPTIONS) },
+          {
+            key: 'screenInch',
+            label: 'Màn hình (inch)',
+            type: 'select',
+            required: true,
+            options: numOptions(SCREEN_INCH_OPTIONS, '"'),
+          },
+          {
+            key: 'resolution',
+            label: 'Độ phân giải',
+            type: 'select',
+            required: true,
+            help: 'Chọn theo cặp để không nhập lệch tỉ lệ',
+            options: RESOLUTION_OPTIONS.map((r) => ({ label: r.label, value: r.value })),
+            hideInTable: true,
+          },
+          { key: 'resWidth', label: 'Rộng (px)', type: 'number', hideInForm: true },
+          { key: 'resHeight', label: 'Cao (px)', type: 'number', hideInForm: true },
+          {
+            key: 'refreshHz',
+            label: 'Tần số quét (Hz)',
+            type: 'select',
+            options: numOptions(REFRESH_HZ_OPTIONS, ' Hz'),
+          },
           { key: 'srgb100', label: 'sRGB 100%', type: 'boolean' },
-          { key: 'weightKg', label: 'Trọng lượng (kg)', type: 'number', required: true },
-          { key: 'batteryWh', label: 'Pin (Wh)', type: 'number' },
-          { key: 'priceVnd', label: 'Giá (VND)', type: 'number', required: true },
+          { key: 'weightKg', label: 'Trọng lượng (kg)', type: 'number', required: true, ...NUMERIC_LIMITS.weightKg },
+          { key: 'batteryWh', label: 'Pin (Wh)', type: 'number', ...NUMERIC_LIMITS.batteryWh },
+          { key: 'priceVnd', label: 'Giá (VND)', type: 'number', required: true, ...NUMERIC_LIMITS.priceVnd },
         ]);
       }
     );
@@ -58,6 +93,15 @@ export function AdminLaptops() {
       listEndpoint="/laptops?pageSize=1000"
       fields={fields}
       renderFormExtra={(form) => <SegmentSuggester form={form} />}
+      // Form dung o `resolution` dang "2560x1440" cho de chon; backend nhan resWidth/resHeight
+      transformSubmit={(values) => {
+        const { resolution, ...rest } = values;
+        if (!resolution) return rest;
+        const [w, h] = String(resolution).split('x').map(Number);
+        return { ...rest, resWidth: w, resHeight: h };
+      }}
+      // Khi sua: dung resWidth/resHeight co san de chon dung muc trong danh sach do phan giai
+      transformEdit={(row) => ({ ...row, resolution: `${row.resWidth}x${row.resHeight}` })}
     />
   );
 }

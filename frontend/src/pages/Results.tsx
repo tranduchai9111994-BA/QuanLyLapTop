@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Button, Empty, Result } from 'antd';
+import { Button, Empty, Result, Space } from 'antd';
 import { RecommendationCard } from '../components/smart/RecommendationCard';
 import { ExplainDrawer } from '../components/smart/ExplainDrawer';
 import { FallbackBanner, BudgetRelaxedBanner } from '../components/smart/FallbackBanner';
@@ -36,15 +36,37 @@ export function Results() {
   }
 
   return (
-    <div style={{ maxWidth: 900, margin: '32px auto', padding: '0 16px' }}>
+    <div style={{ maxWidth: 1240, margin: '24px auto', padding: '0 24px' }}>
       <h1>Kết quả gợi ý</h1>
       {result.mode === 'FALLBACK' && <FallbackBanner />}
       {result.budgetRelaxed && <BudgetRelaxedBanner />}
 
       {result.items.length === 0 ? (
-        <Empty description="Chưa có máy nào khớp mọi điều kiện. Thử nới ngân sách hoặc bỏ bớt yêu cầu bắt buộc." />
+        /* Khong bao gio de trang trong tron: neu khong tim duoc may nao, phai noi RO vi sao
+           va cho duong quay lai sua nhu cau ngay (docs/07 SS8). */
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={
+            <div>
+              <div style={{ fontWeight: 600, marginBottom: 8 }}>
+                Chưa tìm được máy nào khớp toàn bộ yêu cầu của bạn
+              </div>
+              <div style={{ color: '#4A5B73' }}>
+                Thường do ngân sách hơi thấp so với cấu hình mong muốn, hoặc ràng buộc bắt buộc
+                (RAM / cân nặng) quá chặt.
+              </div>
+            </div>
+          }
+        >
+          <Space wrap>
+            <Button type="primary" onClick={() => navigate('/wizard')}>
+              Sửa lại nhu cầu
+            </Button>
+            <Button onClick={() => navigate('/laptops')}>Tự xem danh mục</Button>
+          </Space>
+        </Empty>
       ) : (
-        <div style={{ display: 'grid', gap: 16 }}>
+        <div style={{ display: 'grid', gap: 12 }}>
           {result.items.map((item) => (
             <RecommendationCard
               key={item.laptopId}

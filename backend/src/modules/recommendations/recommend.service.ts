@@ -53,21 +53,45 @@ async function findCandidates(segment: Segment, budgetMax: number, must: Recomme
   ).map((p) => p.laptopId);
   if (bannedLaptopIds.length) where.id = { notIn: bannedLaptopIds };
 
-  return prisma.laptop.findMany({ where, include: { cpu: true, gpu: true, segmentLabel: true } });
+  // `brand` can thiet cho giao dien (anh dai dien hien ten hang) va cho trong so uy tin thuong hieu
+  return prisma.laptop.findMany({ where, include: { cpu: true, gpu: true, segmentLabel: true, brand: true } });
 }
 
 async function findPins(segment: Segment) {
   return prisma.laptopPin.findMany({ where: { action: 'PIN', OR: [{ segment }, { segment: null }] } });
 }
 
+/**
+ * Ham TRUNG TAM cua toan bo he thong goi y - dieu phoi 7 buoc tu luc nguoi dung bam "Xem ket
+ * qua" den luc tra ve danh sach 5 laptop kem giai thich. Day la noi "noi" tat ca cac phan lai:
+ * Mo hinh A (suy phan khuc), Mo hinh B (xep hang), che do du phong, va ghi telemetry.
+ *
+ * Cac buoc thuc hien (dung thu tu):
+ *   1. Neu nguoi dung KHONG chon phan khuc ro rang (segment = null, vd khi dung cau tu do va
+ *      Mo hinh C khong chac chan) -> goi ML /infer-segment de Mo hinh A doan phan khuc
+ *   2. Loc CUNG trong CSDL: chi giu may thoa ngan sach toi da + cac rang buoc bat buoc
+ *      (RAM/SSD/can nang toi thieu, hang may) + LOAI BO may bi quan tri vien cam (BAN)
+ *   3. Neu loc xong con QUA IT may (< 3) -> tu dong NOI RONG ngan sach them 10% va loc lai,
+ *      danh dau `budgetRelaxed = true` de frontend hien thong bao cho nguoi dung biet
+ *   4. Goi dich vu ML (Mo hinh B) de XEP HANG cac may con lai theo do phu hop voi nhu cau
+ *   5. Neu ML loi/qua thoi gian cho (mang, dich vu ML dang tat,...) -> CHUYEN SANG CHE DO DU
+ *      PHONG (xep hang bang cong thuc don gian trong fallback.service.ts, khong dung ML nua)
+ *      - day la co che dam bao he thong VAN CHAY DUOC ngay ca khi Mo hinh ML gap su co
+ *   6. Chen them may duoc QUAN TRI VIEN GHIM (PIN) neu chua co trong ket qua va van hop ngan
+ *      sach - danh dau ro "De xuat tu cua hang" de nguoi dung biet day KHONG PHAI goi y cua AI
+ *   7. GHI LAI toan bo phien tu van (RecommendationSession) vao CSDL - du lieu nay dung de:
+ *      (a) hien lai lich su cho nguoi dung, (b) tinh KPI dashboard, (c) lam nguon hoc them cho
+ *      Mo hinh C khi nguoi dung 👍 (xem retrain_from_feedback.py o ml-service)
+ */
 export async function recommend(body: RecommendRequestBody) {
-  const startedAt = Date.now();
+  const startedAt = Date.now(); // do thoi gian xu ly, luu vao latencyMs de theo doi hieu nang
   const topN = body.topN ?? 5;
 
   let usedSegment = body.segment;
   let inferredSegment: Segment | null = null;
   let inferredConf: number | null = null;
 
+  // ---- BUOC 1: suy phan khuc neu nguoi dung chua noi ro ----
   if (!usedSegment) {
     const inferred = await inferSegment(body.activities);
     usedSegment = inferred.segment;
@@ -75,6 +99,7 @@ export async function recommend(body: RecommendRequestBody) {
     inferredConf = inferred.confidence;
   }
 
+  // ---- BUOC 2 + 3: loc cung, tu dong noi rong ngan sach neu qua it ket qua ----
   let candidates = await findCandidates(usedSegment, body.budget.max, body.must);
   let budgetRelaxed = false;
   if (candidates.length < DEFAULT_MIN_CANDIDATES) {
@@ -89,8 +114,9 @@ export async function recommend(body: RecommendRequestBody) {
   let items: any[] = [];
   let modelVersion: string | null = null;
 
+  // ---- BUOC 4 + 5: goi Mo hinh B qua ML service; loi thi tu dong roi sang FALLBACK ----
   if (candidates.length === 0) {
-    mode = 'FALLBACK';
+    mode = 'FALLBACK'; // khong co ung vien nao thi khoi can goi ML, chuyen thang sang du phong
   } else {
     try {
       const r = await mlClient.post('/recommend', {
@@ -102,25 +128,32 @@ export async function recommend(body: RecommendRequestBody) {
         topN,
         brandWeight: body.brandWeight ?? 1.0,
       });
-      ideal = r.data.ideal;
-      weights = r.data.weights;
+      ideal = r.data.ideal; // vector "nhu cau ly tuong" q - dung de hien Drawer "Vi sao goi y?"
+      weights = r.data.weights; // trong so tung dac trung - cung dung de giai thich
       modelVersion = r.data.modelVersion;
+      // Ket qua tu ML chi co `laptopId` + diem so; ghep them THONG TIN DAY DU cua laptop
+      // (ten, gia, cau hinh...) da lay san o buoc 2 (candidates) de tra ve cho frontend
       const byId = new Map(candidates.map((c) => [c.id, c]));
       items = r.data.items.map((it: any) => ({ ...it, laptop: byId.get(it.laptopId) })).filter((it: any) => it.laptop);
     } catch (err) {
+      // KHONG duoc de loi nay lam sap ca tinh nang goi y - day la nguyen tac "khong bao gio
+      // tra loi 500 cho nguoi dung cuoi" (xem docs/09 SS4 va CLAUDE.md)
       logger.warn('ML /recommend loi hoac timeout, chuyen sang che do du phong', err);
       mode = 'FALLBACK';
     }
   }
 
   if (mode === 'FALLBACK') {
+    // Che do du phong: KHONG dung kNN nua, chi xep hang bang cong thuc don gian dua tren
+    // performance_index/value_index da tinh san trong CSDL (xem fallback.service.ts)
     items = candidates.length ? fallbackRank(candidates, body.priorities, topN) : [];
   }
 
+  // ---- BUOC 6: chen may duoc quan tri vien GHIM (neu chua co san trong ket qua) ----
   const pins = await findPins(usedSegment);
   const existingIds = new Set(items.map((it) => it.laptopId));
   for (const pin of pins) {
-    if (existingIds.has(pin.laptopId)) continue;
+    if (existingIds.has(pin.laptopId)) continue; // da co san trong ket qua AI thi khong can them
     const laptop = await prisma.laptop.findUnique({ where: { id: pin.laptopId } });
     if (!laptop || laptop.priceVnd > body.budget.max * (1 + DEFAULT_BUDGET_RELAX_RATIO)) continue;
     items.push({
@@ -128,7 +161,7 @@ export async function recommend(body: RecommendRequestBody) {
       laptopId: pin.laptopId,
       distance: null,
       matchPct: null,
-      isPinned: true,
+      isPinned: true, // frontend dung co nay de hien nhan "De xuat tu cua hang" thay vi "AI goi y"
       explanation: { strengths: [{ code: 'store_pick', params: {}, tone: 'positive' }], warnings: [] },
       laptop,
     });

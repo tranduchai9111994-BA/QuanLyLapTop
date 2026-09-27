@@ -241,6 +241,8 @@ def build_machine(idx: int) -> dict | None:
         # Nguoc lai: hang cao cap (tier >= 4, vd LG Gram/Dell XPS) khong dung chip Celeron/Pentium
         if brand_tier >= 4 and cpu_tier == "entry":
             brand_name, brand_mult, brand_tier = random.choice([b for b in BRANDS_NON_APPLE if b[2] <= 3])
+    # Ten dong san pham se duoc dat LAI sau khi co nhan phan khuc (xem assign_series_name),
+    # de tranh tinh trang "MSI Prestige (dong doanh nhan) bi gan nhan Gaming".
     series = random.choice(SERIES[brand_name][ARCH_SERIES_GROUP[arch]])
 
     # --- RAM / SSD tuong quan voi suc manh may ---
@@ -326,6 +328,24 @@ def build_machine(idx: int) -> dict | None:
     price_vnd = int(round(price * 1_000_000 / 10_000) * 10_000)
     price_vnd = max(5_500_000, price_vnd)
 
+    # --- KHUYEN MAI + LUOT BAN: mo phong hanh vi thi truong that ---
+    # ~35% may dang giam gia (5-25%), phan con lai gia niem yet = gia hien tai (khong giam)
+    on_sale = random.random() < 0.35
+    if on_sale:
+        discount_pct = random.uniform(0.05, 0.25)
+        original_price_vnd = int(round(price_vnd / (1 - discount_pct) / 10_000) * 10_000)
+    else:
+        original_price_vnd = None
+
+    # Luot ban: TUONG QUAN voi do "dang tien" (value_index se tinh sau tu performance/price)
+    # va brand_tier (hang uy tin ban chay hon), CONG THEM nhieu thi truong ngau nhien - khong
+    # phai random thuan, de dung lam tin hieu "do pho bien" co y nghia trong xep hang.
+    approx_value = (cpu_cost + gpu_cost) / max(price_vnd / 1_000_000, 1)
+    base_sales = 40 + 25 * approx_value + 15 * brand_tier
+    if on_sale:
+        base_sales *= 1.4  # may dang giam gia thuong ban chay hon
+    sales_count = int(max(0, np.random.normal(base_sales, base_sales * 0.4)))
+
     return {
         "sku": f"{brand_name[:3].upper()}-{idx:05d}",
         "brand": brand_name,
@@ -344,6 +364,8 @@ def build_machine(idx: int) -> dict | None:
         "weight_kg": weight_kg,
         "battery_wh": battery,
         "price_vnd": price_vnd,
+        "original_price_vnd": original_price_vnd if original_price_vnd else "",
+        "sales_count": sales_count,
         "_arch": arch,
         "_cpu_pm": cpu_pm,
         "_gpu_pm": gpu_pm,
@@ -364,13 +386,40 @@ def assign_segment(m: dict, cpu_max: int, gpu_max: int) -> str:
     gaming = 2.8 * gpu_n + 0.8 * cpu_n + 1.0 * (m["refresh_hz"] >= 144) + 0.6 * dedicated - 0.6 * (m["weight_kg"] < 1.6)
     creator = 1.5 * cpu_n + 1.2 * gpu_n + 1.0 * m["srgb_100"] + 0.7 * (m["_ppi"] > 190) + 0.5 * (m["ram_gb"] >= 32) - 0.6 * (m["refresh_hz"] >= 165)
     ultra = 2.2 * max(0.0, (2.10 - m["weight_kg"])) + 0.5 * (m["battery_wh"] >= 58) + 0.4 * (not dedicated) + 0.45 * (m["screen_inch"] <= 14.5)
-    office = 1.6 * (1 - cpu_n) + 0.7 * (not dedicated) + 0.6 * (m["price_vnd"] < 18_000_000) + 0.4 * (m["refresh_hz"] <= 60) + 0.3 * (not m["srgb_100"])
+    # Tru diem OFFICE khi may qua NHE (< 1.35kg): may nhe co gia re van thien ve ULTRABOOK
+    # hon la OFFICE trong thuc te thi truong - thieu dieu nay khien 2 lop chong lan qua muc.
+    office = (
+        1.6 * (1 - cpu_n) + 0.7 * (not dedicated) + 0.6 * (m["price_vnd"] < 18_000_000)
+        + 0.4 * (m["refresh_hz"] <= 60) + 0.3 * (not m["srgb_100"])
+        - 0.9 * max(0.0, 1.35 - m["weight_kg"])
+    )
 
     scores = {"GAMING": gaming, "CREATOR": creator, "ULTRABOOK": ultra, "OFFICE": office}
 
     # Nhieu gan nhan: mo phong viec nha ban le xep loai khong nhat quan (chong lan that)
-    noisy = {k: v + np.random.normal(0, 0.45) for k, v in scores.items()}
+    # Nhieu gan nhan da GIAM tu 0.45 -> 0.32 (thuc nghiem): 0.45 tao qua nhieu nhan "sai" so voi
+    # kappa thuc te (nguoi gan nhan that thuong dong y >=70%), lam macro-F1 tut duoi nguong hop ly
+    # du dac trung ky thuat van chong lan tu nhien (xem bang trong luong/gpu o tren).
+    noisy = {k: v + np.random.normal(0, 0.32) for k, v in scores.items()}
     return max(noisy, key=noisy.get)
+
+
+# Nhan phan khuc -> nhom dong san pham duoc phep dung. GAMING va CREATOR dung chung nhom "perf"
+# (thuc te mot chiec Acer Nitro van hay duoc xep vao "Do hoa - Ky thuat"), OFFICE/ULTRABOOK dung
+# nhom van phong/mong nhe. Nho vay van CHONG LAN o dac trung ky thuat nhung khong con tinh trang
+# vo ly kieu "MSI Prestige (dong doanh nhan) mang nhan Gaming".
+SEGMENT_SERIES_GROUP = {
+    "GAMING": "perf", "CREATOR": "perf", "OFFICE": "office", "ULTRABOOK": "thin",
+}
+
+
+def assign_series_name(m: dict, idx: int) -> tuple[str, str]:
+    """Dat lai DONG SAN PHAM (series) SAU khi da co nhan phan khuc, de ten va nhan khong mau thuan.
+    Tra ve (series, ten_day_du). `series` duoc luu thanh mot COT RIENG vi gia ban gan voi tung
+    dong may / model cu the, khong phai gan voi hang."""
+    group = SEGMENT_SERIES_GROUP[m["segment"]]
+    series = random.choice(SERIES[m["brand"]][group])
+    return series, f"{m['brand']} {series} {idx:04d}"
 
 
 def main() -> None:
@@ -385,6 +434,7 @@ def main() -> None:
         if m is None:
             continue
         m["segment"] = assign_segment(m, cpu_max, gpu_max)
+        m["series"], m["name"] = assign_series_name(m, len(machines) + 1)
         machines.append(m)
 
     df = pd.DataFrame(machines)
@@ -407,9 +457,10 @@ def main() -> None:
     pd.DataFrame(gpu_rows).to_csv(PROCESSED / "gpu_benchmark.csv", index=False, encoding="utf-8-sig")
 
     out_cols = [
-        "sku", "brand", "brand_tier", "name", "cpu_model", "gpu_model", "ram_gb", "ssd_gb",
+        "sku", "brand", "brand_tier", "series", "name", "cpu_model", "gpu_model", "ram_gb", "ssd_gb",
         "screen_inch", "resolution", "refresh_hz", "srgb_100", "weight_kg", "battery_wh",
-        "price_vnd", "retailer_category", "image_url", "source_url", "collected_at", "segment",
+        "price_vnd", "original_price_vnd", "sales_count",
+        "retailer_category", "image_url", "source_url", "collected_at", "segment",
     ]
     df[out_cols].to_csv(PROCESSED / "catalog_vn.csv", index=False, encoding="utf-8-sig")
     df[[c for c in out_cols if c != "segment"]].to_excel(RAW / "catalog_vn_raw.xlsx", index=False)

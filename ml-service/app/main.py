@@ -42,6 +42,20 @@ def health() -> dict:
 def catalog_sync(req: CatalogSyncRequest) -> dict:
     df = pd.DataFrame(req.items)
     df = df.rename(columns={"id": "laptop_id"}).set_index("laptop_id", drop=False)
+
+    # Backend gui `discount_percent` (co san, tinh don gian tu 2 gia) va `sales_count` THO.
+    # sales_count can duoc quy doi ve `sales_score` (thang 0-100, LOG hoa) NGAY TAI DAY vi phep
+    # tinh nay phu thuoc gia tri MAX cua CA SNAPSHOT (giong cach lam trong features.enrich_catalog
+    # khi huan luyen tu CSV) - khong the tinh truoc o backend cho tung may rieng le.
+    if "discount_percent" not in df.columns:
+        df["discount_percent"] = 0.0
+    if "sales_count" in df.columns:
+        log_sales = np.log1p(df["sales_count"].fillna(0).clip(lower=0))
+        max_log = log_sales.max()
+        df["sales_score"] = 100.0 * log_sales / max_log if max_log > 0 else 0.0
+    else:
+        df["sales_score"] = 0.0
+
     _state["catalog"] = df
     _state["scaler"] = fit_scaler(df)
     _state["index_built_at"] = datetime.now(timezone.utc).isoformat()

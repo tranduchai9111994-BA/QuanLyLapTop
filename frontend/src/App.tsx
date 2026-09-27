@@ -11,6 +11,7 @@ import { AdminLayout } from './pages/admin/AdminLayout';
 import { AdminBrands } from './pages/admin/AdminBrands';
 import { AdminCpuBenchmark, AdminGpuBenchmark } from './pages/admin/AdminBenchmarks';
 import { AdminLaptops } from './pages/admin/AdminLaptops';
+import { AdminPrices } from './pages/admin/AdminPrices';
 import { t } from './theme/tokens';
 
 const { Header, Content } = Layout;
@@ -19,8 +20,12 @@ function TopNav() {
   const location = useLocation();
   return (
     <Header style={{ display: 'flex', alignItems: 'center', borderBottom: `1px solid ${t.border}` }}>
-      <Link to="/" style={{ fontWeight: 700, fontSize: 20, color: t.primary700, marginRight: 32 }}>
-        SmartLap
+      <Link
+        to="/"
+        style={{ display: 'flex', alignItems: 'center', gap: 10, marginRight: 32, textDecoration: 'none' }}
+      >
+        <img src="/logo-mark.png" alt="SmartLap" style={{ height: 38, width: 'auto' }} />
+        <span style={{ fontWeight: 700, fontSize: 20, color: t.primary700 }}>SmartLap</span>
       </Link>
       <Menu
         mode="horizontal"
@@ -68,6 +73,7 @@ export default function App() {
           <Route path="benchmarks/cpu" element={<AdminCpuBenchmark />} />
           <Route path="benchmarks/gpu" element={<AdminGpuBenchmark />} />
           <Route path="laptops" element={<AdminLaptops />} />
+          <Route path="prices" element={<AdminPrices />} />
         </Route>
       </Routes>
     );

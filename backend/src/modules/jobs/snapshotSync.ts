@@ -27,6 +27,12 @@ export async function snapshotSync() {
       // Dac trung moi cho Mo hinh B: uy tin thuong hieu + do "dang tien" (hieu nang/trieu dong)
       brand_tier: l.brand.tier,
       value_index: l.valueIdx,
+      // Khuyen mai + luot ban: anh huong xep hang kNN, giong hanh vi mua sam that (may giam
+      // gia sau + ban chay co the duoc chon nhieu hon du gia goc cao hon may khac)
+      discount_percent: l.originalPriceVnd
+        ? Math.max(0, ((l.originalPriceVnd - l.priceVnd) / l.originalPriceVnd) * 100)
+        : 0,
+      sales_count: l.salesCount,
       segment: l.segmentLabel!.segment,
       name: l.name,
       gpu_model: l.gpu.displayName,

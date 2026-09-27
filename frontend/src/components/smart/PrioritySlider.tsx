@@ -18,13 +18,15 @@ export function PrioritySlider({
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, color: t.textPrimary, fontWeight: 600 }}>
         {icon} {label}
       </div>
+      {/* Nhan RAT NGAN: nhan dai ("Rat quan trong") bi xuong 3 dong va de len thanh truot ke duoi */}
       <Slider
         min={1}
         max={5}
         value={value}
         onChange={onChange}
-        marks={{ 1: 'Không quan trọng', 3: 'Bình thường', 5: 'Rất quan trọng' }}
+        marks={{ 1: 'Ít', 3: 'Vừa', 5: 'Cao' }}
         tooltip={{ formatter: (v) => `${v}/5` }}
+        style={{ marginBottom: 20 }}
       />
     </div>
   );

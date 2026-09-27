@@ -14,6 +14,12 @@ export interface CrudField {
   options?: { label: string; value: number | string }[]; // cho type = 'select'
   hideInTable?: boolean;
   hideInForm?: boolean;
+  /** Gioi han cho o nhap so - chan gia tri vo ly (vd RAM am, SSD = 0) ngay tren giao dien. */
+  min?: number;
+  max?: number;
+  step?: number;
+  /** Chu thich nho duoi o nhap (vd "Chon tu bang benchmark da co"). */
+  help?: string;
 }
 
 /** Bang CRUD dung chung: 1 component phuc vu nhieu thuc the (Brand, CPU/GPU Benchmark, Laptop)
@@ -25,6 +31,7 @@ export function CrudTable({
   listEndpoint,
   fields,
   transformSubmit,
+  transformEdit,
   renderFormExtra,
 }: {
   title: string;
@@ -34,6 +41,8 @@ export function CrudTable({
   listEndpoint?: string;
   fields: CrudField[];
   transformSubmit?: (values: any) => any;
+  /** Chuyen doi ban ghi truoc khi do vao form Sua (vd ghep resWidth/resHeight thanh mot muc chon). */
+  transformEdit?: (row: any) => any;
   /** Noi dung phu hien trong modal (vd o AI goi y phan khuc khi them laptop moi). */
   renderFormExtra?: (form: any) => ReactNode;
 }) {
@@ -78,7 +87,7 @@ export function CrudTable({
 
   function openEdit(row: any) {
     setEditing(row);
-    form.setFieldsValue(row);
+    form.setFieldsValue(transformEdit ? transformEdit(row) : row);
     setModalOpen(true);
   }
 
@@ -261,13 +270,26 @@ export function CrudTable({
             }
           >
             {formFields.map((f) => (
-              <Form.Item key={f.key} name={f.key} label={f.label} rules={f.required ? [{ required: true, message: `Vui lòng nhập ${f.label}` }] : []}>
+              <Form.Item
+                key={f.key}
+                name={f.key}
+                label={f.label}
+                extra={f.help}
+                valuePropName={f.type === 'boolean' ? 'checked' : undefined}
+                rules={[
+                  ...(f.required ? [{ required: true, message: `Vui lòng nhập ${f.label}` }] : []),
+                  // Chan gia tri ngoai khoang cho phep (vd RAM am, gia 0 dong) ngay khi bam Luu
+                  ...(f.type === 'number' && (f.min !== undefined || f.max !== undefined)
+                    ? [{ type: 'number' as const, min: f.min, max: f.max, message: `${f.label} phải trong khoảng ${f.min ?? '-∞'} – ${f.max ?? '∞'}` }]
+                    : []),
+                ]}
+              >
                 {f.type === 'number' ? (
-                  <InputNumber style={{ width: '100%' }} />
+                  <InputNumber style={{ width: '100%' }} min={f.min} max={f.max} step={f.step} />
                 ) : f.type === 'boolean' ? (
                   <Switch />
                 ) : f.type === 'select' ? (
-                  <Select options={f.options} showSearch optionFilterProp="label" />
+                  <Select options={f.options} showSearch optionFilterProp="label" placeholder="Chọn..." />
                 ) : (
                   <Input />
                 )}

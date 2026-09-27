@@ -23,15 +23,20 @@
   khoảng giá các phân khúc giao nhau mạnh (GAMING 17,7–71,6tr; CREATOR 18,2–68,2tr).
 - Hãng cao cấp (tier ≥ 4) không dùng chip entry; hãng giá rẻ không bán máy cấu hình cao.
 
+> **Cập nhật gần nhất**: đã bổ sung đặc trưng **khuyến mãi** (`discount_percent`) và **lượt bán**
+> (`sales_score`, log-hoá) vào Mô hình B (xem mục 4.4). Model A/C được huấn luyện lại trên cùng bộ
+> dữ liệu 1.000 máy đã tái sinh (có thêm cột giá gốc/khuyến mãi/lượt bán) — số liệu bên dưới là số
+> liệu **mới nhất**, thay thế các con số cũ.
+
 ## 2. Mô hình A — kNN phân lớp phân khúc
 
 | Chỉ số | Giá trị | Mục tiêu | Đạt? |
 |---|---|---|---|
-| macro-F1 (5-fold CV) | **0,766** | — | — |
-| macro-F1 trên tập test 20% | **0,797** | ≥ 0,75 | ✅ |
-| Vượt baseline đa số (Dummy) | **+0,668** | ≥ 0,30 | ✅ |
-| Vượt baseline luật if-else | **+0,122** | ≥ 0,05 | ✅ |
-| Tham số tốt nhất | k = 9, Manhattan, weights = distance | — | — |
+| macro-F1 (5-fold CV) | **0,773** | — | — |
+| macro-F1 trên tập test 20% | **0,787** | ≥ 0,75 | ✅ |
+| Vượt baseline đa số (Dummy) | **+0,658** | ≥ 0,30 | ✅ |
+| Vượt baseline luật if-else | **+0,155** | ≥ 0,05 | ✅ |
+| Tham số tốt nhất | k = 7, Euclidean, weights = uniform | — | — |
 
 **Điểm đáng chú ý cho hội đồng**: trên bộ dữ liệu cũ (sinh theo khuôn mẫu, phân khúc tách bạch),
 kNN **thua** baseline luật if-else (−0,043) vì luật khớp đúng khuôn mẫu sinh dữ liệu. Trên bộ dữ
@@ -39,9 +44,11 @@ liệu mới có chồng lấn thực tế, kNN **vượt luật +0,122** — đ
 khi ranh giới rõ ràng, còn kNN học được ranh giới mờ. Tham số `k` cũng chuyển từ 1 (dấu hiệu
 overfit dữ liệu quá sạch) sang 9 (mô hình mượt, hợp lý).
 
-Confusion matrix (5-fold CV) cho thấy nhầm lẫn tập trung ở **CREATOR ↔ GAMING** (41/128 máy
-CREATOR bị đoán thành GAMING) — đúng dự đoán trong đặc tả, vì hai nhóm này dùng cấu hình gần giống
-nhau, chỉ khác mục đích sử dụng.
+Confusion matrix (5-fold CV) cho thấy nhầm lẫn tập trung ở **CREATOR ↔ GAMING** (49/120 máy
+CREATOR bị đoán thành GAMING, recall CREATOR chỉ 0,442) — đúng dự đoán trong đặc tả, vì hai nhóm
+này dùng cấu hình gần giống nhau, chỉ khác mục đích sử dụng. Đây là hạn chế đã biết và chấp nhận
+được: ranh giới CREATOR/GAMING trong dữ liệu thật cũng mờ tương tự (một máy RTX mạnh vừa chơi game
+vừa dựng phim tốt).
 
 ## 3. Mô hình C — phân loại câu nhu cầu tự do (TF-IDF + kNN) — **MỚI**
 
@@ -51,7 +58,7 @@ nhau, chỉ khác mục đích sử dụng.
 |---|---|
 | Số câu huấn luyện | 132 câu tiếng Việt viết tay |
 | Số nhóm nhu cầu | 6 (Văn phòng, Học tập, Lập trình, Đồ họa, Gaming, Di động) |
-| macro-F1 (5-fold CV) | **0,773** (k = 7) |
+| macro-F1 (5-fold CV) | **0,7725** (k = 7) |
 | Độ chính xác trên 30 câu persona | **93%** (28/30) |
 
 Kiến trúc: `câu văn → TF-IDF (word 1-2gram + char_wb 3-5gram) → kNN cosine → nhóm nhu cầu → hồ sơ
@@ -67,12 +74,22 @@ tri thức hỗ trợ, việc **phân loại nhu cầu hoàn toàn do kNN đảm
 
 | Phương pháp | P@5 | nDCG@5 | Đúng ngân sách |
 |---|---|---|---|
-| **kNN một phía (Mô hình B)** | **0,453** | **0,788** | 100% |
-| Baseline: value_index (hiệu năng/giá) | 0,227 | 0,679 | 100% |
-| Baseline: ngẫu nhiên | 0,153 | 0,627 | 100% |
-| Baseline: giá tăng dần | 0,073 | 0,541 | 100% |
+| **kNN một phía (Mô hình B)** | **0,433** | **0,737** | 100% |
+| Baseline: value_index (hiệu năng/giá) | 0,247 | 0,640 | 100% |
+| Baseline: ngẫu nhiên | 0,113 | 0,649 | 100% |
+| Baseline: giá tăng dần | 0,153 | 0,612 | 100% |
 
-→ kNN vượt baseline tốt nhất **+0,110 nDCG@5** và **P@5 gấp đôi**.
+→ kNN vượt baseline tốt nhất **+0,088 nDCG@5**.
+
+> Số liệu ở bảng trên là **sau khi** thêm đặc trưng khuyến mãi/lượt bán (mục 4.4). So với lần đo
+> trước (nDCG@5 0,788), con số mới (0,737) **thấp hơn một chút** — nhưng đây **không phải** một
+> phép so sánh có kiểm soát (ablation): toàn bộ catalog 1.000 máy đã được **sinh lại từ đầu** (giá,
+> phân khúc, nhiễu ngẫu nhiên khác lần trước) để có thêm cột giá gốc/khuyến mãi/lượt bán, nên chênh
+> lệch này lẫn cả sai số do dữ liệu khác nhau lẫn ảnh hưởng của đặc trưng mới, không tách bạch được.
+> Muốn kết luận chắc chắn "khuyến mãi/lượt bán có giúp xếp hạng tốt hơn không" cần chạy lại đúng 1
+> bộ dữ liệu, bật/tắt riêng nhóm `popularity` trong `retriever.py` để so sánh — việc này **chưa
+> làm**, nên khi bảo vệ cần nói rõ đây là bổ sung theo yêu cầu nghiệp vụ (mô phỏng hành vi mua sắm
+> thật), chưa có bằng chứng định lượng tách bạch rằng nó cải thiện độ chính xác xếp hạng.
 
 Độ liên quan được tính tự động từ hồ sơ persona (không gán nhãn tay): với mỗi tiêu chí, máy nhận
 điểm theo **hạng phân vị** (liên tục 0–1) nhân trọng số `mức_ưu_tiên/5`. Cách này công bằng cho mọi
@@ -104,6 +121,29 @@ thứ tự `metric(query, train)`, ngược với thứ tự `(x, q)` mà công 
 | Thêm thuộc tính thương hiệu | `brand_tier` 1–5 là đặc trưng; từ khóa "bền/uy tín" trong câu nói đẩy trọng số thương hiệu lên 1,6× |
 | Bỏ lọc cứng theo phân khúc | Phân khúc là **một đặc trưng trong metric** (trọng số 0,18) — máy phân khúc kề bên vẫn lọt top nếu thực sự phù hợp. Lọc cứng chỉ còn: ngân sách, RAM/SSD/cân nặng tối thiểu, máy bị cấm |
 | Sửa match % | Dùng mốc cố định `100·e^(−d/0,9)`, không chuẩn hóa theo top-N nữa → điểm so sánh được giữa các lần truy vấn, máy hạng 1 không còn luôn được điểm cao |
+
+### 4.4 Khuyến mãi + lượt bán — góp ý bổ sung mới nhất
+
+Góp ý gốc: *"máy giá gốc cao hơn nhưng đang giảm giá tốt hơn, đang có số lượt bán tốt hơn thì vẫn
+có thể sẽ được chọn nhiều hơn"* — tức khuyến mãi/độ phổ biến phải là **tín hiệu xếp hạng thật sự
+trong metric kNN**, không chỉ là huy hiệu trang trí trên giao diện.
+
+Đã bổ sung:
+- Dữ liệu: 35% số máy trong catalog đang giảm giá (5–25%), có `originalPriceVnd` (giá gốc) và
+  `salesCount` (lượt bán, tương quan với độ "đáng tiền" + uy tín thương hiệu + có đang giảm giá hay
+  không) — sinh tại [data/generate_catalog.py](data/generate_catalog.py).
+- Đặc trưng mới cho Mô hình B ([ml-service/app/features.py](ml-service/app/features.py)):
+  `discount_percent` (% giảm giá) và `sales_score` (lượt bán, log-hoá về thang 0–100 để không bị vài
+  máy bán chạy đột biến lấn át).
+- Nhóm trọng số mới trong metric kNN ([ml-service/app/retriever.py](ml-service/app/retriever.py)):
+  `"popularity": ["discount_percent", "sales_score"]`, trọng số **cố định** 0,12 (không cho người
+  dùng chỉnh qua thanh trượt ưu tiên — đây là tín hiệu nền, không phải tiêu chí người dùng tự chọn).
+- Hướng tối ưu: cả hai đặc trưng đều "càng cao càng tốt" và **không phạt khi vượt** — máy giảm giá
+  sâu hơn/bán chạy hơn mức "lý tưởng" (mốc phân vị 80%) vẫn không bị trừ điểm, đúng tinh thần đo
+  khoảng cách một phía đã dùng cho các đặc trưng khác (mục 4.2).
+- Có sẵn qua toàn bộ chuỗi đồng bộ dữ liệu: `backend/prisma/schema.prisma` →
+  `backend/src/modules/jobs/snapshotSync.ts` (tính `discount_percent` từ giá gốc/giá hiện tại) →
+  `ml-service/app/main.py` (`catalog_sync`, tính `sales_score` log-hoá tại thời điểm đồng bộ).
 
 ## 5. Tiêu chí 3 — hệ thống thông minh lên theo thời gian
 
@@ -137,11 +177,11 @@ nhất), tái lập được bằng code nên không cần bấm giờ từng ng
 
 | Cách tìm | Số máy phải xem |
 |---|---|
-| Duyệt danh mục thủ công (sắp theo giá) | **19,5 máy/lần** (trung vị 9) |
-| Dùng hệ thống gợi ý | **1,4 máy/lần** |
-| Tỷ lệ tìm thấy ngay trong top-5 | **67%** |
+| Duyệt danh mục thủ công (sắp theo giá) | **19,7 máy/lần** (trung vị 12) |
+| Dùng hệ thống gợi ý | **1,92 máy/lần** |
+| Tỷ lệ tìm thấy ngay trong top-5 | **80%** |
 
-→ Giảm công sức khoảng **14 lần**.
+→ Giảm công sức khoảng **10,3 lần**.
 
 ## 7. Hạn chế cần nói rõ khi bảo vệ
 

@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import type { Laptop } from '../types';
 import { SegmentTag } from '../components/smart/SegmentTag';
 import { LaptopThumbnail } from '../components/smart/LaptopThumbnail';
+import { DiscountBadge } from '../components/smart/DiscountBadge';
 import { formatVnd, formatKg, formatInch } from '../utils/format';
 import { t } from '../theme/tokens';
 
@@ -49,15 +50,22 @@ export function Detail() {
     );
 
   return (
-    <div style={{ maxWidth: 900, margin: '32px auto', padding: '0 16px' }}>
-      <LaptopThumbnail imageUrl={laptop.imageUrl} segment={laptop.segmentLabel?.segment} name={laptop.name} height={220} />
+    <div style={{ maxWidth: 1200, margin: '24px auto', padding: '0 24px' }}>
+      <LaptopThumbnail imageUrl={laptop.imageUrl} segment={laptop.segmentLabel?.segment} brand={laptop.brand?.name} name={laptop.name} width={320} height={240} />
       <h1>{laptop.name}</h1>
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         {laptop.segmentLabel && <SegmentTag segment={laptop.segmentLabel.segment} />}
         <Tag>{laptop.brand.name}</Tag>
       </div>
-      <div style={{ fontSize: 28, fontWeight: 700, color: t.primary700, marginBottom: 16 }} className="tabular-nums">
+      <div style={{ fontSize: 28, fontWeight: 700, color: t.primary700 }} className="tabular-nums">
         {formatVnd(laptop.priceVnd)}
+      </div>
+      <div style={{ marginBottom: 16 }}>
+        <DiscountBadge
+          priceVnd={laptop.priceVnd}
+          originalPriceVnd={laptop.originalPriceVnd}
+          salesCount={laptop.salesCount}
+        />
       </div>
 
       <Card title="Thông số kỹ thuật" style={{ marginBottom: 24 }}>
@@ -76,12 +84,21 @@ export function Detail() {
 
       <h2>Máy tương tự</h2>
       {similar.length === 0 ? (
-        <div style={{ color: t.textTertiary }}>Chưa tìm được máy tương tự lúc này.</div>
+        <Result
+          status="info"
+          title="Chưa tìm được máy tương tự"
+          subTitle="Có thể catalog gợi ý (ML service) chưa đồng bộ máy này, hoặc đây là cấu hình hiếm gặp."
+          extra={
+            <Button type="primary" onClick={() => navigate('/catalog')}>
+              Xem toàn bộ danh mục
+            </Button>
+          }
+        />
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
           {similar.map((s) => (
             <Card key={s.laptopId} hoverable onClick={() => navigate(`/laptop/${s.laptopId}`)} size="small">
-              <LaptopThumbnail imageUrl={s.laptop?.imageUrl} segment={s.laptop?.segmentLabel?.segment} name={s.laptop?.name ?? ''} height={70} />
+              <LaptopThumbnail imageUrl={s.laptop?.imageUrl} segment={s.laptop?.segmentLabel?.segment} brand={s.laptop?.brand?.name} name={s.laptop?.name ?? ''} height={90} />
               <div style={{ fontWeight: 600 }}>{s.laptop?.name}</div>
               <div className="tabular-nums">{formatVnd(s.laptop?.priceVnd)}</div>
             </Card>
