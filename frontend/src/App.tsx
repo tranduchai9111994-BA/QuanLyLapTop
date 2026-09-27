@@ -12,6 +12,7 @@ import { AdminBrands } from './pages/admin/AdminBrands';
 import { AdminCpuBenchmark, AdminGpuBenchmark } from './pages/admin/AdminBenchmarks';
 import { AdminLaptops } from './pages/admin/AdminLaptops';
 import { AdminPrices } from './pages/admin/AdminPrices';
+import { AdminReviewQueue } from './pages/admin/AdminReviewQueue';
 import { t } from './theme/tokens';
 
 const { Header, Content } = Layout;
@@ -80,6 +81,7 @@ export default function App() {
           <Route path="benchmarks/gpu" element={<AdminGpuBenchmark />} />
           <Route path="laptops" element={<AdminLaptops />} />
           <Route path="prices" element={<AdminPrices />} />
+          <Route path="review-queue" element={<AdminReviewQueue />} />
         </Route>
       </Routes>
     );

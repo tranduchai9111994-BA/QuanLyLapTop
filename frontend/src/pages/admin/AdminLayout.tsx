@@ -1,6 +1,8 @@
-import { Button, Layout, Menu } from 'antd';
+import { useEffect, useState } from 'react';
+import { Badge, Button, Layout, Menu } from 'antd';
 import { LogoutOutlined, EyeOutlined } from '@ant-design/icons';
 import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { api } from '../../lib/api';
 
 const { Sider, Content, Header } = Layout;
 
@@ -15,6 +17,24 @@ export function AdminLayout() {
 
   const userRaw = localStorage.getItem('smartlap_user');
   const user = userRaw ? JSON.parse(userRaw) : null;
+
+  // So may dang cho xac minh (UC-10) - hien so tren menu de nhan vien biet CO viec can lam ma
+  // khong phai tu vao tung man kiem tra. Chi doc 1 lan khi vao khu quan tri (khong tu lam moi
+  // lien tuc) - du dung cho muc dich "nhac nho", khong can that real-time.
+  const [pendingCount, setPendingCount] = useState(0);
+  function reloadPendingCount() {
+    api
+      .get('/labels/review-queue')
+      .then((r) => setPendingCount(r.data.data.length))
+      .catch(() => undefined);
+  }
+  useEffect(reloadPendingCount, [location.pathname]);
+  // Man Duyet nhan phat su kien nay ngay sau khi duyet xong 1 may - cap nhat huy hieu NGAY,
+  // khong doi den luc chuyen trang moi thay so giam (xem AdminReviewQueue.tsx).
+  useEffect(() => {
+    window.addEventListener('smartlap:review-queue-changed', reloadPendingCount);
+    return () => window.removeEventListener('smartlap:review-queue-changed', reloadPendingCount);
+  }, []);
 
   function logout() {
     localStorage.removeItem('smartlap_token');
@@ -38,6 +58,15 @@ export function AdminLayout() {
             { key: '/admin/benchmarks/gpu', label: <Link to="/admin/benchmarks/gpu">Benchmark GPU</Link> },
             { key: '/admin/laptops', label: <Link to="/admin/laptops">Laptop</Link> },
             { key: '/admin/prices', label: <Link to="/admin/prices">Quản lý giá</Link> },
+            {
+              key: '/admin/review-queue',
+              label: (
+                <Link to="/admin/review-queue">
+                  Duyệt nhãn{' '}
+                  {pendingCount > 0 && <Badge count={pendingCount} style={{ marginLeft: 4 }} />}
+                </Link>
+              ),
+            },
           ]}
         />
       </Sider>

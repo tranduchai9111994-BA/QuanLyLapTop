@@ -189,6 +189,20 @@ Câu cụ thể được sửa: *"cần máy chỉnh ảnh cưới hàng loạt,
 Chỉ nhận câu có phản hồi 👍 vào tập huấn luyện — không tự tin vào dự đoán của chính mình, tránh
 hiệu ứng "buồng vọng âm" (echo chamber).
 
+### 5.3 Hàng đợi "Cần xác minh" (UC-10, human-in-the-loop)
+
+Máy được Mô hình A tự gán nhãn với độ tin cậy dưới ngưỡng (`confidence_threshold`, mặc định 0,6)
+vào trạng thái `NEEDS_REVIEW` thay vì chặn lưu — máy **vẫn được gợi ý tạm** cho khách bằng nhãn
+đó (đúng tinh thần "hệ thống hoạt động được ngay, con người xác nhận lại sau", không phải "chờ
+duyệt mới hoạt động"). Màn quản trị mới `/admin/review-queue`: hiện huy hiệu số lượng đang chờ
+ngay trên menu (cập nhật tức thì sau mỗi lần duyệt, không cần tải lại trang), liệt kê từng máy
+kèm phân bố xác suất đầy đủ, cho phép giữ nguyên nhãn AI hoặc chọn nhãn khác rồi duyệt.
+
+Đã kiểm thử trên browser (`scripts/capture_phase2_review_queue.py`, ảnh
+`crud_test_screenshots/phase2_*.png`): hạ tạm ngưỡng để ép máy mới vào hàng đợi, xác nhận huy
+hiệu "1" hiện trên menu, màn hiện đúng thông tin máy + phân bố xác suất, bấm duyệt xong hàng đợi
+rỗng và huy hiệu biến mất ngay lập tức.
+
 ## 6. Độ đo thực tế — công sức tìm kiếm
 
 Đo bằng **số máy người dùng phải xem qua** trước khi gặp máy phù hợp (máy thuộc nhóm 20% hài lòng
