@@ -72,11 +72,26 @@ const DEFAULT_ALERT_THRESHOLDS: AlertThresholds = {
 };
 
 /** Doc 1 khoa KnowledgeConfig, tra ve fallback neu chua tung cau hinh (404) hoac loi mang -
- * man hinh nay LUON hien duoc gia tri (mac dinh khop code) thay vi bao loi ngay lan dau mo. */
+ * man hinh nay LUON hien duoc gia tri (mac dinh khop code) thay vi bao loi ngay lan dau mo.
+ * `valueJson` co the bi MA HOA JSON LONG NHAU nhieu lop (vd "0.6" -> "\"0.6\"" -> "\"\\\"0.6\\\"\""):
+ * xay ra khi 1 gia tri da bi hong 1 lan roi bi luu lai (moi lan Sua+Luu lai bao 1 lop nua, gay
+ * "NaN%" tren Slider vi ket qua sau cung van la CHUOI, khong phai so). Tiep tuc parse khi ket qua
+ * van la chuoi hop le JSON de tu "go" het cac lop cu, tranh loi tai dien lai o nhung ban ghi da
+ * tung bi hong tu truoc (khong the sua tay tung dong trong DB moi lan gap). */
 async function loadConfig<T>(key: string, fallback: T): Promise<T> {
   try {
     const r = await api.get(`/knowledge/config/${key}`);
-    return JSON.parse(r.data.data.valueJson) as T;
+    let value: unknown = JSON.parse(r.data.data.valueJson);
+    let guard = 0;
+    while (typeof value === 'string' && guard < 5) {
+      try {
+        value = JSON.parse(value);
+      } catch {
+        break;
+      }
+      guard += 1;
+    }
+    return value as T;
   } catch {
     return fallback;
   }
