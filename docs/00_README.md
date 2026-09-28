@@ -34,9 +34,9 @@ Người dùng khai báo nhu cầu (mục đích sử dụng, ngân sách, mức
 
 | Tầng | Công nghệ |
 |------|-----------|
-| Backend | Node.js 20, Express, TypeScript, Prisma, SQL Server |
-| Dịch vụ ML | Python 3.11, FastAPI, scikit-learn, pandas, joblib |
-| Frontend | React 18, Vite, TypeScript, Ant Design 5, Recharts |
+| Backend | Node.js, Express 4, TypeScript, Prisma 5, SQL Server, zod, JWT, bcryptjs, vitest |
+| Dịch vụ ML | Python, FastAPI, scikit-learn, pandas, numpy, imbalanced-learn, joblib, pytest |
+| Frontend | React 19, Vite, TypeScript, Ant Design 6, Recharts, react-router-dom 7, axios |
 | Font | Be Vietnam Pro (hỗ trợ tiếng Việt tốt) |
 
 ## 4. Cấu trúc thư mục
@@ -67,27 +67,35 @@ Quản trị: link "Quản trị viên / Nhân viên" góc phải (`/admin/login
 
 | Vai trò | Email | Mật khẩu | Dùng để |
 |---------|-------|----------|---------|
-| Quản trị viên (ADMIN) | `admin@smartlap.vn` | `Demo@123` | Vào `/admin`: quản lý laptop, giá, benchmark, hãng máy |
-| Nhân viên tư vấn (STAFF) | `staff@smartlap.vn` | `Demo@123` | Tư vấn, sửa laptop/giá, không có toàn quyền admin |
+| Quản trị viên (ADMIN) | `admin@smartlap.vn` | `Demo@123` | Vào `/admin`: quản lý laptop, giá, benchmark, hãng máy, dashboard, người dùng |
+| Nhân viên tư vấn (STAFF) | `staff@smartlap.vn` | `Demo@123` | Tư vấn, sửa laptop/giá, không có toàn quyền admin (không xem được Dashboard) |
 | Khách hàng (CUSTOMER) | `khach@smartlap.vn` | `Demo@123` | Luồng người dùng cuối (Wizard → Kết quả → So sánh) |
 
 Mật khẩu chung chỉ vì đây là dữ liệu demo cho đồ án. Đổi mật khẩu thì sửa cả `seed.ts` lẫn bảng này.
+
+Ở màn đăng nhập khách hàng (`/login`) và quản trị (`/admin/login`), nếu `frontend/.env` bật
+`VITE_DEMO=true` thì form sẽ tự điền sẵn tài khoản demo tương ứng để bấm đăng nhập nhanh. Tắt biến
+này (hoặc xoá dòng đó) trước khi triển khai thật.
 
 **Chạy tay lần đầu** (cần SQL Server, Python, Node.js):
 
 ```bash
 # ML service
-cd ml-service && pip install -r requirements.txt && python -m app.train && pytest
-uvicorn app.main:app --port 8001
+cd ml-service && pip install -r requirements.txt
+python -m app.data_check && python -m app.train && python -m app.evaluate && pytest
+uvicorn app.main:app --reload --port 8001
 
-# Backend (terminal khác) — cấu hình kết nối theo backend/.env.example
+# Backend (terminal khác) — cấu hình kết nối theo backend/.env.example (DATABASE_URL, JWT_SECRET,
+# ML_SERVICE_URL, ML_INTERNAL_KEY, PORT)
 cd backend && npm install && npx prisma migrate dev && npm run seed && npm run seed:telemetry
 npm run dev
 
-# Frontend (terminal khác)
+# Frontend (terminal khác) — copy biến trong frontend/.env (VITE_API_URL, VITE_DEMO) nếu cần chỉnh
 cd frontend && npm install && npm run dev
 ```
 
 Sinh lại dữ liệu (chỉ khi cần): `python data/generate_catalog.py && python data/generate_personas.py`,
 rồi `npm run seed -- --reset` ở backend. Chụp lại ảnh giao diện: `python scripts/capture_screenshots.py`.
+Kiểm thử: `npm run test` (backend, vitest), `pytest` (ml-service), `npm run lint` (frontend, oxlint +
+kiểm tra không hardcode màu).
 

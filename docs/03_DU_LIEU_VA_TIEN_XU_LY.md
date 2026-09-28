@@ -1,160 +1,126 @@
 # 03 — Dữ liệu và tiền xử lý
 
-## 1. Chiến lược dữ liệu (đề xuất cho D-02)
+## 1. Tổng quan nguồn dữ liệu
 
-Dùng **ba nguồn với ba vai trò tách bạch**, để mỗi nguồn trả lời một câu hỏi khác nhau của hội đồng:
+Catalog hiện tại là **dữ liệu tổng hợp có logic** (không phải thu thập thủ công từ nhà bán lẻ, không dùng thêm bộ dữ liệu ngoài như Kaggle). Toàn bộ được sinh bằng `data/generate_catalog.py` (`RANDOM_STATE = 42` để tái lập được), theo các ràng buộc mô phỏng đúng thị trường thay vì random thuần:
 
-| Nguồn | Quy mô | Vai trò | Trả lời câu hỏi |
-|---|---|---|---|
-| **A. Catalog thị trường VN** (tự thu thập) | 250–350 mẫu | Dữ liệu chính: huấn luyện Mô hình A, làm danh mục khuyến nghị | "Hệ thống có dùng được thật không?" |
-| **B. Kaggle Laptop Prices** | ~1.300 mẫu | Thực nghiệm đối chứng: chạy lại cùng pipeline kNN trên dữ liệu công khai | "Phương pháp có tái lập được trên dữ liệu người khác không?" |
-| **C. Dữ liệu tổng hợp** | 30 persona + tương tác giả lập | Kiểm thử khuyến nghị, tạo dữ liệu phản hồi cho demo vòng đời | "Làm sao biết khuyến nghị đúng?" |
+- **1000 dòng**, mỗi lần sinh có thể thay đổi phân bố nhẹ vì có thành phần nhiễu ngẫu nhiên, nhưng seed cố định nên chạy lại đúng script cho kết quả giống hệt.
+- **12 hãng** (`BRANDS`), mỗi hãng có `brand_tier` (1–5) và hệ số nhân giá (`price_mult`): Apple (tier 5, ×1.45), Dell (5, ×1.15), LG (4, ×1.20), Lenovo (4, ×1.05), HP (4, ×1.04), ASUS (4, ×1.00), MSI (3, ×1.02), Acer (3, ×0.90), Gigabyte (3, ×0.95), Huawei (3, ×0.98), Masstel (1, ×0.78), Avita (1, ×0.80).
+- **28 mẫu CPU** và **21 mẫu GPU** với điểm PassMark tham chiếu thật (CPU Mark / G3D Mark), phân theo tier (entry/U/P/H/Apple Silicon…). Hàm `gpu_compatible()` chặn các tổ hợp phi thực tế: Apple Silicon chỉ đi với GPU Apple, iGPU phải cùng hãng CPU, GPU rời yêu cầu CPU đạt tier tối thiểu, CPU tier entry không được ghép GPU rời.
+- **Kiến trúc máy** (`pick_archetype`) chọn theo trọng số: budget_office 0.26, mainstream 0.20, thin_light 0.15, gaming_entry 0.15, gaming_high 0.10, creator 0.09, workstation 0.05. RAM/SSD được chọn theo 3 ngưỡng điểm CPU (11000/18000/25000) — máy càng mạnh càng có xác suất RAM/SSD cao hơn.
+- **Giá** (`price_vnd`): `base_cost = cpu_cost + gpu_cost + ram_cost(0,18 tr/GB) + ssd_cost(0,0022 tr/GB) + screen_cost + chassis_cost`, nhân với `brand_mult × noise(N(1.0, 0.07), tối thiểu 0.85) × 1.38` (hệ số bán lẻ/VAT), làm tròn 10.000đ, sàn 5.500.000đ. 35% số máy có khuyến mãi (`original_price_vnd` cao hơn `price_vnd` 5–25%). `sales_count` tương quan với `value_index`, `brand_tier`, tình trạng khuyến mãi và nhiễu Gauss.
+- **Gán nhãn phân khúc** (`assign_segment`): tính 4 điểm số có trọng số (gaming/creator/ultrabook/office) từ `cpu_score`, `gpu_score`, `gpu_dedicated`, `refresh_hz`, `weight_kg`, `srgb_100`, `ppi`, `ram_gb`, `price_vnd`, cộng nhiễu Gaussian `N(0, 0.32)` rồi lấy `argmax`. Cách này **cố ý tạo chồng lấn tự nhiên** giữa các phân khúc liền kề (thay vì luật if-else tách bạch tuyệt đối), đúng theo góp ý cần dữ liệu "khó" hơn để chứng minh giá trị của kNN so với luật cứng.
+- `series` (dòng máy hiển thị, ví dụ "Gram Pro", "Legion") được gán **sau khi** đã có `segment`, chọn từ đúng nhóm series phù hợp phân khúc đó — tránh lỗi tên dòng máy văn phòng bị gắn nhãn Gaming.
 
-**Nguyên tắc cứng:** dữ liệu tổng hợp (C) **không bao giờ** dùng để huấn luyện Mô hình A. Như vậy không ai có thể nói "mô hình học lại luật của nhóm".
+Việc dùng dữ liệu tổng hợp là lựa chọn thực tế cho quy mô đồ án: cho phép sinh đủ số mẫu mỗi lớp (mọi phân khúc đều ≥ 100 mẫu, vượt xa mốc tối thiểu 50/lớp) và tránh rủi ro pháp lý khi crawler dữ liệu nhà bán lẻ. Hạn chế cần nêu rõ khi bảo vệ: dữ liệu không phải giá/cấu hình thị trường thật 100%, và chưa có bước gán nhãn độc lập hai người (Cohen's kappa) vì không có bước gán nhãn thủ công trên dữ liệu thật.
 
-**Phương án rút gọn** nếu nhóm không đủ thời gian thu thập 250 mẫu: dùng Kaggle làm dữ liệu huấn luyện Mô hình A (nhãn từ cột `TypeName`), catalog VN chỉ cần 60–80 mẫu để làm danh mục demo, và nêu rõ hạn chế lệch miền trong báo cáo.
+### 1.1 Các file dữ liệu
 
-## 2. Nguồn A — Catalog thị trường VN
+| File | Vai trò |
+|---|---|
+| `data/generate_catalog.py` | Script sinh catalog tổng hợp (nguồn của mọi file bên dưới) |
+| `data/raw/catalog_vn_raw.xlsx` | Catalog thô, 1000 dòng, đúng cột ở mục 2 |
+| `data/processed/catalog_vn.csv` | Bản đã có `segment`, `discount_percent`/giá gốc, `sales_count` — dùng huấn luyện Mô hình A và B |
+| `data/processed/cpu_benchmark.csv`, `data/processed/gpu_benchmark.csv` | Điểm PassMark tham chiếu (CPU Mark / G3D Mark) cho từng mẫu CPU/GPU dùng trong catalog |
+| `data/personas/personas.json` | 30 hồ sơ nhu cầu kiểm thử (script `data/generate_personas.py`), **không** dùng để huấn luyện |
+| `data/need_phrases.json` | 132 câu tiếng Việt viết tay, dữ liệu huấn luyện Mô hình C (TF-IDF + kNN) |
 
-### 2.1 Cách thu thập
-- Thu thập **thủ công** từ trang sản phẩm công khai của các nhà bán lẻ lớn (không viết crawler tự động, tránh vi phạm điều khoản sử dụng). Mỗi dòng ghi `source_url` và `collected_at`.
-- Chia việc: mỗi thành viên ~100 mẫu, cân bằng giữa 4 phân khúc (mục tiêu tối thiểu 50 mẫu / lớp).
-- Nhập vào mẫu Excel `data/raw/catalog_vn_raw.xlsx` theo đúng cột ở 2.2.
+## 2. Cột dữ liệu catalog (`catalog_vn.csv` / `catalog_vn_raw.xlsx`)
 
-### 2.2 Cột thu thập
-
-| Cột | Kiểu | Ví dụ | Ghi chú |
-|---|---|---|---|
-| `sku` | text | `ASUS-TUF-F15-FX507ZC4` | Duy nhất |
-| `brand` | text | ASUS | |
-| `name` | text | ASUS TUF Gaming F15 FX507ZC4 | |
-| `cpu_model` | text | Intel Core i5-12500H | Tra benchmark |
-| `gpu_model` | text | NVIDIA GeForce RTX 3050 4GB | Card tích hợp ghi đúng tên, ví dụ Intel Iris Xe |
-| `ram_gb` | int | 16 | |
-| `ssd_gb` | int | 512 | |
-| `screen_inch` | float | 15.6 | |
-| `resolution` | text | 1920x1080 | Tính PPI |
-| `refresh_hz` | int | 144 | Không ghi → 60 |
-| `srgb_100` | bool | 0 | 1 nếu công bố ≥ 100% sRGB hoặc có DCI-P3 |
-| `weight_kg` | float | 2.2 | |
-| `battery_wh` | float | 56 | |
-| `price_vnd` | int | 19990000 | Giá niêm yết tại ngày thu thập |
-| `retailer_category` | text | Laptop Gaming | **Nhãn gốc** |
-| `retailer_category_2` | text | | Nếu nhà bán lẻ xếp vào 2 danh mục |
-| `image_url` | text | | Ảnh demo (tùy chọn, có thể dùng ảnh minh họa chung) |
-| `source_url`, `collected_at` | text, date | | Truy vết |
-
-### 2.3 Gán nhãn phân khúc
-
-Ánh xạ danh mục nhà bán lẻ → nhãn hệ thống:
-
-| Danh mục nhà bán lẻ (thường gặp) | Nhãn `segment` | Tên hiển thị |
+| Cột | Kiểu | Ghi chú |
 |---|---|---|
-| Học tập – Văn phòng | `OFFICE` | Văn phòng – Học tập |
-| Mỏng nhẹ, Cao cấp – Sang trọng (máy mỏng) | `ULTRABOOK` | Mỏng nhẹ – Di động |
-| Gaming | `GAMING` | Gaming |
-| Đồ họa – Kỹ thuật | `CREATOR` | Đồ họa – Kỹ thuật |
+| `sku` | text | Duy nhất, kiểm tra trùng ở `data_check.py` |
+| `brand` | text | 1 trong 12 hãng ở mục 1 |
+| `name`, `series` | text | Tên hiển thị, dòng máy |
+| `cpu_model` | text | Tra `cpu_benchmark.csv` |
+| `gpu_model` | text | Tra `gpu_benchmark.csv`; iGPU ghi đúng tên (vd Intel Iris Xe) |
+| `ram_gb`, `ssd_gb` | int | |
+| `screen_inch` | float | |
+| `resolution` | text | Dạng `WxH`, dùng tính `ppi` |
+| `refresh_hz` | int | Thiếu → mặc định 60 khi làm giàu đặc trưng |
+| `srgb_100` | bool (0/1) | 1 nếu công bố ≥ 100% sRGB hoặc DCI-P3 |
+| `weight_kg`, `battery_wh` | float | |
+| `price_vnd`, `original_price_vnd` | int | Giá hiện tại / giá gốc trước khuyến mãi (nếu có) |
+| `sales_count` | int | Số lượt bán mô phỏng, dùng tính `sales_score` |
+| `brand_tier` | int (1–5) | Uy tín thương hiệu, ảnh hưởng `value_index` hiển thị và Mô hình B |
+| `segment` | text | Nhãn phân khúc: `OFFICE` / `ULTRABOOK` / `GAMING` / `CREATOR` |
 
-Quy tắc khi một máy nằm ở 2 danh mục:
-1. Lấy danh mục đầu tiên nhà bán lẻ hiển thị làm nhãn chính.
-2. Hai thành viên độc lập gán lại 40 mẫu ngẫu nhiên, tính **hệ số Cohen's kappa** (Cohen, 1960). Kappa ≥ 0,7 được xem là đáng tin; đưa con số này vào báo cáo.
-3. Mẫu hai người bất đồng → trưởng nhóm quyết, ghi `label_note`.
+## 3. Bảng benchmark CPU / GPU
 
-## 3. Nguồn B — Kaggle Laptop Prices
+`data/processed/cpu_benchmark.csv` và `gpu_benchmark.csv` có các cột `pattern`, `display_name`, `raw_score` (điểm PassMark thô: CPU Mark cho CPU, G3D Mark cho GPU), `source`; `gpu_benchmark.csv` còn có cột `dedicated` (0/1) nếu có sẵn.
 
-- File `laptop_price.csv` (các cột Company, Product, TypeName, Inches, ScreenResolution, Cpu, Ram, Memory, Gpu, OpSys, Weight, Price_euros). **Kiểm tra giấy phép trên trang dataset trước khi dùng và ghi vào báo cáo.**
-- Ánh xạ nhãn: `Notebook`, `Netbook` → OFFICE; `Ultrabook`, `2 in 1 Convertible` → ULTRABOOK; `Gaming` → GAMING; `Workstation` → CREATOR.
-- Lớp CREATOR rất ít mẫu (vài chục) → đây là cơ hội trình bày xử lý mất cân bằng lớp (04 §5.3).
-- Kaggle thiếu `refresh_hz`, `srgb_100`, `battery_wh` → thí nghiệm đối chứng chỉ dùng tập đặc trưng giao nhau; ghi rõ trong báo cáo.
+- `build_bench_lookup()` ([ml-service/app/features.py:63](../ml-service/app/features.py)) quy đổi điểm thô về thang 0–100: `score = 100 × raw_score / max(raw_score)` trên toàn bảng — máy mạnh nhất trong bảng benchmark được 100 điểm.
+- Khớp tên (`match_score()`, [features.py:83](../ml-service/app/features.py)): chuẩn hoá chuỗi bằng `normalize_name()` (viết thường, bỏ `"(r)"`, `"(tm)"`, `"processor"`, gọn khoảng trắng), khớp chính xác trước, nếu không có thử khớp một phần (chuỗi trong catalog chứa `pattern` hoặc ngược lại). Không khớp được → `enrich_catalog()` raise `ValueError` liệt kê toàn bộ tên CPU/GPU không khớp — **không tự đoán mò**.
+- `gpu_dedicated`: ưu tiên cột `dedicated` thật trong `gpu_benchmark.csv` nếu có; nếu bảng cũ chưa có cột này thì suy từ từ khoá trong tên GPU (`geforce`, `radeon rx`, `rtx`, `quadro`, `arc a` → `is_gpu_dedicated()`, [features.py:102](../ml-service/app/features.py)).
 
-## 4. Bảng benchmark CPU / GPU
+## 4. Làm giàu đặc trưng — `enrich_catalog()` ([ml-service/app/features.py:120](../ml-service/app/features.py))
 
-Tên CPU/GPU là chuỗi, kNN cần số. Quy đổi qua hai bảng tra cứu:
+Hàm bắt buộc chạy trước khi đưa dữ liệu vào bất kỳ mô hình kNN nào (`train.py`, `evaluate.py`, và `main.py` lúc `/catalog/sync`). Từ catalog thô, tính thêm:
 
-`data/processed/cpu_benchmark.csv`
+| Cột sinh ra | Công thức / cách tính |
+|---|---|
+| `cpu_score`, `gpu_score` | Tra bảng benchmark, thang 0–100 (mục 3) |
+| `gpu_dedicated` | 0/1, ưu tiên cột `dedicated` thật (mục 3) |
+| `ppi` | `compute_ppi()`: `sqrt(w² + h²) / screen_inch`, `w, h` lấy từ `resolution` |
+| `refresh_hz` | Thiếu → 60 |
+| `battery_wh` | Thiếu → trung vị **theo từng phân khúc** (`groupby("segment").transform(median)`), không lấy trung vị chung toàn catalog |
+| `brand_tier` | Catalog cũ thiếu cột → mặc định 3 (tương thích ngược) |
+| `performance_index` | `0,5·cpu_score + 0,35·gpu_score + 0,1·(100·ram_norm) + 0,05·(100·ssd_norm)`, thang 0–100 — chỉ số **hiển thị**, không đưa vào mô hình |
+| `value_index` | `performance_index / (price_vnd / 1.000.000)` — "hiệu năng trên mỗi triệu đồng", dùng cho huy hiệu "Đáng tiền nhất" **và** là một đặc trưng thật trong Mô hình B |
+| `discount_percent` | `(original_price_vnd − price_vnd) / original_price_vnd × 100`, không có khuyến mãi → 0 |
+| `sales_score` | `100 × log1p(sales_count) / max(log1p(sales_count))` — log hoá vì lượt bán lệch phải mạnh (vài máy bán rất chạy, đa số còn lại ít) |
 
-| `pattern` | `display_name` | `raw_score` | `source` |
+## 5. Tập đặc trưng đưa vào mô hình
+
+| Đặc trưng | Biến đổi | Mô hình A | Mô hình B |
 |---|---|---|---|
-| `i5-12500H` | Intel Core i5-12500H | (điểm PassMark CPU Mark tra thủ công) | PassMark, ngày tra |
+| `ram_gb`, `ssd_gb` | log2 → StandardScaler | ✅ | ✅ |
+| `cpu_score`, `gpu_score`, `screen_inch`, `ppi`, `refresh_hz`, `weight_kg`, `battery_wh` | StandardScaler | ✅ | ✅ |
+| `gpu_dedicated`, `srgb_100` | passthrough (đã là 0/1) | ✅ | ✅ |
+| `price_vnd`, `brand_tier`, `value_index`, `discount_percent`, `sales_score` | StandardScaler (qua `fit_scaler` của Mô hình B) | ❌ | ✅ |
 
-`data/processed/gpu_benchmark.csv` tương tự với điểm PassMark G3D Mark.
+`MODEL_A_FEATURES = NUMERIC_LOG + NUMERIC + BINARY` ([features.py:35](../ml-service/app/features.py)); `MODEL_B_FEATURES = MODEL_A_FEATURES + ["price_vnd", "brand_tier", "value_index", "discount_percent", "sales_score"]` ([features.py:44](../ml-service/app/features.py)).
 
-- Điểm tra thủ công từ trang benchmark công khai, **ghi ngày tra**.
-- Chuẩn hóa: `cpu_score = 100 × raw_score / max(raw_score)` trên toàn bảng → thang 0–100 để hiển thị. Mô hình vẫn chuẩn hóa lại bằng StandardScaler.
-- Khớp tên: chuẩn hóa chuỗi (viết thường, bỏ "(R)", "(TM)", "Processor", khoảng trắng thừa) rồi so `pattern`. Không khớp → báo lỗi ở màn nhập liệu, **không** tự đoán.
-- `gpu_dedicated = 1` nếu tên chứa GeForce / Radeon RX / RTX / Quadro / Arc A-series.
+**`price_vnd` cố ý không có mặt trong Mô hình A** (quyết định thiết kế D-04, được test `test_price_not_in_classifier` chặn tái phát): nếu đưa giá vào, mô hình sẽ "học" phân khúc theo giá thay vì theo cấu hình thật — hai máy cùng cấu hình nhưng khác giá vẫn phải cùng phân khúc. Giá chỉ tham gia xếp hạng ở Mô hình B.
 
-## 5. Đặc trưng
+### 5.1 Vì sao phải chuẩn hoá
 
-### 5.1 Tập đặc trưng
+kNN dựa trên khoảng cách. Không chuẩn hoá thì `price_vnd` (hàng chục triệu) và `ssd_gb` (hàng trăm) sẽ lấn át hoàn toàn `weight_kg` (1–3 kg). Dùng `log2` cho `ram_gb`/`ssd_gb` vì chênh 8→16 GB có ý nghĩa ngang 16→32 GB (cùng là gấp đôi), không phải bằng 1/2 giá trị tuyệt đối.
 
-| Đặc trưng | Nguồn | Biến đổi | Mô hình A | Mô hình B |
-|---|---|---|---|---|
-| `cpu_score` | benchmark | chuẩn hóa z | ✅ | ✅ |
-| `gpu_score` | benchmark | chuẩn hóa z | ✅ | ✅ |
-| `gpu_dedicated` | suy ra | 0/1 | ✅ | |
-| `ram_gb` | thô | log2 → z | ✅ | ✅ |
-| `ssd_gb` | thô | log2 → z | ✅ | ✅ |
-| `screen_inch` | thô | z | ✅ | ✅ |
-| `ppi` | tính | z | ✅ | ✅ |
-| `refresh_hz` | thô | z | ✅ | ✅ |
-| `srgb_100` | thô | 0/1 | ✅ | ✅ |
-| `weight_kg` | thô | z | ✅ | ✅ |
-| `battery_wh` | thô | z | ✅ | ✅ |
-| `price_vnd` | thô | log10 → z | ❌ (D-04) | ✅ |
-
-`ppi = sqrt(w² + h²) / screen_inch`.
-
-Chỉ số hiển thị (không đưa vào mô hình):
-- `performance_index = 0,5·cpu_score + 0,35·gpu_score + 0,1·ram_norm + 0,05·ssd_norm` (0–100).
-- `value_index = performance_index / (price_vnd / 1.000.000)` — dùng cho huy hiệu "Đáng tiền nhất" và cho chế độ dự phòng.
-
-### 5.2 Vì sao phải chuẩn hóa (điểm hay hỏi khi bảo vệ)
-
-kNN dựa trên khoảng cách. Không chuẩn hóa thì `price_vnd` (hàng chục triệu) và `ssd_gb` (hàng trăm) sẽ lấn át hoàn toàn `weight_kg` (1–3). Thí nghiệm cắt bỏ (ablation) ở 04 §6.3 bắt buộc chạy phiên bản không chuẩn hóa để minh chứng bằng số.
-
-Dùng log cho RAM/SSD/giá vì chênh 8 → 16 GB có ý nghĩa ngang 16 → 32 GB, không phải bằng 1/2.
-
-### 5.3 Pipeline
+### 5.2 Pipeline thật — `build_model_a_preprocessor()` ([features.py:225](../ml-service/app/features.py))
 
 ```python
-numeric_log = ["ram_gb", "ssd_gb"]           # log2
-numeric = ["cpu_score", "gpu_score", "screen_inch", "ppi",
-           "refresh_hz", "weight_kg", "battery_wh"]
-binary = ["gpu_dedicated", "srgb_100"]
-
-preprocess = ColumnTransformer([
-    ("log", Pipeline([("log", FunctionTransformer(np.log2)),
-                      ("sc", StandardScaler())]), numeric_log),
-    ("num", StandardScaler(), numeric),
-    ("bin", "passthrough", binary),
+ColumnTransformer([
+    ("log", Pipeline([
+        ("impute", SimpleImputer(strategy="median")),
+        ("log", FunctionTransformer(np.log2, feature_names_out="one-to-one")),
+        ("sc", StandardScaler()),
+    ]), NUMERIC_LOG),        # ram_gb, ssd_gb
+    ("num", Pipeline([
+        ("impute", SimpleImputer(strategy="median")),
+        ("sc", StandardScaler()),
+    ]), NUMERIC),            # cpu_score, gpu_score, screen_inch, ppi, refresh_hz, weight_kg, battery_wh
+    ("bin", "passthrough", BINARY),   # gpu_dedicated, srgb_100
 ])
 ```
 
-Thiếu dữ liệu: `refresh_hz` thiếu → 60; `battery_wh` thiếu → trung vị của phân khúc trong tập train (dùng `SimpleImputer` trong pipeline). Không có cột nào thiếu quá 10%; vượt ngưỡng → báo cáo và loại cột.
+Bước này nằm **trong** `Pipeline` của Mô hình A ([ml-service/app/classifier.py:41](../ml-service/app/classifier.py)) để `StandardScaler`/`SimpleImputer` chỉ được `fit` trên tập train ở mỗi fold cross-validation — tránh rò rỉ dữ liệu (data leakage). Với Mô hình B, chuẩn hoá dùng `fit_scaler()` ([ml-service/app/retriever.py:81](../ml-service/app/retriever.py)) — một `StandardScaler` đơn fit trên toàn catalog hiện hành (không cross-validate, vì đây là bài toán truy hồi không có nhãn).
 
-## 6. Nguồn C — Persona tổng hợp
+Thiếu dữ liệu vượt 10% một cột → `data_check.py` báo lỗi, không tự động loại cột.
 
-`data/personas/personas.json` gồm 30 hồ sơ nhu cầu viết tay, mỗi hồ sơ có **ràng buộc kiểm chứng được**:
+## 6. Persona và câu nhu cầu tự do (dữ liệu kiểm thử, không dùng để huấn luyện Mô hình A/B)
 
-```json
-{
-  "id": "P07",
-  "mo_ta": "Sinh viên CNTT, lập trình + game nhẹ, ngân sách 18–22 tr",
-  "input": { "segment": null, "activities": ["lap_trinh", "choi_game"],
-             "budget": [18000000, 22000000],
-             "priorities": { "performance": 4, "mobility": 3, "display": 2, "price": 3 },
-             "must": { "ram_min": 16 } },
-  "expect": { "segment_in": ["GAMING", "OFFICE"], "all_price_lte": 24200000,
-              "all_ram_gte": 16, "top1_gpu_dedicated": true }
-}
-```
+- `data/personas/personas.json`: 30 hồ sơ nhu cầu (sinh bởi `data/generate_personas.py`), mỗi hồ sơ có ràng buộc kiểm chứng được (`expect`), dùng cho `ml-service/tests/test_personas.py` và `test_priority_sensitivity.py`, đo tỷ lệ persona đạt kỳ vọng.
+- `data/need_phrases.json`: 132 câu tiếng Việt viết tay gắn nhãn 1 trong 6 nhóm nhu cầu (`VAN_PHONG`, `HOC_TAP`, `LAP_TRINH`, `DO_HOA`, `GAMING`, `DI_DONG`) — **đây mới là dữ liệu huấn luyện thật** của Mô hình C (kNN phân loại văn bản, xem `docs/04_MO_HINH_KNN.md` và `docs/13_GIAI_THICH_THUAT_TOAN_KNN.md`).
 
-Dùng cho: kiểm thử tự động (04 §9), số liệu "tỷ lệ persona đạt" trong báo cáo, và sinh tương tác giả lập (người dùng giả chọn 👍 cho máy thỏa `expect`, 👎 kèm lý do cho máy vi phạm) để demo vòng phản hồi.
+## 7. Kiểm tra chất lượng dữ liệu — `ml-service/app/data_check.py`
 
-## 7. Kiểm tra chất lượng dữ liệu (script `ml-service/app/data_check.py`)
+Chạy `python -m app.data_check` (từ thư mục `ml-service/`). Kiểm tra trên `data/processed/catalog_vn.csv`:
 
 - Trùng `sku` → lỗi.
-- Giá ngoài [5 tr, 150 tr], trọng lượng ngoài [0,8; 4,5] kg, RAM không thuộc {4, 8, 12, 16, 24, 32, 64} → cảnh báo.
-- Số mẫu mỗi lớp, in bảng phân bố → đưa vào báo cáo.
-- CPU/GPU không khớp bảng benchmark → lỗi, liệt kê tên.
+- CPU/GPU không khớp bảng benchmark (cùng logic khớp tên ở mục 3) → lỗi, liệt kê tên không khớp.
+- Giá ngoài khoảng [5 triệu, 150 triệu] → cảnh báo.
+- Trọng lượng ngoài khoảng [0,8; 4,5] kg → cảnh báo.
+- `ram_gb` không thuộc {4, 8, 12, 16, 24, 32, 64} → cảnh báo.
+- Cột thiếu dữ liệu quá 10% (bỏ qua các cột tuỳ chọn `retailer_category_2`, `image_url`, `label_note`) → lỗi.
+- Phân khúc dưới 50 mẫu → cảnh báo. In bảng phân bố số mẫu mỗi phân khúc để đưa vào báo cáo (số liệu cụ thể xem `docs/14_KET_QUA_THUC_NGHIEM.md`, vì catalog có thể tái sinh và số liệu thay đổi nhẹ mỗi lần chạy `generate_catalog.py`).

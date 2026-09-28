@@ -33,13 +33,15 @@
 | `border-strong` | `#C9D6E8` | Viền input |
 | `text-primary` | `#0F1B2D` | Tiêu đề, nội dung chính |
 | `text-secondary` | `#4A5B73` | Mô tả, nhãn |
-| `text-tertiary` | `#64748B` | Chú thích, placeholder |
+| `text-tertiary` | `#5B6B85` | Chú thích, placeholder (chỉnh từ tông xám nhạt hơn để đạt tương phản AA trên nền `bg-subtle`) |
 | `success` | `#15803D` | Điểm mạnh, 👍, trạng thái tốt |
 | `success-bg` | `#EAF8EF` | |
 | `warning` | `#B45309` | Lưu ý, cần xác minh (đậm hơn vàng chuẩn để đạt tương phản 5,0:1) |
 | `warning-bg` | `#FFF6E5` | |
-| `error` | `#DC2626` | Lỗi, 👎 |
+| `error` | `#C62828` | Lỗi, 👎 (đậm hơn đỏ chuẩn để đạt tương phản AA trên `error-bg`) |
 | `error-bg` | `#FDECEC` | |
+
+> Ngoài ra `white` là alias của `bg-surface` (cùng `#FFFFFF`) nhưng mang ngữ nghĩa riêng: dùng khi cần chữ/icon **trắng** trên nền tối (gradient AI, nút chính) chứ không phải "nền thẻ".
 
 ### 2.2 Màu phân khúc (cố định mọi nơi: tag, biểu đồ, viền thẻ)
 
@@ -73,7 +75,7 @@ Chuỗi mặc định: `#1A73E8, #06B6D4, #0F766E, #C2410C, #9333EA, #64748B`. R
 
 ## 4. Khoảng cách, bo góc, đổ bóng
 
-- Lưới 4 px: `4, 8, 12, 16, 20, 24, 32, 40, 48, 64`.
+- `tokens.ts` không khai báo hằng số spacing riêng — khoảng cách dùng trực tiếp giá trị px theo bội số của 4 ngay trong từng component (`4, 8, 12, 16, 20, 24, 32, 40, 48, 64`).
 - Bo góc: nút/input `10`, thẻ `16`, modal `20`, tag `999` (viên thuốc).
 - Bóng (tông xanh, không xám đen):
   - `shadow-sm`: `0 1px 2px rgba(26,115,232,0.06)`
@@ -128,13 +130,25 @@ Bọc `<ConfigProvider theme={antdTheme} locale={viVN}>` + `dayjs.locale('vi')`.
 ### 6.1 Khu vực khách hàng (top navigation)
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│ [logo SmartLap]  Tư vấn  Danh mục  So sánh (2)      ♡  [Đăng nhập] │  64 px, nền trắng, viền dưới border
+│ [logo SmartLap]  Tư vấn  Danh mục   So sánh (2)  ♡  [Tên/Đăng nhập] Quản trị viên/Nhân viên │  nền trắng, viền dưới border
 ├──────────────────────────────────────────────────────────────────┤
-│                    nội dung, max-width 1200 px                    │  nền bg-page
+│                          nội dung trang                           │  nền bg-page
 └──────────────────────────────────────────────────────────────────┘
 ```
+- Menu ngang chỉ có 2 mục "Tư vấn" (`/wizard`) và "Danh mục" (`/laptops`).
+- Liên kết "So sánh (N)" chỉ hiện khi danh sách so sánh có ≥ 1 máy (dùng chung toàn app qua `localStorage` — xem 08 mục 1).
+- Icon ♡ luôn dẫn tới `/favorites`.
+- Đã đăng nhập khách hàng: hiện tên + dropdown ("Lịch sử tư vấn", "Đăng xuất"); chưa đăng nhập: liên kết "Đăng nhập".
+- Cuối thanh có liên kết chữ nhỏ "Quản trị viên / Nhân viên" dẫn tới `/admin/login`.
+- Dưới 768 px: toàn bộ menu trên gộp vào Drawer mở bằng nút "☰" (giữ lại logo + nút menu trên `Header`).
+
 ### 6.2 Khu vực quản trị (sidebar)
-Sider trắng 240 px (thu gọn 72 px), menu nhóm: **Tổng quan** (Dashboard) · **Dữ liệu** (Laptop, Hàng đợi nhãn, Benchmark) · **Trí tuệ** (Mô hình, Phản hồi, Cấu hình tri thức) · **Hệ thống** (Người dùng, Nhật ký). Nhóm "Trí tuệ" có icon ✨ để hội đồng thấy ngay phần thông minh.
+Sider trắng 240 px (thu gọn 72 px, trạng thái thu gọn lưu `localStorage`); dưới 768 px ẩn hẳn Sider, thay bằng nút "☰" mở Drawer trái. Nhóm menu (`type: 'group'` của AntD Menu):
+- **Tổng quan** — chỉ hiện với vai trò ADMIN: Dashboard.
+- **Dữ liệu** — mọi vai trò: Hãng máy, Benchmark CPU, Benchmark GPU, Laptop, Quản lý giá, Duyệt nhãn (có `Badge` số lượng đang chờ).
+- **✨ Trí tuệ** — chỉ ADMIN: Quản lý mô hình, Cấu hình tri thức, Phân tích phản hồi.
+- **Hệ thống** — chỉ ADMIN: Người dùng & nhật ký (1 màn có 2 tab).
+Header quản trị có nút "Xem như khách hàng" (mở `/` ở tab mới) và "Đăng xuất".
 
 ### 6.3 Breakpoint
 | Tên | Rộng | Lưới thẻ kết quả |
@@ -175,16 +189,35 @@ Tag viên thuốc nền nhạt + chữ màu phân khúc + icon (bảng 2.2).
 - Máy ghim: nhãn xám "Đề xuất từ cửa hàng", **không** có AiBadge.
 
 ### 7.5 `ExplainDrawer` ("Vì sao gợi ý?")
-Drawer phải 480 px: radar lý tưởng vs máy; bảng "Đặc trưng | Bạn cần | Máy này | Mức lệch" (thanh ngang nhỏ); khối "Phân khúc được chọn vì…" liệt kê láng giềng bỏ phiếu; dòng cuối chữ nhỏ: "Mô hình kNN phiên bản clf-2026.10.05-01".
+Drawer phải 480 px: radar lý tưởng vs máy (dùng `RadarComparison`); danh sách điểm mạnh/lưu ý; khối "Phân khúc được chọn vì…" (khi có suy luận); bảng so sánh đặc trưng (Bạn cần / Máy này / Mức lệch); dòng cuối chữ nhỏ: "Mô hình kNN phiên bản {modelVersion}" (hoặc "không xác định (chế độ dự phòng)" nếu không có).
 
 ### 7.6 `PrioritySlider`
-Nhãn trái (icon + tên), Slider 1–5 có mốc chữ: 1 "Không quan trọng", 3 "Bình thường", 5 "Rất quan trọng". Giá trị hiển thị bằng chấm tròn tô dần.
+Nhãn trái (icon + tên), Slider 1–5 có mốc chữ: 1 "Không quan trọng", 3 "Bình thường", 5 "Rất quan trọng".
 
 ### 7.7 `FallbackBanner`
-Alert `type="warning"` đầu danh sách: "Hệ thống AI đang bảo trì, kết quả được sắp xếp theo hiệu năng/giá. Bạn vẫn có thể xem và so sánh bình thường."
+Export 2 component trong cùng file `FallbackBanner.tsx`:
+- `FallbackBanner`: Alert `type="warning"` cảnh báo chế độ dự phòng khi dịch vụ ML không phản hồi.
+- `BudgetRelaxedBanner({ count })`: Alert `type="info"` thông báo đã nới ngân sách thêm 10% để có đủ kết quả.
 
-### 7.8 `ConfidenceIndicator` (quản trị)
-Thanh ngang 4 đoạn màu phân khúc tỷ lệ theo xác suất; < 0,6 → tag `warning` "Cần xác minh".
+### 7.8 `ConfidenceIndicator` (dùng chung khách hàng + quản trị)
+Thanh ngang chia đoạn theo 4 màu phân khúc, độ rộng = xác suất dự đoán; nếu xác suất cao nhất dưới ngưỡng (mặc định 0,6) → hiện Tag `warning` "Cần xác minh". Dùng ở cả `AdminReviewQueue.tsx` và `SegmentSuggester.tsx`.
+
+### 7.9 `RadarComparison`
+Biểu đồ radar Recharts so sánh "Bạn cần" vs "Máy này" trên 6 trục (CPU, GPU, RAM, SSD, Pin, Màn hình), chuẩn hóa 0–100%. Dùng trong `ExplainDrawer` và panel dính ở Kết quả khuyến nghị (lg/xl).
+
+### 7.10 `MatchScore`, `SegmentTag`, `AiBadge`, `DiscountBadge`, `LaptopThumbnail`
+- `DiscountBadge`: hiển thị giá gốc gạch ngang + % giảm giá, kèm "Đã bán N" nếu có dữ liệu lượt bán.
+- `LaptopThumbnail`: ảnh đại diện laptop, thứ tự ưu tiên: `imageUrl` thật → ảnh mẫu theo hãng (Apple/ASUS/Huawei/Lenovo/Dell) → SVG minh họa vẽ theo màu phân khúc/hãng khi không có ảnh.
+
+### 7.11 `NeedTextInput`
+Ô nhập nhu cầu bằng câu tự do (Wizard bước 1), gọi `/recommendations/parse-need`, hiển thị nhãn suy ra kèm độ tin cậy, gợi ý (hints) và láng giềng ("Vì sao hệ thống hiểu như vậy?").
+
+### 7.12 `LoadingMessages`
+Hiển thị 1 dòng chữ trong danh sách, tự đổi luân phiên trong lúc chờ tải (07 mục 8).
+
+### 7.13 Component khu quản trị (`src/components/admin/`)
+- `CrudTable`: bảng CRUD dùng chung cho nhiều thực thể (Hãng máy, Benchmark CPU/GPU, Laptop) — tìm kiếm phía client, xuất/nhập Excel, form dạng lưới 2 cột khi có nhiều trường.
+- `SegmentSuggester`: khi thêm/sửa laptop, gọi `/laptops/predict-segment` để Mô hình A gợi ý phân khúc kèm độ tin cậy và k láng giềng đã "bỏ phiếu" (dùng lại `ConfidenceIndicator`), tự điền vào ô "Phân khúc" nếu còn trống.
 
 ## 8. Trạng thái bắt buộc
 
@@ -216,7 +249,7 @@ rules: {
   }],
 }
 ```
-- Component dùng chung ở `src/components/smart/` (AiBadge, MatchScore, SegmentTag, RecommendationCard, ExplainDrawer, PrioritySlider, FallbackBanner, ConfidenceIndicator).
+- Component dùng chung ở `src/components/smart/`: `AiBadge`, `ConfidenceIndicator`, `DiscountBadge`, `ExplainDrawer`, `FallbackBanner` (+ `BudgetRelaxedBanner`), `LaptopThumbnail`, `LoadingMessages`, `MatchScore`, `NeedTextInput`, `PrioritySlider`, `RadarComparison`, `SegmentTag`, `RecommendationCard`. Component khu quản trị ở `src/components/admin/`: `CrudTable`, `SegmentSuggester`.
 - Định dạng ở `src/utils/format.ts`: `formatVnd`, `formatShortVnd`, `formatKg`, `formatPct`.
 
 ## 11. Truy cập (a11y)

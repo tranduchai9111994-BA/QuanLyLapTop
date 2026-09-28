@@ -1,24 +1,30 @@
 # 11 — Kịch bản demo và bộ câu hỏi hội đồng
 
 ## 1. Chuẩn bị
-- Chạy local cả 3 dịch vụ + SQL Server; đã `seed` và `seed:telemetry`.
-- Mở sẵn tab: trang chủ, `/admin/models` (Quản lý mô hình), `/admin/feedback` (Phân tích phản hồi),
-  `/admin/dashboard` (KPI + cảnh báo), terminal ML service.
+- Chạy local cả 3 dịch vụ + SQL Server (dùng shortcut Desktop `SmartLap` hoặc chạy tay theo
+  `00_README.md` mục 5); đã `seed` và `seed:telemetry`.
+- Mở sẵn tab: trang chủ (`/`), `/laptops` (Danh mục), `/admin/models` (Quản lý mô hình),
+  `/admin/feedback` (Phân tích phản hồi), `/admin/dashboard` (KPI + cảnh báo), `/admin/review-queue`
+  (Duyệt nhãn), terminal ML service.
+- Đăng nhập sẵn 1 tài khoản CUSTOMER (`khach@smartlap.vn` / `Demo@123`) và 1 tài khoản ADMIN
+  (`admin@smartlap.vn` / `Demo@123`) — nếu `VITE_DEMO=true` thì form đăng nhập tự điền sẵn.
 - Có sẵn 1 laptop "mới" chưa nhập (thông số ghi giấy) để demo gợi ý phân khúc.
 
 ## 2. Kịch bản 10 phút
 
 | Phút | Việc | Lời dẫn chính | Tiêu chí thể hiện |
 |---|---|---|---|
-| 0–1 | Trang chủ | "Người mua khó quy đổi nhu cầu thành cấu hình; bộ lọc cứng thì trả về 0 hoặc 80 kết quả." | C1 mục tiêu |
+| 0–1 | Trang chủ: khối "Cách SmartLap hoạt động" + "Đáng tiền nhất tuần này" | "Người mua khó quy đổi nhu cầu thành cấu hình; bộ lọc cứng thì trả về 0 hoặc 80 kết quả. SmartLap còn tự xếp hạng máy đáng tiền nhất mỗi tuần theo điểm hiệu năng/giá." | C1 mục tiêu |
+| 1 | Trang Danh mục (`/laptops`), bấm banner "Không biết chọn gì? Để AI tư vấn" | "Từ danh mục lọc cứng, người dùng luôn có lối tắt sang tư vấn AI." | Điều hướng, UX |
 | 1–3 | Wizard, chọn "Chưa rõ" + Lập trình, Chơi game; ngân sách 18–22 tr | "Mô hình kNN phân lớp đang so nhu cầu với hàng trăm máy đã gán nhãn — 5/7 láng giềng là Gaming." | C2, trải nghiệm thông minh |
 | 3–5 | Kết quả, mở "Vì sao gợi ý?" | "Điểm phù hợp tính từ khoảng cách Euclidean có trọng số; đây là đóng góp của từng đặc trưng." | Giải thích được |
 | 5 | Kéo ưu tiên Di động lên 5, chạy lại | "Trọng số đổi → máy nặng tụt hạng. Cùng dữ liệu, khác người dùng, khác kết quả." | Cá nhân hóa |
-| 5–6 | 👎 "Quá nặng"; mở Chi tiết → Laptop tương tự | "Phản hồi được ghi lại; máy tương tự dùng kNN item-item." | Telemetry |
-| 6–7 | Quản trị → Thêm laptop mới → Gợi ý bằng AI | "Nhân viên không cần tự phân loại; tin cậy thấp thì vào hàng đợi duyệt." | Human-in-the-loop |
-| 7–8 | Màn Mô hình: đường cong k, confusion matrix, baseline | "k chọn bằng 5-fold CV theo macro-F1; kNN vượt luật if-else X điểm." | C2 đánh giá |
-| 8–9 | Màn Phản hồi: đề xuất tăng trọng số Di động cho Gaming → Áp dụng | "Tri thức mới sinh từ tương tác, con người duyệt trước khi áp dụng." | C3 tạo & ghi đè tri thức |
-| 9–10 | Tắt ML service (Ctrl+C), tư vấn lại | "Hệ thống không sập — chế độ dự phòng, dashboard bật cảnh báo." | C3 giảm nhẹ sai lầm |
+| 5–6 | 👎 "Quá nặng"; mở Chi tiết → xem % đáng tiền theo phân khúc + biểu đồ lịch sử giá → Laptop tương tự | "Phản hồi được ghi lại; trang chi tiết so máy này với trung vị phân khúc và giá qua thời gian; máy tương tự dùng kNN item-item." | Telemetry, minh bạch giá |
+| 6–7 | Quản trị → Thêm laptop mới → Gợi ý bằng AI | "Nhân viên không cần tự phân loại; tin cậy thấp thì vào hàng đợi duyệt (`/admin/review-queue`), có thể khoá nhãn để mô hình không tự sửa lại." | Human-in-the-loop |
+| 7–8 | `/admin/benchmarks/cpu` hoặc `/admin/benchmarks/gpu`: sửa thử một điểm benchmark | "Hệ thống cảnh báo ngay: đổi điểm linh kiện này ảnh hưởng mọi máy đang dùng nó." | Kiểm soát rủi ro dữ liệu |
+| 8–9 | `/admin/models`: đường cong k, confusion matrix, baseline, bảng precision/recall/F1 theo phân khúc | "k chọn bằng 5-fold CV theo macro-F1; kNN vượt luật if-else X điểm; từng phân khúc đều có precision/recall/F1 riêng để soi lớp yếu." | C2 đánh giá |
+| 9 | `/admin/feedback`: đề xuất tăng trọng số Di động cho Gaming → Áp dụng | "Tri thức mới sinh từ tương tác, con người duyệt trước khi áp dụng." | C3 tạo & ghi đè tri thức |
+| 9–10 | Tắt ML service (Ctrl+C), tư vấn lại; xem `/admin/dashboard` | "Hệ thống không sập — chế độ dự phòng, dashboard bật cảnh báo." | C3 giảm nhẹ sai lầm |
 
 ## 3. Câu hỏi thường gặp và gợi ý trả lời
 

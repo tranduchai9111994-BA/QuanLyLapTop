@@ -141,7 +141,7 @@ Với Euclidean thường, khoảng cách là **hai chiều**: nếu bạn cần
 hướng ngược lại — quá yếu). Điều này vô lý với trực giác con người: **máy mạnh hơn nhu cầu không
 đáng bị coi là "tệ"** như máy yếu hơn nhu cầu.
 
-Giải pháp của đồ án — [ml-service/app/retriever.py:189-211](../ml-service/app/retriever.py)
+Giải pháp của đồ án — [ml-service/app/retriever.py:201-223](../ml-service/app/retriever.py)
 (`one_sided_distance`) — mỗi đặc trưng có một "hướng tốt" khai báo trước trong
 `FEATURE_DIRECTION` ([retriever.py:51-68](../ml-service/app/retriever.py)):
 
@@ -265,8 +265,8 @@ công thức Euclidean có trọng số (mục 3.3).
 
 **Bước 3 — Tính khoảng cách MỘT PHÍA và đưa thẳng vào kNN** —
 `one_sided_distance()` + `make_one_sided_metric()`
-[retriever.py:189-229](../ml-service/app/retriever.py), rồi truyền thẳng vào
-`NearestNeighbors(metric=callable)` ở [retriever.py:271-274](../ml-service/app/retriever.py). Đây là
+[retriever.py:201-241](../ml-service/app/retriever.py), rồi truyền thẳng vào
+`NearestNeighbors(metric=callable)` ở [retriever.py:283-287](../ml-service/app/retriever.py). Đây là
 điểm mấu chốt trả lời yêu cầu "kNN phải là lõi, không phải xếp hạng lại bên ngoài": hàm khoảng
 cách tuỳ biến được đưa **trực tiếp vào tham số `metric` của thuật toán kNN gốc**, không phải chạy
 kNN xong rồi viết thêm code để "sắp xếp lại theo ý mình".
@@ -277,17 +277,17 @@ kNN xong rồi viết thêm code để "sắp xếp lại theo ý mình".
 > sai thứ tự làm **lật dấu phạt** — hệ thống vô tình ưu tiên máy YẾU HƠN thay vì MẠNH HƠN. Lỗi
 > này được phát hiện bằng cách so sánh thủ công một trường hợp cụ thể (máy mạnh hơn nhu cầu phải
 > được xếp hạng cao, nhưng thực tế lại xếp thấp), sửa bằng cách đảo tham số tường minh trong
-> `metric()` ở [retriever.py:225-227](../ml-service/app/retriever.py), và chặn tái phát bằng
+> `metric()` ở [retriever.py:237-239](../ml-service/app/retriever.py), và chặn tái phát bằng
 > `test_one_sided_metric_argument_order` trong
 > [ml-service/tests/test_one_sided_metric.py](../ml-service/tests/test_one_sided_metric.py). Sau
 > khi sửa, nDCG@5 (độ đo chất lượng xếp hạng) tăng từ 0,589 lên 0,788 trong lần đo đó — con số cụ
 > thể chứng minh lỗi này ảnh hưởng lớn thế nào.
 
 **Bước 4 — Lọc mềm theo phân khúc thay vì lọc cứng** —
-[retriever.py:259-264](../ml-service/app/retriever.py). Thay vì loại bỏ thẳng các máy khác phân khúc
+[retriever.py:271-277](../ml-service/app/retriever.py). Thay vì loại bỏ thẳng các máy khác phân khúc
 mong muốn (lọc cứng — có thể bỏ sót máy tốt), "độ khớp phân khúc" được đưa vào làm **một đặc
 trưng nữa trong metric** (trọng số cố định `SEGMENT_SOFT_WEIGHT = 0.18`
-— [retriever.py:235](../ml-service/app/retriever.py)): máy khác phân khúc bị trừ điểm nhẹ nhưng
+— [retriever.py:247](../ml-service/app/retriever.py)): máy khác phân khúc bị trừ điểm nhẹ nhưng
 **vẫn có cơ hội** lọt top-5 nếu các mặt khác thực sự vượt trội.
 
 **Ứng dụng thật mới nhất — khuyến mãi & lượt bán** (trả lời yêu cầu: "máy giá gốc cao hơn nhưng
@@ -300,7 +300,7 @@ hành vi thị trường, không phải tiêu chí kỹ thuật người dùng t
 
 **Hai chức năng phụ dùng lại cùng hạ tầng Mô hình B:**
 - **"Máy tương tự" trên trang Chi tiết** — `similar_items()`
-  ([retriever.py:291-299](../ml-service/app/retriever.py)): cùng `NearestNeighbors`, nhưng điểm
+  ([retriever.py:303-311](../ml-service/app/retriever.py)): cùng `NearestNeighbors`, nhưng điểm
   truy vấn là **chính vector của máy đang xem** (không phải hồ sơ nhu cầu), dùng Euclidean **hai
   phía** thông thường (ở đây cần tìm máy *giống nhau*, mạnh hơn hay yếu hơn đều là khác biệt), rồi
   bỏ kết quả đầu tiên vì luôn là chính nó (khoảng cách 0).
@@ -515,7 +515,7 @@ metric thật, nhưng **chưa chạy ablation** bật/tắt trên cùng 1 bộ d
 1. **Bắt đầu**: [ml-service/app/retriever.py](../ml-service/app/retriever.py) — đọc từ trên xuống
    theo đúng thứ tự file (docstring đầu file tóm tắt 5 thay đổi quan trọng nhất so với kNN gốc).
 2. **Cách 3 mô hình được ghép vào API thực tế**: [ml-service/app/main.py](../ml-service/app/main.py)
-   — endpoint `/recommend` ([main.py:159-199](../ml-service/app/main.py)) là nơi gọi cả `build_ideal_vector`,
+   — endpoint `/recommend` ([main.py:172-218](../ml-service/app/main.py)) là nơi gọi cả `build_ideal_vector`,
    `build_weights`, `recommend`, `match_pct` theo đúng thứ tự đã mô tả ở mục 4.2.
 3. **Cách chuẩn bị đặc trưng từ dữ liệu thô**: [ml-service/app/features.py](../ml-service/app/features.py)
    (hàm `enrich_catalog`) — nơi tính `value_index`, `ppi`, `discount_percent`, `sales_score`... từ

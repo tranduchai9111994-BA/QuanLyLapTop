@@ -1,130 +1,164 @@
 # 08 — Đặc tả màn hình Frontend
 
 > Màu, chữ, component: theo `07_UIUX.md`. Mỗi màn liệt kê: route, quyền, bố cục, dữ liệu, hành vi, trạng thái.
-> Ba màn **trải nghiệm thông minh** trọng tâm khi bảo vệ được đánh dấu ✨.
+> Route lấy đúng theo `src/App.tsx` (tiếng Anh). Ba màn **trải nghiệm thông minh** trọng tâm khi bảo vệ được đánh dấu ✨.
 
-## 1. Danh sách màn
+## 1. Kiến trúc chung & danh sách màn
+
+**Quản lý trạng thái:** không dùng Zustand/Redux/TanStack Query. Mỗi trang tự quản lý dữ liệu bằng `useState`/`useEffect` cục bộ, gọi API qua instance `axios` dùng chung `src/lib/api.ts`. Chỉ có 2 mẩu trạng thái được chia sẻ giữa nhiều trang, và cả hai đều dựa trên `localStorage` + sự kiện DOM tuỳ chỉnh (không phải store tập trung):
+- **Danh sách so sánh** (`src/lib/compareList.ts`): lưu tối đa 3 `laptopId` ở khoá `smartlap_compare_ids`; hook `useCompareIds()` lắng nghe sự kiện `smartlap:compare-changed` (phát trong cùng tab) và `storage` (đổi từ tab khác) để `TopNav` và `Results.tsx` luôn hiển thị đúng số lượng.
+- **Đăng nhập** (khách hàng và quản trị dùng chung khoá `smartlap_token` / `smartlap_user`, vì một trình duyệt chỉ đăng nhập một danh tính tại một thời điểm): đăng nhập/đăng ký/đăng xuất phát sự kiện `smartlap:customer-auth-changed` để `TopNav` cập nhật ngay không cần tải lại trang. `AdminLayout` tự kiểm tra token mỗi khi vào khu quản trị và chuyển hướng `/admin/login` nếu chưa đăng nhập hoặc tài khoản là `CUSTOMER`; `Favorites.tsx`/`History.tsx` áp dụng logic ngược lại (yêu cầu `role === 'CUSTOMER'`).
+
+Danh sách toàn bộ route (đúng `src/App.tsx`):
 
 | # | Màn | Route | Quyền |
 |---|---|---|---|
 | 1 | Trang chủ | `/` | Công khai |
-| 2 | ✨ Wizard tư vấn | `/tu-van` | Công khai |
-| 3 | ✨ Kết quả khuyến nghị | `/tu-van/ket-qua/:sessionId` | Công khai |
+| 2 | ✨ Wizard tư vấn | `/wizard` | Công khai |
+| 3 | ✨ Kết quả khuyến nghị | `/results` | Công khai (nhận dữ liệu qua `location.state`, không có id phiên trên URL) |
 | 4 | Chi tiết laptop + tương tự | `/laptop/:id` | Công khai |
-| 5 | Danh mục | `/danh-muc` | Công khai |
-| 6 | So sánh | `/so-sanh` | Công khai |
-| 7 | Yêu thích & lịch sử | `/ca-nhan` | CUSTOMER |
-| 8 | Đăng nhập | `/dang-nhap` | Công khai |
-| 9 | Dashboard | `/quan-tri` | ADMIN |
-| 10 | Quản lý laptop (+ gợi ý phân khúc AI) | `/quan-tri/laptop` | STAFF |
-| 11 | Hàng đợi nhãn | `/quan-tri/hang-doi-nhan` | STAFF |
-| 12 | Benchmark CPU/GPU | `/quan-tri/benchmark` | ADMIN |
-| 13 | ✨ Mô hình | `/quan-tri/mo-hinh` | ADMIN |
-| 14 | ✨ Phản hồi & đánh giá | `/quan-tri/phan-hoi` | ADMIN |
-| 15 | Cấu hình tri thức | `/quan-tri/tri-thuc` | ADMIN |
-| 16 | Người dùng, Nhật ký | `/quan-tri/nguoi-dung`, `/quan-tri/nhat-ky` | ADMIN |
+| 5 | Danh mục | `/laptops` | Công khai |
+| 6 | So sánh | `/compare?ids=1,2,3` | Công khai |
+| 7 | Yêu thích | `/favorites` | CUSTOMER (chặn ở frontend, hiện `Result` mời đăng nhập nếu chưa đủ quyền) |
+| 8 | Lịch sử tư vấn | `/history` | CUSTOMER |
+| 9 | Đăng nhập / Tạo tài khoản khách hàng | `/login` | Công khai |
+| 10 | Đăng nhập quản trị | `/admin/login` | Công khai |
+| 11 | Dashboard | `/admin/dashboard` | ADMIN |
+| 12 | Hãng máy | `/admin/brands` | STAFF, ADMIN |
+| 13 | Benchmark CPU | `/admin/benchmarks/cpu` | STAFF, ADMIN |
+| 14 | Benchmark GPU | `/admin/benchmarks/gpu` | STAFF, ADMIN |
+| 15 | Laptop (+ gợi ý phân khúc AI) | `/admin/laptops` | STAFF, ADMIN |
+| 16 | Quản lý giá | `/admin/prices` | STAFF, ADMIN |
+| 17 | Duyệt nhãn phân khúc | `/admin/review-queue` | STAFF, ADMIN |
+| 18 | ✨ Quản lý mô hình | `/admin/models` | ADMIN |
+| 19 | Cấu hình tri thức | `/admin/knowledge` | ADMIN |
+| 20 | ✨ Phân tích phản hồi | `/admin/feedback` | ADMIN |
+| 21 | Người dùng & nhật ký | `/admin/users` | ADMIN |
 
-Trạng thái toàn cục: Zustand store `compareStore` (tối đa 3 id, lưu trong bộ nhớ phiên), `authStore`. Gọi API bằng TanStack Query (cache 60 s cho danh mục).
+`/admin` (không kèm path con) tự chuyển hướng: ADMIN → `dashboard`, STAFF → `laptops` (STAFF không có quyền xem Dashboard). Giới hạn theo vai trò ở trên là những gì Sider ẩn/hiện tại frontend (`AdminLayout.tsx`); backend vẫn tự kiểm `requireRole` cho từng route.
 
 ## 2. Trang chủ `/`
-- Hero nền `ai-gradient` nhạt (primary-50 → trắng), H1 "Tìm laptop hợp với bạn chỉ trong 2 phút", phụ đề "AI so sánh hàng trăm mẫu máy theo hiệu năng và ngân sách của bạn". Nút chính lớn "Tìm laptop cho tôi" → `/tu-van`.
-- 4 thẻ phân khúc (icon + màu 07 §2.2) → vào wizard với phân khúc chọn sẵn.
-- Khối "Cách SmartLap hoạt động": 3 bước icon (Bạn cho biết nhu cầu → AI tìm máy gần nhất → Bạn xem giải thích và chọn).
-- Dải "Đáng tiền nhất tuần này": 4 máy `value_desc`.
+- Hero, 4 thẻ phân khúc (icon + màu theo 07 §2.2) dẫn vào wizard với phân khúc chọn sẵn.
+- Khối "Cách SmartLap hoạt động": tiêu đề `<h2>` + đúng 3 bước (mảng `STEPS`).
+- Dải "💎 Đáng tiền nhất tuần này": tiêu đề `<h2>` + 4 thẻ máy, dữ liệu lấy từ `GET /laptops?sort=value_desc&pageSize=4`, hiện skeleton 4 ô khi đang tải.
 
-## 3. ✨ Wizard tư vấn `/tu-van`
-Thẻ trung tâm max 720 px, `Steps` 3 bước ở trên, nút "Quay lại" / "Tiếp tục" dưới, bước cuối "Xem kết quả".
+## 3. ✨ Wizard tư vấn `/wizard`
+Component chính: `PrioritySlider`, `NeedTextInput`.
 
 **Bước 1 — Bạn dùng laptop để làm gì?**
-- Lưới 2×2 thẻ phân khúc chọn được + thẻ thứ 5 viền nét đứt "Chưa rõ — gợi ý giúp tôi ✨".
-- Chọn "Chưa rõ" → hiện nhóm chip chọn nhiều hoạt động (Học tập, Văn phòng, Lập trình, Chơi game, Thiết kế đồ họa, Dựng video, Di chuyển nhiều). Mỗi lần đổi chip gọi `POST /recommendations/infer-segment` (debounce 400 ms) → khối gợi ý: "✨ Nhu cầu của bạn gần với **Gaming** (72%)" + `ConfidenceIndicator` + link "Dùng phân khúc khác".
-- Độ tin cậy < 60% → "Nhu cầu của bạn nằm giữa Gaming và Đồ họa. Hệ thống sẽ tìm ở cả hai." (backend dùng 2 phân khúc).
+- Chọn nhanh 1 trong 4 phân khúc, hoặc "Chưa rõ" → hiện nhóm chip hoạt động (Văn phòng/soạn thảo, Học tập, Lập trình, Chơi game, Đồ họa/thiết kế, Dựng video, Di chuyển nhiều, Xem phim/giải trí).
+- Mỗi lần đổi danh sách hoạt động, gọi `POST /recommendations/infer-segment` (không debounce, gọi ngay khi mảng hoạt động thay đổi, huỷ request cũ nếu có request mới) → hiển thị phân khúc suy luận kèm độ tin cậy và `ConfidenceIndicator`.
+- `NeedTextInput` cho phép nhập câu nhu cầu tự do, gọi `/recommendations/parse-need`.
 
 **Bước 2 — Ngân sách**
-- `Slider range` 8–80 triệu, hiển thị "Từ 15.000.000 ₫ đến 22.000.000 ₫". 4 nút nhanh. Dòng phụ động: "Có 46 mẫu trong khoảng này" (gọi `GET /laptops?...&pageSize=1` lấy `meta.total`).
+- `Slider range` từ 8.000.000 ₫ đến 80.000.000 ₫ (bước 500.000 ₫), 4 nút nhanh (Dưới 15 tr, 15–25 tr, 25–40 tr, Trên 40 tr).
+- Dòng phụ động cạnh slider: **"Có {N} mẫu trong khoảng này"** — debounce **400 ms** sau khi ngừng kéo, gọi `GET /laptops?priceMin=...&priceMax=...&pageSize=1` và lấy `meta.total`.
 
 **Bước 3 — Điều gì quan trọng với bạn?**
-- 4 `PrioritySlider`: Hiệu năng, Di động & pin, Màn hình, Tiết kiệm chi phí (mặc định 3).
-- Collapse "Yêu cầu bắt buộc (tùy chọn)": RAM tối thiểu (Segmented 8/16/32), SSD tối thiểu (256/512/1TB), Nặng tối đa (Slider 1–3 kg), Hãng (Select nhiều).
+- 4 `PrioritySlider` (Hiệu năng, Di động & pin, Màn hình, Tiết kiệm chi phí), thang 1–5, mặc định 3.
+- Chọn thêm: RAM tối thiểu, SSD tối thiểu, Trọng lượng tối đa, Hãng.
 
-Gửi → màn tải (07 §8) → điều hướng tới kết quả. Để quay lại chỉnh nhu cầu, dùng `/tu-van?from=<sessionId>`: wizard tải lại `needJson` của phiên đó từ server (không dùng browser storage).
+Bấm "Xem kết quả" → điều hướng ngay sang `/results` kèm `requestBody` trong `location.state` (Wizard **không** đợi API trả lời trước khi chuyển trang) — `Results.tsx` tự gọi `POST /recommendations` và tự hiển thị trạng thái tải.
 
-## 4. ✨ Kết quả khuyến nghị `/tu-van/ket-qua/:sessionId`
-Bố cục xl: cột trái 8/12 danh sách thẻ, cột phải 4/12 panel dính.
+## 4. ✨ Kết quả khuyến nghị `/results`
+Nhận `location.state` gồm `{ result?, requestBody? }`. Nếu chỉ có `requestBody` (đến từ Wizard), tự gọi `POST /recommendations` lúc mount và hiện Skeleton + `LoadingMessages` luân phiên trong lúc chờ.
 
-**Đầu trang:** H1 "5 laptop phù hợp nhất với bạn" + tóm tắt nhu cầu dạng chip (Gaming · 18–22 tr · Hiệu năng 4/5 …) + nút phụ "Chỉnh nhu cầu". Có `AiBadge`. Alert nới ngân sách / `FallbackBanner` nếu có.
+Bố cục ≥ 992 px (lg): cột trái danh sách thẻ, cột phải panel dính (radar + `SegmentTag` + trọng số); dưới 992 px: 2 cột không panel; dưới 768 px (md): 1 cột.
 
-**Danh sách:** `RecommendationCard` × N (07 §7.4). Sắp xếp phụ: Phù hợp nhất (mặc định) / Giá thấp / Hiệu năng cao — chỉ đổi thứ tự hiển thị, không gọi lại mô hình, không ghi event.
-
-**Panel phải:**
-- "Hồ sơ lý tưởng của bạn": radar 6 trục (CPU, GPU, RAM, Màn hình, Di động, Giá hợp lý) so với máy đang hover/chọn.
-- "Phân khúc": `SegmentTag` + câu "Chọn vì 5/7 máy tương tự nhu cầu của bạn là Gaming".
-- "Trọng số hệ thống đã dùng": thanh ngang từng nhóm (minh bạch cách chấm).
-
-**Hành vi:**
-- "Vì sao gợi ý?" → `ExplainDrawer`.
-- 👍 → `POST /events {type: LIKE}`; 👎 → Popover chọn lý do → `DISLIKE` + reason. Không cho bấm lặp (khóa theo `sessionId+laptopId`).
-- "Chi tiết" → ghi `VIEW_DETAIL`; "+ So sánh" → `ADD_COMPARE`, thanh so sánh nổi dưới đáy khi ≥ 1 máy.
-- Cuối trang: "Không thấy máy ưng ý?" → nút "Thử ưu tiên khác" và "Xem toàn bộ danh mục".
+- **Số lượng hiển thị**: `Segmented` 3/5/8/10 (`TOPN_OPTIONS`) — gọi lại API.
+- **Sắp xếp cục bộ** (`localSort`, không gọi lại API/không ghi event): `Segmented` "Phù hợp nhất" (mặc định, giữ nguyên thứ tự backend trả về) / "Giá thấp" / "Hiệu năng cao".
+- Danh sách: `RecommendationCard` × N (07 §7.4).
+- Nút Thích/Không thích khoá sau khi bấm: `RecommendationCard.tsx` lưu `localStorage` với khoá `smartlap_feedback_{sessionId}_{laptopId}`, disable cả 2 nút khi đã có phản hồi lưu.
+- "Vì sao gợi ý?" → `ExplainDrawer` (truyền `modelVersion` từ `result.modelVersion`).
+- "+ So sánh" → ghi event `ADD_COMPARE`, thêm vào danh sách so sánh dùng chung (`toggleCompareId`, tối đa 3 máy).
+- Cuối danh sách: khối "Không thấy máy ưng ý?" với 2 nút hành động.
+- `FallbackBanner` / `BudgetRelaxedBanner` hiện khi `result.mode === 'FALLBACK'` hoặc `result.budgetRelaxed`.
 
 ## 5. Chi tiết laptop `/laptop/:id`
-- Trái: ảnh lớn. Phải: tên, `SegmentTag`, giá `Price-lg`, chỉ số hiệu năng (Progress 0–100) và "Đáng tiền" (so với trung vị phân khúc: "Tốt hơn 68% máy cùng phân khúc").
-- Bảng thông số 2 cột, nền `bg-subtle`.
-- Biểu đồ lịch sử giá (Line, nếu ≥ 2 điểm).
-- **"Laptop tương tự ✨"**: carousel 6 thẻ nhỏ, mỗi thẻ có chênh giá (`+2,5 tr` màu `error`, `−1,2 tr` màu `success`) và 1 khác biệt chính ("Nhẹ hơn 0,4 kg").
-- Nếu vào từ kết quả (`?session=`), hiện 👍/👎 như thẻ kết quả.
+- Trái: `LaptopThumbnail`. Phải: tên, `SegmentTag`, giá, thông số hiệu năng.
+- Dòng "💎 Đáng tiền — tốt hơn {laptop.valuePercentile}% máy cùng phân khúc" — chỉ hiện khi `valuePercentile != null`.
+- Bảng thông số 2 cột (CPU, GPU, RAM, SSD, Màn hình, Trọng lượng, Pin).
+- **Lịch sử giá**: `Card` + Recharts `LineChart` — chỉ render khi `laptop.priceHistory?.length >= 2`.
+- **"Máy tương tự"**: lưới CSS tự co giãn (`grid-template-columns: repeat(auto-fill, minmax(200px,1fr))`, không phải carousel), mỗi thẻ có Tag chênh lệch giá (`Đắt hơn N%` màu đỏ / `Rẻ hơn N%` màu xanh / `Cùng mức giá`) và 1 dòng nêu **khác biệt lớn nhất** so với máy đang xem (hàm `biggestDifference()`, so trên trọng lượng/RAM/SSD/tần số quét/dung lượng pin; nếu không có khác biệt đáng kể → "Cấu hình gần như tương đương"). Nếu không có máy tương tự nào, hiện `Result status="info"` với nút "Xem toàn bộ danh mục".
 
-## 6. Danh mục `/danh-muc`
-- Bộ lọc trái (Drawer ở mobile): phân khúc, giá, hãng, RAM, trọng lượng. Lưới thẻ 3 cột, `Pagination`. Sắp xếp. Tìm kiếm tên.
-- Banner nhỏ đầu trang: "Không biết chọn gì? Để AI tư vấn ✨" → wizard.
+## 6. Danh mục `/laptops`
+- Bộ lọc (phân khúc, giá, hãng, RAM, trọng lượng), lưới thẻ, phân trang, sắp xếp, tìm kiếm tên.
+- Banner đầu trang: **"Không biết chọn gì? Để AI tư vấn ✨"** kèm nút "Bắt đầu tư vấn" → `navigate('/wizard')`.
 
-## 7. So sánh `/so-sanh`
-- Bảng cột theo máy (tối đa 3), hàng theo thông số; ô tốt nhất mỗi hàng tô `success-bg` + đậm. Hàng đầu radar chồng 3 máy. Nút xóa từng máy.
+## 7. So sánh `/compare?ids=`
+- Danh sách id lấy từ query string `ids` (không phải path param). Chưa có id nào hoặc dữ liệu không tải được → `Empty` với nút "Chọn máy trong danh mục".
+- `Table` cột theo từng máy, hàng theo thông số: Tên máy, Giá, Khuyến mãi, Đã bán, CPU, GPU, RAM, SSD, Màn hình, Trọng lượng. Gọi `GET /laptops/compare?ids=...`.
 
-## 8. Cá nhân `/ca-nhan`
-- Tab "Yêu thích" (lưới thẻ), tab "Lịch sử tư vấn" (List: ngày, tóm tắt nhu cầu, máy hạng 1, nút "Xem lại").
+## 8. Yêu thích `/favorites`
+- Yêu cầu đăng nhập khách hàng (kiểm tra `token` + `user.role === 'CUSTOMER'`); chưa đủ điều kiện → `Result status="info"` mời đăng nhập, nút điều hướng `/login` kèm `state.from`.
+- Dữ liệu: `GET /me/favorites`. Lưới thẻ (`LaptopThumbnail`, `SegmentTag`, giá); mỗi thẻ có nút "Bỏ thích" (`DELETE /me/favorites/:laptopId`, chặn nổi bọt sự kiện để không điều hướng nhầm sang Chi tiết).
+- Rỗng: `Empty` + nút "Xem danh mục".
 
-## 9. Dashboard `/quan-tri`
-- Hàng KPI (Card thống kê): Lượt tư vấn (7 ngày, % so kỳ trước), Tỷ lệ 👍, Tỷ lệ phiên có tương tác, p95 phản hồi, Tỷ lệ dự phòng, Nhãn chờ duyệt.
-- Line: lượt tư vấn và tỷ lệ 👍 theo ngày. Pie/Bar: phân bố phân khúc được tư vấn. Bar: top 10 máy được gợi ý hạng 1.
-- Khối "Cảnh báo" (List từ `AlertLog`, icon theo mức độ) — mỗi cảnh báo có hành động gợi ý (ví dụ "Xem phản hồi", "Huấn luyện lại").
-- Bộ chọn khoảng ngày `RangePicker`; công tắc "Loại dữ liệu giả lập".
+## 9. Lịch sử tư vấn `/history`
+- File và route **tách riêng hoàn toàn** khỏi Yêu thích (`src/pages/History.tsx`, không phải tab chung 1 trang). Cùng điều kiện đăng nhập như mục 8.
+- Dữ liệu: `GET /me/sessions`. Mỗi thẻ: `SegmentTag` phân khúc đã dùng, Tag "Chế độ dự phòng" nếu có, thời gian, tối đa 3 tên máy đầu (+ số máy còn lại), giá thấp nhất trong phiên.
+- Bấm vào 1 phiên → dựng lại `RecommendationResult` từ dữ liệu đã lưu (không gọi lại `/recommendations`) rồi điều hướng `/results` kèm `location.state.result` — xem lại đúng những gì người dùng từng thấy dù giá/mô hình hiện tại đã đổi.
 
-## 10. Quản lý laptop `/quan-tri/laptop`
-- Table: ảnh nhỏ, tên, hãng, phân khúc (tag + icon khóa nếu `locked`), nguồn nhãn, giá, trạng thái, thao tác. Lọc + tìm.
-- Form thêm/sửa (Drawer 640 px): chọn CPU/GPU từ bảng benchmark (Select có tìm kiếm, hiện điểm), các trường thông số, giá.
-- **Khối "Gợi ý phân khúc ✨"** cuối form: nút "Gợi ý bằng AI" (bật khi đủ trường) → `ConfidenceIndicator`, nhãn đề xuất, bảng 7 láng giềng (tên, phân khúc, khoảng cách). Nút "Dùng gợi ý này" / chọn nhãn khác (Radio) + Checkbox "Khóa nhãn, không cho mô hình thay đổi".
-- Đổi giá → tự ghi `PriceHistory`.
+## 10. Đăng nhập khách hàng `/login`
+- Thẻ giữa màn, `Tabs` 2 tab: "Đăng nhập" (`POST /auth/login`, từ chối nếu tài khoản không phải `CUSTOMER`) và "Tạo tài khoản" (`POST /auth/register`, tự đăng nhập ngay sau khi đăng ký).
+- Tab "Đăng nhập" tự điền `{ email: 'khach@smartlap.vn', password: 'Demo@123' }` **chỉ khi** biến môi trường `VITE_DEMO === 'true'`.
+- Đăng nhập/đăng ký thành công → lưu `smartlap_token`/`smartlap_user`, phát sự kiện `smartlap:customer-auth-changed`, điều hướng theo `location.state.from` (mặc định `/`).
 
-## 11. Hàng đợi nhãn `/quan-tri/hang-doi-nhan`
-- Table các nhãn `NEEDS_REVIEW` hoặc "nhãn đáng ngờ" (nhãn hiện tại khác dự đoán mô hình với tin cậy ≥ 0,8). Cột: máy, nhãn hiện tại, dự đoán, độ tin cậy. Thao tác: Xác nhận / Đổi nhãn. Chọn nhiều → xác nhận hàng loạt.
-- Đầu trang: "Mỗi nhãn bạn xác nhận sẽ được dùng để huấn luyện mô hình ở lần tiếp theo."
+## 11. Đăng nhập quản trị `/admin/login`
+- Thẻ giữa màn, `POST /auth/login`; từ chối nếu tài khoản là `CUSTOMER`.
+- Tự điền `{ email: 'admin@smartlap.vn', password: 'Demo@123' }` **chỉ khi** `VITE_DEMO === 'true'`.
 
-## 12. Benchmark `/quan-tri/benchmark`
-- 2 tab CPU / GPU, bảng có sửa trực tiếp, nhập CSV. Cảnh báo khi sửa điểm: "Thay đổi điểm sẽ ảnh hưởng mọi máy dùng CPU này. Cần đồng bộ lại chỉ mục."
+## 12. Dashboard `/admin/dashboard`
+- 2 nút đầu trang: "Tải lại", "Quét cảnh báo ngay" (`POST /dashboard/alerts/scan`).
+- Lưới thẻ `Statistic` (CSS grid tự co giãn `auto-fit, minmax(220px,1fr)`, không dùng `Row`/`Col` cố định): Lượt tư vấn (30 ngày), Tỷ lệ hài lòng (👍/(👍+👎), kèm số 👍/👎), Độ trễ trung bình, Độ trễ p95 (so ngưỡng NFR-01 800 ms), Tỷ lệ dùng chế độ dự phòng, Nhãn đang chờ xác minh, Tổng phản hồi. Không có biểu đồ Line/Pie/Bar trên màn này.
+- "Cảnh báo đang mở": nếu rỗng hiện `Alert type="success"`; ngược lại `Table` cột Mức (Tag theo `severity`: INFO xanh dương, WARN cam, CRITICAL đỏ), Mã, Nội dung, Lúc, nút "Đánh dấu đã xử lý" (`PATCH /dashboard/alerts/:id/resolve`).
 
-## 13. ✨ Mô hình `/quan-tri/mo-hinh`
-- Đầu trang: thẻ "Phiên bản đang dùng" (version, k, metric, weights, macro-F1, accuracy, số mẫu, ngày) + nút "Huấn luyện lại" (Modal nhập ghi chú, hiện tiến trình).
-- Table phiên bản: trạng thái (tag: Đang dùng xanh, Ứng viên xanh lơ, Lưu trữ xám, Lỗi đỏ), macro-F1 (golden), thay đổi so với đang dùng (▲ ▼ màu), thao tác Duyệt / Quay lại.
-- Chi tiết phiên bản (Tabs):
-  - **Tổng quan**: bảng precision/recall/F1 từng lớp; bảng so sánh baseline (Dummy, Luật, kNN).
-  - **Ma trận nhầm lẫn**: heatmap (lưới div, cường độ `primary`) có số, nhãn tiếng Việt.
-  - **Chọn k**: LineChart macro-F1 train/validation theo k, đánh dấu k được chọn.
-  - **Thí nghiệm cắt bỏ**: bảng 04 §6.3.
-  - **Truy hồi**: segment precision@5, tỷ lệ persona đạt, danh sách persona trượt.
-- Nút "Duyệt đưa vào sử dụng" chỉ bật khi đạt quy tắc (09 §2.3); nếu tắt, Tooltip nói rõ điều kiện nào chưa đạt. Confirm Modal trước khi promote/rollback.
+## 13. Hãng máy `/admin/brands`
+`CrudTable` (07 §7.13) quản lý danh sách hãng: tìm kiếm client-side, thêm/sửa qua Modal form, xuất/nhập Excel.
 
-## 14. ✨ Phản hồi & đánh giá `/quan-tri/phan-hoi`
-- KPI: tỷ lệ 👍 theo phân khúc (Bar), phân bố lý do 👎 (Bar ngang), tỷ lệ 👍 theo hạng (1–5, để xem hạng 1 có thật sự tốt nhất).
-- **Khối "Đề xuất điều chỉnh ✨"** (DSS): ví dụ "Phân khúc Gaming: 38% phản hồi 👎 do *Quá nặng* (cao gấp 2 lần trung bình). Đề xuất tăng trọng số Di động mặc định từ 0,6 lên 0,8." Nút "Áp dụng đề xuất" (mở Cấu hình tri thức với giá trị điền sẵn, admin xác nhận) / "Bỏ qua".
-- Table phản hồi gần đây: thời gian, máy, loại, lý do, ghi chú, link phiên.
+## 14. Benchmark CPU / GPU `/admin/benchmarks/cpu`, `/admin/benchmarks/gpu`
+- 2 route riêng, cùng dùng `CrudTable` với các trường chung: Mã tra cứu (pattern), Tên hiển thị, Điểm PassMark thô, Điểm chuẩn hoá (0–100), Nguồn tra cứu, Ngày tra. GPU có thêm "Card rời" (boolean) và "VRAM (GB)".
+- Khi **sửa** một điểm đã có (không áp dụng lúc thêm mới): `renderFormExtra` hiện `Alert type="warning"` — **"Thay đổi điểm sẽ ảnh hưởng mọi máy dùng linh kiện này"** kèm mô tả về việc cập nhật lại `performanceIdx`/`valueIdx` của toàn bộ laptop gắn linh kiện đó.
 
-## 15. Cấu hình tri thức `/quan-tri/tri-thuc`
-- Tab **Trọng số mặc định**: bảng 4 phân khúc × 4 nhóm, InputNumber 0,1–2,0; cột xem trước "Top 3 cho persona mẫu" cập nhật khi đổi (gọi recommend với persona P01).
-- Tab **Ghim / Loại**: Table + form (máy, hành động, phân khúc, lý do bắt buộc, ngày hết hạn).
-- Tab **Hồ sơ hoạt động**: bảng 04 §3.5 sửa được.
-- Tab **Ngưỡng**: tin cậy, top-N, tỷ lệ nới ngân sách, ngưỡng cảnh báo.
-- Mọi thay đổi ghi `AuditLog`, hiện "Cập nhật lần cuối bởi … lúc …".
+## 15. Laptop `/admin/laptops`
+- `CrudTable` với đầy đủ trường thông số (SKU, tên, hãng, CPU/GPU chọn từ bảng benchmark có sẵn, RAM/SSD/màn hình/độ phân giải/tần số quét chọn từ danh sách giá trị chuẩn, sRGB, trọng lượng, pin, giá).
+- Cột/ô "Phân khúc": chọn thủ công hoặc để trống cho AI tự gán; khối `SegmentSuggester` trong form gọi `/laptops/predict-segment`, hiển thị `ConfidenceIndicator` + nhãn đề xuất + tự điền nếu ô còn trống.
+- Sau khi lưu: nếu có `labelWarning` từ server → `message.warning`; nếu đã gán được phân khúc → `message.info` báo tên phân khúc.
 
-## 16. Đăng nhập
-Thẻ giữa màn trên nền gradient nhạt; khối "Tài khoản demo" bấm để điền nhanh (chỉ hiện khi `VITE_DEMO=true`).
+## 16. Quản lý giá `/admin/prices`
+- Tách khỏi form sửa laptop đầy đủ vì giá đổi thường xuyên hơn.
+- Khối "Biến động giá gần đây": tối đa 8 Tag (`GET /laptops/price-changes`), màu đỏ nếu tăng/xanh nếu giảm.
+- `Table` sửa trực tiếp theo dòng (`InputNumber` inline, lưu khi rời ô hoặc nhấn Enter): Giá mới, Giá gốc/khuyến mãi (để trống = huỷ khuyến mãi, tối thiểu = giá bán + 10.000 ₫), Đã bán. Nút "Lịch sử" mở Drawer biểu đồ `LineChart` (Recharts) + 4 số tóm tắt (hiện tại, thấp nhất, cao nhất, số lần đổi giá).
+- Modal "Điều chỉnh hàng loạt": nhập % thay đổi + lọc theo hãng, bắt buộc bấm "Xem trước ảnh hưởng" (`dryRun=true`) trước khi nút "Áp dụng thật" được bật.
+
+## 17. Duyệt nhãn phân khúc `/admin/review-queue`
+- Danh sách máy có nhãn AI gán nhưng độ tin cậy dưới ngưỡng cấu hình (`GET /labels/review-queue`); máy trong hàng đợi vẫn đang được gợi ý tạm bằng nhãn hiện tại.
+- Mỗi thẻ: thông tin máy, `ConfidenceIndicator` theo phân bố xác suất, `Select` đổi phân khúc (hiện `Alert warning` nếu chọn khác nhãn AI), checkbox **"Khóa nhãn, không cho mô hình thay đổi"**, nút Duyệt (`PATCH /labels/review-queue/:laptopId`) — phát sự kiện `smartlap:review-queue-changed` để badge trên Sider cập nhật ngay.
+
+## 18. ✨ Quản lý mô hình `/admin/models`
+- Form huấn luyện nhanh (ghi chú tuỳ chọn) + nút "Huấn luyện mô hình mới" (`POST /models/train`) — luôn tạo "Ứng viên" (`CHALLENGER`), không tự thay mô hình đang phục vụ khách.
+- `Table` phiên bản: trạng thái (Tag: Đang dùng/Champion xanh lá, Ứng viên xanh dương, Đã lưu trữ xám), macro-F1 (test), số mẫu, thời điểm huấn luyện, ghi chú, nút "Xem chi tiết".
+- Drawer chi tiết (không phải Tabs, các khối xếp dọc theo thứ tự):
+  1. So với baseline: bảng so sánh macro-F1 của kNN đã tối ưu, đoán ngẫu nhiên có trọng số, luật đơn giản.
+  2. Đường cong chọn k (5-fold CV): `LineChart` macro-F1 theo k, `ReferenceLine` đánh dấu k đã chọn.
+  3. **Precision/Recall/F1-score theo từng phân khúc**: `Table` (Phân khúc, Precision, Recall, F1-score, Số mẫu/support).
+  4. Ma trận nhầm lẫn (confusion matrix): `Table` dạng lưới, đường chéo in đậm.
+  Nút "Đưa vào sử dụng" (`promote`, chỉ hiện khi chưa là Champion) và "Quay lại phiên bản này" (`rollback`, chỉ hiện với phiên bản đã lưu trữ) — backend tự kiểm quy tắc an toàn khi promote.
+
+## 19. Cấu hình tri thức `/admin/knowledge`
+4 tab (`Tabs`), mọi thay đổi đọc/ghi qua `KnowledgeConfig` (key-value), có hiệu lực ngay không cần khởi động lại backend:
+- **"Ghim / Cấm máy"**: form thêm (chọn máy, loại 📌 Ghim/🚫 Cấm, phân khúc áp dụng tuỳ chọn, lý do, ngày hết hạn) + `Table` danh sách đang áp dụng, nút gỡ từng mục.
+- **"Ngưỡng & mặc định"**: `Slider` ngưỡng tin cậy tự động duyệt nhãn, `InputNumber` số kết quả mặc định, `Slider` tỷ lệ nới ngân sách.
+- **"Trọng số theo phân khúc"**: chọn 1 trong 4 phân khúc, chỉnh 5 `Slider` nhóm trọng số (Hiệu năng, Di động & pin, Màn hình, Giá/đáng tiền, Thương hiệu) từ 0,1–2,0; nút lưu tất cả và nút khôi phục mặc định riêng phân khúc đang chọn.
+- **"Ngưỡng cảnh báo"**: các `InputNumber` dùng cho tác vụ quét cảnh báo định kỳ (tỷ lệ hài lòng tối thiểu, tỷ lệ dự phòng tối đa, độ trễ p95 tối đa, tỷ lệ máy mới có độ tin cậy thấp tối đa, số nhãn chờ duyệt tối đa).
+
+## 20. ✨ Phân tích phản hồi `/admin/feedback`
+- 3 thẻ `Statistic`: Tỷ lệ hài lòng, Lượt thích, Lượt không thích.
+- `BarChart` (Recharts) "Hành vi người dùng theo loại sự kiện": tổng hợp `InteractionEvent` theo loại (Xem chi tiết, Thích, Không thích, Thêm vào so sánh, Thêm vào yêu thích).
+- `BarChart` ngang "Lý do 'Không thích' phổ biến nhất" (Giá quá cao, Máy quá nặng/cồng kềnh, Cấu hình yếu, Màn hình không như ý, Không thích thương hiệu, Lý do khác).
+- `Table` "Câu nhu cầu tự do đã học (phản hồi 👍)": câu nhập tự do + nhãn suy ra, phục vụ huấn luyện lại Mô hình C.
+
+## 21. Người dùng & nhật ký `/admin/users`
+1 màn, `Tabs` 2 tab (không phải 2 route riêng):
+- **"Tài khoản nội bộ"**: `Table` tài khoản STAFF/ADMIN (khách hàng tự đăng ký ở `/login`, không quản lý ở đây) — đổi vai trò và bật/tắt hoạt động ngay trên dòng (khoá sửa với chính tài khoản đang đăng nhập), Modal "Thêm tài khoản nội bộ".
+- **"Nhật ký hệ thống"**: `Table` `AuditLog` (Lúc, Người thực hiện, Hành động — nhãn tiếng Việt cho các hành động sửa cấu hình tri thức/ghim-cấm máy/promote-rollback mô hình/tạo-sửa tài khoản, Đối tượng, Chi tiết rút gọn).
