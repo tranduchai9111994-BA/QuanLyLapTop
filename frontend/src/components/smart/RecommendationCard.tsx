@@ -13,8 +13,8 @@ import { formatVnd, formatKg } from '../../utils/format';
 import { explainText } from '../../utils/explainText';
 import { api } from '../../lib/api';
 
-// Ly do "Khong thich" (FR-04) - khop voi enum `reason` phia backend (events.routes.ts) va
-// duoc dung lam du lieu hoc them trong retrain_from_feedback.py o ml-service.
+// Lý do "Không thích" (FR-04) - khớp với enum `reason` phía backend (events.routes.ts) và
+// được dùng làm dữ liệu học thêm trong retrain_from_feedback.py ở ml-service.
 const DISLIKE_REASONS: { value: string; label: string }[] = [
   { value: 'TOO_EXPENSIVE', label: 'Giá quá cao' },
   { value: 'TOO_HEAVY', label: 'Máy quá nặng/cồng kềnh' },
@@ -24,11 +24,11 @@ const DISLIKE_REASONS: { value: string; label: string }[] = [
   { value: 'OTHER', label: 'Lý do khác' },
 ];
 
-/** The hien thi 1 may trong danh sach "Ket qua goi y" (Results.tsx) - gom anh, gia + khuyen mai,
- * 2 diem manh/canh bao noi bat nhat, nut Vi sao/So sanh/Chi tiet, va nut Thich/Khong thich de
- * ghi lai phan hoi (dung cho "hoc tu phan hoi" - xem retrain_from_feedback trong ml-service).
- * `badges`: nhan phu (FR-02) do Results.tsx TINH TU TAP KET QUA DANG HIEN (khong dung nguong
- * co dinh nhu valueIdx > X), vd "Nhe nhat"/"Manh nhat"/"Dang tien nhat" trong top may dang xem. */
+/** Thẻ hiển thị 1 máy trong danh sách "Kết quả gợi ý" (Results.tsx) - gồm ảnh, giá + khuyến mãi,
+ * 2 điểm mạnh/cảnh báo nổi bật nhất, nút Vì sao/So sánh/Chi tiết, và nút Thích/Không thích để
+ * ghi lại phản hồi (dùng cho "học từ phản hồi" - xem retrain_from_feedback trong ml-service).
+ * `badges`: nhãn phụ (FR-02) do Results.tsx TÍNH TỪ TẬP KẾT QUẢ ĐANG HIỆN (không dùng ngưỡng
+ * cố định như valueIdx > X), vd "Nhẹ nhất"/"Mạnh nhất"/"Đáng tiền nhất" trong top máy đang xem. */
 export function RecommendationCard({
   item,
   sessionId,
@@ -47,10 +47,10 @@ export function RecommendationCard({
   const navigate = useNavigate();
   const laptop = item.laptop;
   const isTop1 = item.rank === 1;
-  // docs/08_FRONTEND_SPEC.md muc 4: "khong cho bam lap (khoa theo sessionId+laptopId)" - luu vao
-  // localStorage (khong chi state trong bo nho) de khoa nay GIU NGUYEN ca khi nguoi dung tai lai
-  // trang (vd bam F5 sau khi da 👍), tranh ghi trung nhieu su kien LIKE/DISLIKE cho CUNG 1 may
-  // trong CUNG 1 phien tu van.
+  // docs/08_FRONTEND_SPEC.md mục 4: "không cho bấm lặp (khóa theo sessionId+laptopId)" - lưu vào
+  // localStorage (không chỉ state trong bộ nhớ) để khóa này GIỮ NGUYÊN cả khi người dùng tải lại
+  // trang (vd bấm F5 sau khi đã 👍), tránh ghi trùng nhiều sự kiện LIKE/DISLIKE cho CÙNG 1 máy
+  // trong CÙNG 1 phiên tư vấn.
   const feedbackKey = `smartlap_feedback_${sessionId}_${laptop.id}`;
   const [feedback, setFeedback] = useState<'LIKE' | 'DISLIKE' | null>(() => {
     try {
@@ -62,22 +62,22 @@ export function RecommendationCard({
   const [reasonPickerOpen, setReasonPickerOpen] = useState(false);
   const [reason, setReason] = useState<string>('TOO_EXPENSIVE');
 
-  /** Ghi lai 1 su kien phan hoi - LUU Y: cap nhat giao dien (setFeedback) NGAY LAP TUC truoc khi
-   * cho ket qua goi API (optimistic update), vi day chi la telemetry phu, khong bat buoc thanh
-   * cong ngay lap tuc thi trai nghiem nguoi dung moi lam. Neu goi API loi thi im lang bo qua
-   * (khong hien thong bao loi) - khong nen lam gian doan nguoi dung vi 1 thao tac phu nhu the nay. */
+  /** Ghi lại 1 sự kiện phản hồi - LƯU Ý: cập nhật giao diện (setFeedback) NGAY LẬP TỨC trước khi
+   * chờ kết quả gọi API (optimistic update), vì đây chỉ là telemetry phụ, không bắt buộc thành
+   * công ngay lập tức thì trải nghiệm người dùng mới mượt. Nếu gọi API lỗi thì im lặng bỏ qua
+   * (không hiện thông báo lỗi) - không nên làm gián đoạn người dùng vì 1 thao tác phụ như thế này. */
   async function sendFeedback(type: 'LIKE' | 'DISLIKE', extra?: { reason?: string }) {
     setFeedback(type);
     try {
       localStorage.setItem(feedbackKey, type);
     } catch {
-      // localStorage co the bi chan (che do an danh) - khong sao, chi mat tinh nang khoa qua lan tai lai
+      // localStorage có thể bị chặn (chế độ ẩn danh) - không sao, chỉ mất tính năng khóa qua lần tải lại
     }
     try {
       await api.post('/events', { sessionId, laptopId: laptop.id, type, ...extra });
       message.success('Cảm ơn bạn! Phản hồi giúp hệ thống gợi ý tốt hơn.');
     } catch {
-      // im lang - khong lam gian doan trai nghiem
+      // im lặng - không làm gián đoạn trải nghiệm
     }
   }
 
@@ -94,13 +94,13 @@ export function RecommendationCard({
   return (
     <div
       style={{
-        // `minWidth: 0`: the outer div here IS a CSS grid item (Results.tsx renders these
-        // directly inside a `display:grid` list) - grid items, like flex items, default to
-        // `min-width: auto` and refuse to shrink below their content's min-content size unless
-        // told otherwise. The inner flex rows already declare `minWidth: 0` so THEIR own text
-        // can wrap/shrink, but without it HERE too the whole card still can't go narrower than
-        // (thumbnail 128px + match-score circle 64px + paddings/gaps), pushing the page into
-        // horizontal overflow on narrow screens (found testing NFR-04 at 375px in Giai đoạn 7).
+        // `minWidth: 0`: div ngoài cùng này CHÍNH LÀ 1 grid item (Results.tsx render trực tiếp
+        // các thẻ này bên trong 1 danh sách `display:grid`) - grid item, giống flex item, mặc
+        // định `min-width: auto` và từ chối co nhỏ hơn kích thước nội dung tối thiểu của nó nếu
+        // không khai báo rõ. Các dòng flex bên trong đã khai báo `minWidth: 0` để chữ CỦA CHÚNG
+        // xuống dòng/co lại được, nhưng nếu thiếu khai báo này Ở ĐÂY thì cả thẻ vẫn không thể hẹp
+        // hơn (ảnh đại diện 128px + vòng tròn % phù hợp 64px + khoảng đệm), đẩy trang bị tràn
+        // ngang trên màn hẹp (phát hiện khi kiểm thử NFR-04 ở 375px).
         minWidth: 0,
         background: t.bgSurface,
         borderRadius: 16,
@@ -112,12 +112,12 @@ export function RecommendationCard({
         padding: 16,
       }}
     >
-      {/* Bo cuc NGANG: anh ben trai, thong tin ben phai (docs/07 SS7.4) - truoc day anh keo dai
-          het chieu ngang the nen thua rat nhieu khoang trong. */}
+      {/* Bố cục NGANG: ảnh bên trái, thông tin bên phải (docs/07 SS7.4) - trước đây ảnh kéo dài
+          hết chiều ngang thẻ nên thừa rất nhiều khoảng trống. */}
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-        {/* flexShrink:0 - anh la KICH THUOC CO DINH co chu y (128x96), khong muon no tu bop nho
-            lai truoc khi noi dung ben canh (ten/gia/thong so) kip wrap xuong dong; neu khong co
-            dong nay, tren man hep ca anh LAN chu deu bi ep nho lai dong thoi, cang de gay tran. */}
+        {/* flexShrink:0 - ảnh là KÍCH THƯỚC CỐ ĐỊNH có chủ ý (128x96), không muốn nó tự bóp nhỏ
+            lại trước khi nội dung bên cạnh (tên/giá/thông số) kịp xuống dòng; nếu không có
+            dòng này, trên màn hẹp cả ảnh LẪN chữ đều bị ép nhỏ lại đồng thời, càng dễ gây tràn. */}
         <div style={{ flexShrink: 0 }}>
           <LaptopThumbnail
             imageUrl={laptop.imageUrl}
@@ -134,9 +134,9 @@ export function RecommendationCard({
             <div style={{ minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
                 <span style={{ fontWeight: 700 }}>#{item.rank}</span>
-                {/* isPinned: may nay duoc CUA HANG chu dong "ghim" uu tien (khong phai kNN chon)
-                    - vd may dang can day hang/co khuyen mai dac biet - phai ghi ro nguon goc
-                    khac nhau de khong nham lan voi goi y THAT cua thuat toan */}
+                {/* isPinned: máy này được CỬA HÀNG chủ động "ghim" ưu tiên (không phải kNN chọn)
+                    - vd máy đang cần đẩy hàng/có khuyến mãi đặc biệt - phải ghi rõ nguồn gốc
+                    khác nhau để không nhầm lẫn với gợi ý THẬT của thuật toán */}
                 {!item.isPinned && <AiBadge />}
                 {item.isPinned && <Tag>Đề xuất từ cửa hàng</Tag>}
               </div>
@@ -214,8 +214,8 @@ export function RecommendationCard({
         </div>
       </div>
 
-      {/* FR-04: khi bam "Khong thich", hoi RO ly do thay vi chi ghi 1 su kien chung chung - du
-          lieu nay dung de UC-15 (Phan tich phan hoi) thong ke nguyen nhan pho bien nhat. */}
+      {/* FR-04: khi bấm "Không thích", hỏi RÕ lý do thay vì chỉ ghi 1 sự kiện chung chung - dữ
+          liệu này dùng để UC-15 (Phân tích phản hồi) thống kê nguyên nhân phổ biến nhất. */}
       <Modal
         title="Vì sao bạn không thích máy này?"
         open={reasonPickerOpen}
