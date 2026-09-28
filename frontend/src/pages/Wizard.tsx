@@ -25,8 +25,8 @@ const ACTIVITY_OPTIONS = [
   { value: 'xem_phim', label: 'Xem phim / giải trí' },
 ];
 
-// FR-01: nut chon nhanh ngan sach - gioi han theo tung khoang, don gian hoa cho nguoi
-// khong quen keo thanh truot chinh xac den tung trieu.
+// FR-01: nút chọn nhanh ngân sách - giới hạn theo từng khoảng, đơn giản hóa cho người
+// không quen kéo thanh trượt chính xác đến từng triệu.
 const BUDGET_PRESETS: { label: string; range: [number, number] }[] = [
   { label: 'Dưới 15 tr', range: [8_000_000, 15_000_000] },
   { label: '15–25 tr', range: [15_000_000, 25_000_000] },
@@ -55,18 +55,18 @@ export function Wizard() {
   const [brandIds, setBrandIds] = useState<number[]>([]);
   const [brands, setBrands] = useState<{ id: number; name: string }[]>([]);
   const [priorities, setPriorities] = useState<Priorities>({ performance: 3, mobility: 3, display: 3, price: 3 });
-  // Ket qua doc cau tu do (Mo hinh C) - dung de gui kem telemetry va truyen trong so thuong hieu
+  // Kết quả đọc câu tự do (Mô hình C) - dùng để gửi kèm telemetry và truyền trọng số thương hiệu
   const [parsedNeed, setParsedNeed] = useState<{ need: ParsedNeed; text: string } | null>(null);
-  // FR-01: Mo hinh A suy phan khuc tu cac HOAT DONG da chon (doc lap voi phan khuc nguoi dung
-  // tu chon o o Radio ben duoi) - dung de (a) hien "gan voi Gaming (72%)" khi chon "Chua ro",
-  // (b) goi y nhe khi nguoi dung tu chon 1 phan khuc KHAC voi du doan nay.
+  // FR-01: Mô hình A suy phân khúc từ các HOẠT ĐỘNG đã chọn (độc lập với phân khúc người dùng
+  // tự chọn ở ô Radio bên dưới) - dùng để (a) hiện "gần với Gaming (72%)" khi chọn "Chưa rõ",
+  // (b) gợi ý nhẹ khi người dùng tự chọn 1 phân khúc KHÁC với dự đoán này.
   const [inferred, setInferred] = useState<InferResult | null>(null);
 
   useEffect(() => {
     api.get('/brands').then((r) => setBrands(r.data.data)).catch(() => undefined);
   }, []);
 
-  // Goi lai moi khi danh sach hoat dong doi - danh sach rong thi khong suy duoc gi (bo qua).
+  // Gọi lại mỗi khi danh sách hoạt động đổi - danh sách rỗng thì không suy được gì (bỏ qua).
   useEffect(() => {
     if (activities.length === 0) {
       setInferred(null);
@@ -86,9 +86,9 @@ export function Wizard() {
     };
   }, [activities]);
 
-  // docs/08_FRONTEND_SPEC.md muc 3 buoc 2: "Co N mau trong khoang nay" canh thanh truot ngan
-  // sach - debounce 400ms (nguoi dung con dang keo) roi goi GET /laptops chi lay `meta.total`
-  // (pageSize=1, khong can du lieu tung may) de dem so may thoa dung khoang gia dang chon.
+  // docs/08_FRONTEND_SPEC.md mục 3 bước 2: "Có N mẫu trong khoảng này" cạnh thanh trượt ngân
+  // sách - debounce 400ms (người dùng còn đang kéo) rồi gọi GET /laptops chỉ lấy `meta.total`
+  // (pageSize=1, không cần dữ liệu từng máy) để đếm số máy thỏa đúng khoảng giá đang chọn.
   const [budgetCount, setBudgetCount] = useState<number | null>(null);
   useEffect(() => {
     const id = setTimeout(() => {
@@ -100,8 +100,8 @@ export function Wizard() {
     return () => clearTimeout(id);
   }, [budget]);
 
-  /** Khi Mo hinh C doc xong cau noi: dien san moi lua chon ben duoi. Nguoi dung van sua duoc -
-   * he thong goi y chu khong ep (nguyen tac "ton trong quyet dinh nguoi dung", docs/07 SS1). */
+  /** Khi Mô hình C đọc xong câu nói: điền sẵn mọi lựa chọn bên dưới. Người dùng vẫn sửa được -
+   * hệ thống gợi ý chứ không ép (nguyên tắc "tôn trọng quyết định người dùng", docs/07 SS1). */
   function applyParsedNeed(need: ParsedNeed, text: string) {
     setParsedNeed({ need, text });
     setPriorities(need.priorities);
@@ -111,12 +111,12 @@ export function Wizard() {
   }
 
   function handleSubmit() {
-    // Luu lai NGUYEN VAN phan than request (khong chi ket qua) - Results.tsx can goi lai dung
-    // request nay voi topN khac khi nguoi dung doi "So luong ket qua" (FR-02), khong bat nguoi
-    // dung quay lai Wizard dien lai tu dau. CHUYEN TRANG NGAY (khong doi API tra ve o day nua) -
-    // Results.tsx tu goi API va hien Skeleton + dong chu luan phien trong luc cho (docs/07_UIUX.md
-    // muc 8 "Dang tai ket qua"), thay vi nguoi dung chi thay 1 vong xoay tren nut trong khi man
-    // hinh Wizard dung yen.
+    // Lưu lại NGUYÊN VĂN phần thân request (không chỉ kết quả) - Results.tsx cần gọi lại đúng
+    // request này với topN khác khi người dùng đổi "Số lượng kết quả" (FR-02), không bắt người
+    // dùng quay lại Wizard điền lại từ đầu. CHUYỂN TRANG NGAY (không đợi API trả về ở đây nữa) -
+    // Results.tsx tự gọi API và hiện Skeleton + dòng chữ luân phiên trong lúc chờ (docs/07_UIUX.md
+    // mục 8 "Đang tải kết quả"), thay vì người dùng chỉ thấy 1 vòng xoay trên nút trong khi màn
+    // hình Wizard đứng yên.
     const requestBody = {
       segment: segmentChoice === 'unknown' ? null : segmentChoice,
       activities,
@@ -136,8 +136,8 @@ export function Wizard() {
     navigate('/results', { state: { requestBody } });
   }
 
-  // FR-01: goi y nhe khi nguoi dung TU chon 1 phan khuc ro rang nhung khac voi du doan tu hoat
-  // dong, VA du doan do du tin cay (>= 60%) - chi hien khi CA HAI dieu kien dung, khong ep buoc.
+  // FR-01: gợi ý nhẹ khi người dùng TỰ chọn 1 phân khúc rõ ràng nhưng khác với dự đoán từ hoạt
+  // động, VÀ dự đoán đó đủ tin cậy (>= 60%) - chỉ hiện khi CẢ HAI điều kiện đúng, không ép buộc.
   const showNudge =
     segmentChoice !== 'unknown' &&
     inferred &&
