@@ -197,7 +197,10 @@ export async function recommend(body: RecommendRequestBody) {
   const existingIds = new Set(items.map((it) => it.laptopId));
   for (const pin of pins) {
     if (existingIds.has(pin.laptopId)) continue; // da co san trong ket qua AI thi khong can them
-    const laptop = await prisma.laptop.findUnique({ where: { id: pin.laptopId } });
+    const laptop = await prisma.laptop.findUnique({
+      where: { id: pin.laptopId },
+      include: { brand: true, cpu: true, gpu: true, segmentLabel: true },
+    });
     if (!laptop || laptop.priceVnd > body.budget.max * (1 + DEFAULT_BUDGET_RELAX_RATIO)) continue;
     items.push({
       rank: items.length + 1,
