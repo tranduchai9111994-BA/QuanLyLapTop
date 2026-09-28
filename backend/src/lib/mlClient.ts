@@ -1,9 +1,10 @@
 import axios from 'axios';
+import { env } from '../config/env';
 
 // Client axios rieng de GOI SANG ML service (Python/FastAPI, cong 8001) - tach khoi `api` cua
 // frontend (do la client CUA trinh duyet goi VAO backend, con day la backend goi ra ML service).
-const ML_SERVICE_URL = process.env.ML_SERVICE_URL ?? 'http://localhost:8001';
-const ML_INTERNAL_KEY = process.env.ML_INTERNAL_KEY ?? '';
+const ML_SERVICE_URL = env.mlServiceUrl;
+const ML_INTERNAL_KEY = env.mlInternalKey;
 
 export const mlClient = axios.create({
   baseURL: ML_SERVICE_URL,

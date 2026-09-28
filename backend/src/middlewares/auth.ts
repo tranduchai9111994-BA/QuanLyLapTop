@@ -2,8 +2,9 @@ import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import type { Role } from '../constants/enums';
 import { AppError } from './error';
+import { env } from '../config/env';
 
-const JWT_SECRET = process.env.JWT_SECRET ?? 'dev-secret';
+const JWT_SECRET = env.jwtSecret;
 
 export interface AuthUser {
   id: number;

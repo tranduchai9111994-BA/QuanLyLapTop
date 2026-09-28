@@ -4,8 +4,9 @@ import { createApp } from './app';
 import { snapshotSync } from './modules/jobs/snapshotSync';
 import { alertScan } from './modules/jobs/alertScan';
 import { logger } from './lib/logger';
+import { env } from './config/env';
 
-const PORT = Number(process.env.PORT ?? 4000);
+const PORT = env.port;
 
 const app = createApp();
 
