@@ -573,6 +573,50 @@ với văn bản đặc tả: quy tắc cấm hex dùng script Node thay ESLint 
 không hỗ trợ rule tuỳ chỉnh — xem mục 5.9), và `LaptopThumbnail.tsx` được loại trừ khỏi quy tắc đó
 vì chứa màu logo thương hiệu thật, không phải màu giao diện.
 
+### 5.12 Rà soát `docs/08_FRONTEND_SPEC.md` — Giai đoạn 11: các điểm còn thiếu
+
+Sau khi rà soát toàn bộ đặc tả 16 màn hình trong `08_FRONTEND_SPEC.md`, phần lớn đã được triển
+khai đúng hoặc tốt hơn đặc tả (route tiếng Anh thay vì slug tiếng Việt, state cục bộ thay vì
+Zustand/TanStack Query, trang Yêu thích/Lịch sử tách riêng thay vì gộp — các khác biệt kiến trúc
+này giữ nguyên, không coi là thiếu sót). Các điểm THẬT SỰ còn thiếu đã bổ sung:
+
+- **Trang chủ (mục 2)**: thêm khối "Cách SmartLap hoạt động" (3 bước) và dải "💎 Đáng tiền nhất
+  tuần này" (4 máy, sắp theo `value_desc` có sẵn ở backend) vào `Home.tsx`.
+- **Wizard (mục 3)**: thêm dòng "Có N mẫu trong khoảng này" cạnh thanh trượt ngân sách — debounce
+  400ms rồi gọi `GET /laptops?priceMin&priceMax&pageSize=1`, chỉ lấy `meta.total`.
+- **Kết quả (mục 4)**: thêm control sắp xếp cục bộ (Phù hợp nhất/Giá thấp/Hiệu năng cao) và khối
+  CTA cố định "Không thấy máy ưng ý?" (Thử ưu tiên khác / Xem toàn bộ danh mục) sau danh sách kết
+  quả không rỗng. Khóa nút Thích/Không thích theo `sessionId + laptopId` lưu vào `localStorage`
+  (giữ nguyên qua lần tải lại trang, không chỉ trong bộ nhớ).
+- **Chi tiết laptop (mục 5)**: thêm dòng "Đáng tiền — tốt hơn N% máy cùng phân khúc" (tính
+  `valuePercentile` ở `laptops.service.ts` bằng cách so `valueIdx` với toàn bộ máy cùng phân khúc
+  đang bán, loại trừ chính nó khỏi mẫu số), biểu đồ lịch sử giá (Recharts `LineChart`, dữ liệu
+  `priceHistory` vốn đã có sẵn trong Prisma include — chỉ thiếu phần vẽ ở frontend), và 1 dòng nêu
+  khác biệt lớn nhất so với máy đang xem trong danh sách "Máy tương tự" (so theo % chênh lệch lớn
+  nhất giữa cân nặng/RAM/SSD/tần số quét/pin).
+- **Danh mục (mục 6)**: thêm banner "Không biết chọn gì? Để AI tư vấn ✨" dẫn sang Wizard, đặt ngay
+  dưới tiêu đề trang, trước bộ lọc.
+- **Hàng đợi nhãn (mục 11)**: thêm checkbox "Khóa nhãn, không cho mô hình thay đổi" khi duyệt —
+  backend đã có sẵn cơ chế `SegmentLabel.locked` (từ trước, dùng ở `applySegmentLabel`) nhưng chưa
+  có đường dẫn nào từ giao diện set được cờ này; nay `PATCH /labels/review-queue/:id` nhận thêm
+  `locked` và `AdminReviewQueue.tsx` có checkbox tương ứng.
+- **Benchmark (mục 12)**: thêm `Alert` cảnh báo "Thay đổi điểm sẽ ảnh hưởng mọi máy dùng linh kiện
+  này" khi SỬA (không hiện khi thêm mới) — mở rộng `CrudTable.renderFormExtra` nhận thêm tham số
+  `isEdit` để phân biệt 2 chế độ.
+- **Mô hình (mục 13)**: thêm bảng Precision/Recall/F1-score theo từng phân khúc trong Drawer chi
+  tiết phiên bản — dữ liệu (`metrics.test.report`) đã có sẵn từ lúc huấn luyện, chỉ thiếu bảng hiển
+  thị.
+- **Đăng nhập (mục 16)**: trước đây `AdminLogin.tsx` LUÔN điền sẵn tài khoản demo (không điều
+  kiện), còn `CustomerLogin.tsx` không có điền sẵn nào. Nay cả 2 chỉ điền sẵn khi biến môi trường
+  `VITE_DEMO=true` (mặc định bật ở `.env` cho môi trường đồ án, tắt/xóa dòng này trước khi triển
+  khai thật).
+
+**Đã kiểm thử trên browser** (điều hướng thủ công qua Trang chủ, Danh mục, Chi tiết máy `id=5190`,
+đăng nhập quản trị bằng tài khoản demo tự điền, form Sửa Benchmark CPU, Drawer chi tiết mô hình):
+xác nhận cả 9 điểm trên hiển thị đúng, không lỗi console mới (các cảnh báo antd deprecated và lỗi
+mạng còn lại là từ trước, không liên quan thay đổi lần này). `npx tsc -p tsconfig.app.json --noEmit`
+sạch ở frontend, `npx tsc --noEmit` sạch ở backend, `pytest` ml-service 35/35 pass.
+
 ## 6. Độ đo thực tế — công sức tìm kiếm
 
 Đo bằng **số máy người dùng phải xem qua** trước khi gặp máy phù hợp (máy thuộc nhóm 20% hài lòng

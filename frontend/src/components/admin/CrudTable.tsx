@@ -49,8 +49,10 @@ export function CrudTable({
   transformSubmit?: (values: any) => any;
   /** Chuyen doi ban ghi truoc khi do vao form Sua (vd ghep resWidth/resHeight thanh mot muc chon). */
   transformEdit?: (row: any) => any;
-  /** Noi dung phu hien trong modal (vd o AI goi y phan khuc khi them laptop moi). */
-  renderFormExtra?: (form: any) => ReactNode;
+  /** Noi dung phu hien trong modal (vd o AI goi y phan khuc khi them laptop moi). `isEdit` cho
+   * biet dang o che do SUA (co ban ghi cu) hay THEM MOI - vd canh bao "sua diem se anh huong moi
+   * may dung linh kien nay" chi hop ly khi dang sua, khong phai luc them moi. */
+  renderFormExtra?: (form: any, isEdit: boolean) => ReactNode;
   /** Goi sau khi luu thanh cong voi ban ghi server tra ve - de man cu the hien them thong bao
    * rieng (vd Laptop canh bao "AI chi tin cay 45%, da dua vao hang doi can xac minh"). */
   afterSave?: (saved: any) => void;
@@ -323,7 +325,7 @@ export function CrudTable({
         maskClosable={false}
       >
         <Form form={form} layout="vertical">
-          <div key={formKey}>{renderFormExtra?.(form)}</div>
+          <div key={formKey}>{renderFormExtra?.(form, !!editing)}</div>
           <div
             style={
               useGrid

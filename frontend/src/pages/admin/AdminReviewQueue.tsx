@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Button, Card, Empty, Select, Space, message } from 'antd';
+import { Alert, Button, Card, Checkbox, Empty, Select, Space, message } from 'antd';
 import { CheckCircleOutlined } from '@ant-design/icons';
 import { api } from '../../lib/api';
 import { segmentColors, t } from '../../theme/tokens';
@@ -21,6 +21,7 @@ interface QueueItem {
   distribution: Record<string, number>;
   predictedBy: string | null;
   waitingSince: string;
+  locked: boolean;
 }
 
 const SEGMENT_OPTIONS = ['OFFICE', 'ULTRABOOK', 'GAMING', 'CREATOR'].map((s) => ({
@@ -38,6 +39,7 @@ export function AdminReviewQueue() {
   const [items, setItems] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [choices, setChoices] = useState<Record<number, string>>({});
+  const [lockChoices, setLockChoices] = useState<Record<number, boolean>>({});
   const [saving, setSaving] = useState<number | null>(null);
 
   function load() {
@@ -53,9 +55,10 @@ export function AdminReviewQueue() {
 
   async function verify(item: QueueItem) {
     const segment = choices[item.laptopId] ?? item.segment;
+    const locked = lockChoices[item.laptopId] ?? item.locked;
     setSaving(item.laptopId);
     try {
-      await api.patch(`/labels/review-queue/${item.laptopId}`, { segment });
+      await api.patch(`/labels/review-queue/${item.laptopId}`, { segment, locked });
       message.success(`Đã duyệt "${item.laptop.name}" → ${segmentColors[segment]?.label ?? segment}`);
       load();
       window.dispatchEvent(new Event('smartlap:review-queue-changed'));
@@ -109,6 +112,12 @@ export function AdminReviewQueue() {
                   {changed && (
                     <Alert type="warning" showIcon message="Đang chọn khác nhãn AI — sẽ lưu với nguồn nhân viên." />
                   )}
+                  <Checkbox
+                    checked={lockChoices[item.laptopId] ?? item.locked}
+                    onChange={(e) => setLockChoices((prev) => ({ ...prev, [item.laptopId]: e.target.checked }))}
+                  >
+                    Khóa nhãn, không cho mô hình thay đổi
+                  </Checkbox>
                   <Button
                     type="primary"
                     icon={<CheckCircleOutlined />}

@@ -45,11 +45,22 @@ export function RecommendationCard({
   isComparing: boolean;
 }) {
   const navigate = useNavigate();
-  const [feedback, setFeedback] = useState<'LIKE' | 'DISLIKE' | null>(null);
-  const [reasonPickerOpen, setReasonPickerOpen] = useState(false);
-  const [reason, setReason] = useState<string>('TOO_EXPENSIVE');
   const laptop = item.laptop;
   const isTop1 = item.rank === 1;
+  // docs/08_FRONTEND_SPEC.md muc 4: "khong cho bam lap (khoa theo sessionId+laptopId)" - luu vao
+  // localStorage (khong chi state trong bo nho) de khoa nay GIU NGUYEN ca khi nguoi dung tai lai
+  // trang (vd bam F5 sau khi da 👍), tranh ghi trung nhieu su kien LIKE/DISLIKE cho CUNG 1 may
+  // trong CUNG 1 phien tu van.
+  const feedbackKey = `smartlap_feedback_${sessionId}_${laptop.id}`;
+  const [feedback, setFeedback] = useState<'LIKE' | 'DISLIKE' | null>(() => {
+    try {
+      return (localStorage.getItem(feedbackKey) as 'LIKE' | 'DISLIKE' | null) ?? null;
+    } catch {
+      return null;
+    }
+  });
+  const [reasonPickerOpen, setReasonPickerOpen] = useState(false);
+  const [reason, setReason] = useState<string>('TOO_EXPENSIVE');
 
   /** Ghi lai 1 su kien phan hoi - LUU Y: cap nhat giao dien (setFeedback) NGAY LAP TUC truoc khi
    * cho ket qua goi API (optimistic update), vi day chi la telemetry phu, khong bat buoc thanh
@@ -57,6 +68,11 @@ export function RecommendationCard({
    * (khong hien thong bao loi) - khong nen lam gian doan nguoi dung vi 1 thao tac phu nhu the nay. */
   async function sendFeedback(type: 'LIKE' | 'DISLIKE', extra?: { reason?: string }) {
     setFeedback(type);
+    try {
+      localStorage.setItem(feedbackKey, type);
+    } catch {
+      // localStorage co the bi chan (che do an danh) - khong sao, chi mat tinh nang khoa qua lan tai lai
+    }
     try {
       await api.post('/events', { sessionId, laptopId: laptop.id, type, ...extra });
       message.success('Cảm ơn bạn! Phản hồi giúp hệ thống gợi ý tốt hơn.');
@@ -66,6 +82,7 @@ export function RecommendationCard({
   }
 
   function handleDislikeClick() {
+    if (feedback) return;
     setReasonPickerOpen(true);
   }
 
@@ -180,15 +197,19 @@ export function RecommendationCard({
         <div>
           <Button
             shape="circle"
+            disabled={!!feedback}
             icon={feedback === 'LIKE' ? <LikeFilled /> : <LikeOutlined />}
             onClick={() => sendFeedback('LIKE')}
             style={{ marginRight: 4, color: feedback === 'LIKE' ? t.success : undefined }}
+            title={feedback ? 'Bạn đã gửi phản hồi cho máy này' : 'Thích'}
           />
           <Button
             shape="circle"
+            disabled={!!feedback}
             icon={feedback === 'DISLIKE' ? <DislikeFilled /> : <DislikeOutlined />}
             onClick={handleDislikeClick}
             style={{ color: feedback === 'DISLIKE' ? t.error : undefined }}
+            title={feedback ? 'Bạn đã gửi phản hồi cho máy này' : 'Không thích'}
           />
         </div>
       </div>

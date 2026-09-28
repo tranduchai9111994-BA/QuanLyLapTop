@@ -61,6 +61,11 @@ export function Results() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // docs/08_FRONTEND_SPEC.md muc 4 "Sap xep phu": chi doi THU TU HIEN THI cuc bo, KHONG goi lai
+  // API/mo hinh va KHONG ghi event gi - khac han "So luong hien thi" (topN) o tren, von goi lai
+  // dung API. "Phu hop nhat" = giu nguyen thu tu backend tra ve (da xep theo khoang cach kNN).
+  const [localSort, setLocalSort] = useState<'match' | 'price_asc' | 'perf_desc'>('match');
+
   const [explainItem, setExplainItem] = useState<RecommendationItemDto | null>(null);
   // Panel radar dinh (lg/xl) doi theo may GAN NHAT nguoi dung bam "Vi sao goi y?" - CO CHU Y
   // tach rieng khoi `explainItem` (dieu khien Drawer): neu dung chung 1 state, panel se quay ve
@@ -178,9 +183,16 @@ export function Results() {
   const focusedItem = result.items.find((it) => it.laptopId === panelFocusId) ?? result.items[0] ?? null;
   const showRadarPanel = screens.lg && focusedItem;
 
+  const sortedItems =
+    localSort === 'price_asc'
+      ? [...result.items].sort((a, b) => a.laptop.priceVnd - b.laptop.priceVnd)
+      : localSort === 'perf_desc'
+        ? [...result.items].sort((a, b) => b.laptop.performanceIdx - a.laptop.performanceIdx)
+        : result.items; // 'match': giu dung thu tu backend tra ve (theo khoang cach kNN)
+
   const itemsGrid = (
     <div style={{ display: 'grid', gridTemplateColumns: screens.md ? 'repeat(2, 1fr)' : '1fr', gap: 12, alignItems: 'start' }}>
-      {result.items.map((item) => (
+      {sortedItems.map((item) => (
         <RecommendationCard
           key={item.laptopId}
           item={item}
@@ -201,18 +213,35 @@ export function Results() {
     <div style={{ maxWidth: showRadarPanel ? 1320 : 1200, margin: '24px auto', padding: '0 24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <h1 style={{ margin: 0 }}>Kết quả gợi ý</h1>
-        {requestBody && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          {/* docs/08_FRONTEND_SPEC.md muc 4: "sap xep phu" - CHI doi thu tu HIEN THI cuc bo,
+              khong goi lai mo hinh/API, khong ghi event gi (khac han "So luong hien thi" ben
+              canh, von goi lai dung API vi doi so luong may can lay). */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ color: t.textTertiary }}>Số lượng hiển thị</span>
+            <span style={{ color: t.textTertiary }}>Sắp xếp</span>
             <Segmented
-              options={TOPN_OPTIONS.map((n) => ({ label: String(n), value: n }))}
-              value={topN}
-              onChange={(v) => changeTopN(v as number)}
-              disabled={reloading}
+              options={[
+                { label: 'Phù hợp nhất', value: 'match' },
+                { label: 'Giá thấp', value: 'price_asc' },
+                { label: 'Hiệu năng cao', value: 'perf_desc' },
+              ]}
+              value={localSort}
+              onChange={(v) => setLocalSort(v as typeof localSort)}
             />
-            {reloading && <Spin size="small" />}
           </div>
-        )}
+          {requestBody && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ color: t.textTertiary }}>Số lượng hiển thị</span>
+              <Segmented
+                options={TOPN_OPTIONS.map((n) => ({ label: String(n), value: n }))}
+                value={topN}
+                onChange={(v) => changeTopN(v as number)}
+                disabled={reloading}
+              />
+              {reloading && <Spin size="small" />}
+            </div>
+          )}
+        </div>
       </div>
 
       {result.mode === 'FALLBACK' && <FallbackBanner />}
@@ -260,6 +289,18 @@ export function Results() {
         </div>
       ) : (
         itemsGrid
+      )}
+
+      {/* docs/08_FRONTEND_SPEC.md muc 4: CTA nay khac Empty state o tren - hien khi CO ket qua
+          nhung nguoi dung van chua ung y may nao, khong phai khi khong tim thay may nao ca. */}
+      {result.items.length > 0 && (
+        <div style={{ textAlign: 'center', marginTop: 32, padding: 16, color: t.textSecondary }}>
+          <div style={{ marginBottom: 8 }}>Không thấy máy ưng ý?</div>
+          <Space wrap>
+            <Button onClick={() => navigate('/wizard')}>Thử ưu tiên khác</Button>
+            <Button onClick={() => navigate('/laptops')}>Xem toàn bộ danh mục</Button>
+          </Space>
+        </div>
       )}
 
       {compareIds.length >= 2 && (

@@ -134,6 +134,18 @@ export function Catalog() {
     <div style={{ maxWidth: 1200, margin: '24px auto', padding: '0 24px' }}>
       <h1>Danh mục laptop</h1>
 
+      {/* docs/08_FRONTEND_SPEC.md muc 6: banner dieu huong sang Wizard cho nguoi dung "luot tu do"
+          chua biet loc theo gi - dat ngay duoi tieu de, truoc bo loc, de bat mat truoc khi ho
+          bat dau tu mo mac dinh cac tieu chi. */}
+      <Card
+        size="small"
+        style={{ marginBottom: 16, background: t.aiGradient, border: 'none' }}
+        styles={{ body: { padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' } }}
+      >
+        <span style={{ color: t.white, fontWeight: 600 }}>Không biết chọn gì? Để AI tư vấn ✨</span>
+        <Button onClick={() => navigate('/wizard')}>Bắt đầu tư vấn</Button>
+      </Card>
+
       <div style={{ marginBottom: 12, overflowX: 'auto' }}>
         <Segmented
           size="large"

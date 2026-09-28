@@ -27,6 +27,11 @@ export interface Laptop {
   valueIdx: number;
   segmentLabel?: { segment: Segment } | null;
   priceHistory?: { priceVnd: number; changedAt: string }[];
+  // docs/08_FRONTEND_SPEC.md muc 5: "Tot hon N% may cung phan khuc" - tinh san o backend
+  // (laptops.service.ts getLaptopDetail), null neu may chua co nhan phan khuc hoac phan khuc chi
+  // co 1 may (khong co gi de so sanh). Chi co tren API GET /laptops/:id, KHONG co trong danh
+  // sach/ket qua goi y (tinh moi laptop se ton kem khong can thiet cho nhung man do).
+  valuePercentile?: number | null;
 }
 
 export interface ExplanationItem {

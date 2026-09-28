@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button, Skeleton, Result, Card, Tag, message } from 'antd';
 import { HeartOutlined, HeartFilled } from '@ant-design/icons';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { api } from '../lib/api';
 import type { Laptop } from '../types';
 import { SegmentTag } from '../components/smart/SegmentTag';
@@ -9,6 +10,46 @@ import { LaptopThumbnail } from '../components/smart/LaptopThumbnail';
 import { DiscountBadge } from '../components/smart/DiscountBadge';
 import { formatVnd, formatKg, formatInch } from '../utils/format';
 import { t } from '../theme/tokens';
+
+/** docs/08_FRONTEND_SPEC.md muc 5: "1 khac biet chinh" - chon DUY NHAT 1 dac trung lech nhieu
+ * NHAT (theo % tuong doi) giua may goc va may tuong tu, giup nguoi xem nam nhanh diem khac biet
+ * ro nhat thay vi doc lai toan bo bang thong so. Chi xet cac dac trung "cang thap/cao cang tot"
+ * co huong ro rang (bo qua RAM/SSD vi kNN item-item da uu tien chon may CUNG cau hinh, chenh
+ * lech thuong khong dang ke va de gay nhieu dong nghia hon la co ich). */
+function biggestDifference(base: Laptop, other: Laptop): string | null {
+  const candidates: { diff: number; text: string }[] = [];
+  const pct = (a: number, b: number) => (b === 0 ? 0 : Math.abs(a - b) / b);
+
+  if (other.weightKg !== base.weightKg) {
+    const d = other.weightKg - base.weightKg;
+    candidates.push({
+      diff: pct(other.weightKg, base.weightKg),
+      text: d < 0 ? `Nhẹ hơn ${Math.abs(d).toFixed(1)} kg` : `Nặng hơn ${d.toFixed(1)} kg`,
+    });
+  }
+  if (other.ramGb !== base.ramGb) {
+    const d = other.ramGb - base.ramGb;
+    candidates.push({ diff: pct(other.ramGb, base.ramGb), text: `RAM ${d > 0 ? 'nhiều hơn' : 'ít hơn'} ${Math.abs(d)}GB` });
+  }
+  if (other.ssdGb !== base.ssdGb) {
+    const d = other.ssdGb - base.ssdGb;
+    candidates.push({ diff: pct(other.ssdGb, base.ssdGb), text: `SSD ${d > 0 ? 'nhiều hơn' : 'ít hơn'} ${Math.abs(d)}GB` });
+  }
+  if (other.refreshHz !== base.refreshHz) {
+    const d = other.refreshHz - base.refreshHz;
+    candidates.push({ diff: pct(other.refreshHz, base.refreshHz), text: `Màn hình ${d > 0 ? 'mượt hơn' : 'tần số thấp hơn'} ${Math.abs(d)}Hz` });
+  }
+  const batteryDiff = (other.batteryWh ?? 0) - (base.batteryWh ?? 0);
+  if (batteryDiff !== 0) {
+    candidates.push({
+      diff: pct(other.batteryWh ?? 0, base.batteryWh ?? 0),
+      text: `Pin ${batteryDiff > 0 ? 'lớn hơn' : 'nhỏ hơn'} ${Math.abs(batteryDiff)}Wh`,
+    });
+  }
+
+  if (candidates.length === 0) return null;
+  return candidates.sort((a, b) => b.diff - a.diff)[0].text;
+}
 
 /** Trang Chi tiet 1 may: thong so ky thuat day du + danh sach "May tuong tu" (item-item kNN,
  * xem retriever.similar_items - docs/13_GIAI_THICH_THUAT_TOAN_KNN.md muc 4.2). 2 API duoc goi doc lap:
@@ -114,13 +155,38 @@ export function Detail() {
       <div style={{ fontSize: 28, fontWeight: 700, color: t.primary700 }} className="tabular-nums">
         {formatVnd(laptop.priceVnd)}
       </div>
-      <div style={{ marginBottom: 16 }}>
+      <div style={{ marginBottom: 8 }}>
         <DiscountBadge
           priceVnd={laptop.priceVnd}
           originalPriceVnd={laptop.originalPriceVnd}
           salesCount={laptop.salesCount}
         />
       </div>
+      {/* docs/08_FRONTEND_SPEC.md muc 5: "Dang tien" so voi TRUNG VI phan khuc - tinh san o
+          backend (percentile theo valueIdx trong CUNG phan khuc). */}
+      {laptop.valuePercentile != null && (
+        <div style={{ marginBottom: 16, fontSize: 14, color: t.success, fontWeight: 600 }}>
+          💎 Đáng tiền — tốt hơn {laptop.valuePercentile}% máy cùng phân khúc
+        </div>
+      )}
+
+      {laptop.priceHistory && laptop.priceHistory.length >= 2 && (
+        <Card title="Lịch sử giá" style={{ marginBottom: 24 }}>
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart
+              data={[...laptop.priceHistory]
+                .sort((a, b) => new Date(a.changedAt).getTime() - new Date(b.changedAt).getTime())
+                .map((h) => ({ date: new Date(h.changedAt).toLocaleDateString('vi-VN'), price: h.priceVnd }))}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+              <YAxis tickFormatter={(v) => `${Math.round(v / 1_000_000)}tr`} tick={{ fontSize: 11 }} />
+              <Tooltip formatter={(v) => formatVnd(Number(v))} />
+              <Line type="monotone" dataKey="price" name="Giá" stroke={t.primary700} strokeWidth={2} dot={{ r: 3 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </Card>
+      )}
 
       <Card title="Thông số kỹ thuật" style={{ marginBottom: 24 }}>
         <table style={{ width: '100%' }}>
@@ -167,6 +233,13 @@ export function Detail() {
                 )}
                 {s.laptop && diff === 0 && (
                   <Tag style={{ marginTop: 4 }}>Cùng mức giá</Tag>
+                )}
+                {/* docs/08_FRONTEND_SPEC.md muc 5: "1 khac biet chinh" - 1 cau ngan nhat nam bat
+                    su khac biet ro nhat, khong bat nguoi xem phai tu doc bang thong so day du. */}
+                {s.laptop && (
+                  <div style={{ fontSize: 12, color: t.textTertiary, marginTop: 4 }}>
+                    {biggestDifference(laptop, s.laptop) ?? 'Cấu hình gần như tương đương'}
+                  </div>
                 )}
               </Card>
             );

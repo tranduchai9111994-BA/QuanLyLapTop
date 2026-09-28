@@ -3,6 +3,10 @@ import { Button, Card, Form, Input, Tabs, message } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../lib/api';
 
+// docs/08_FRONTEND_SPEC.md muc 16: dien san tai khoan demo CHI khi VITE_DEMO=true (moi truong
+// demo/do an), giong AdminLogin.tsx - man khach hang truoc day KHONG co dien san nao ca.
+const DEMO_VALUES = import.meta.env.VITE_DEMO === 'true' ? { email: 'khach@smartlap.vn', password: 'Demo@123' } : undefined;
+
 /** UC-07: đăng nhập/đăng ký cho KHÁCH HÀNG - dùng chung 1 API `/auth/login` với khu quản trị
  * (backend không tách API riêng theo vai trò), nhưng khác `AdminLogin.tsx` ở chỗ NGƯỢC LẠI: từ
  * chối tài khoản STAFF/ADMIN đăng nhập ở đây (họ có màn riêng `/admin/login`), tránh nhầm lẫn
@@ -63,7 +67,7 @@ export function CustomerLogin() {
               key: 'login',
               label: 'Đăng nhập',
               children: (
-                <Form layout="vertical" onFinish={onLogin}>
+                <Form layout="vertical" onFinish={onLogin} initialValues={DEMO_VALUES}>
                   <Form.Item name="email" label="Email" rules={[{ required: true, type: 'email', message: 'Nhập email hợp lệ' }]}>
                     <Input />
                   </Form.Item>

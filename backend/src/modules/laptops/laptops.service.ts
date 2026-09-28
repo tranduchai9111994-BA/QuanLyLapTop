@@ -99,7 +99,23 @@ export async function getLaptopDetail(id: number) {
     include: { brand: true, cpu: true, gpu: true, segmentLabel: true, priceHistory: { orderBy: { changedAt: 'desc' } } },
   });
   if (!laptop) throw new AppError(404, 'NOT_FOUND', 'Không tìm thấy laptop');
-  return laptop;
+
+  // docs/08_FRONTEND_SPEC.md muc 5: "Dang tien" so voi TRUNG VI phan khuc - "Tot hon 68% may
+  // cung phan khuc". Chi tinh khi may DA co nhan phan khuc (segmentLabel) - may chua gan nhan
+  // (hiem, dang cho AI du doan) thi khong co gi de so sanh, tra ve null de frontend an dong nay.
+  let valuePercentile: number | null = null;
+  if (laptop.segmentLabel) {
+    const peers = await prisma.laptop.findMany({
+      where: { isActive: true, segmentLabel: { segment: laptop.segmentLabel.segment } },
+      select: { valueIdx: true },
+    });
+    if (peers.length > 1) {
+      const worseCount = peers.filter((p) => p.valueIdx < laptop.valueIdx).length;
+      valuePercentile = Math.round((worseCount / (peers.length - 1)) * 100);
+    }
+  }
+
+  return { ...laptop, valuePercentile };
 }
 
 /** "May tuong tu" (item-item) tren trang Chi tiet - goi ML service de kNN tim k may GAN NHAT

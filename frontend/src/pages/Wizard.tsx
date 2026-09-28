@@ -86,6 +86,20 @@ export function Wizard() {
     };
   }, [activities]);
 
+  // docs/08_FRONTEND_SPEC.md muc 3 buoc 2: "Co N mau trong khoang nay" canh thanh truot ngan
+  // sach - debounce 400ms (nguoi dung con dang keo) roi goi GET /laptops chi lay `meta.total`
+  // (pageSize=1, khong can du lieu tung may) de dem so may thoa dung khoang gia dang chon.
+  const [budgetCount, setBudgetCount] = useState<number | null>(null);
+  useEffect(() => {
+    const id = setTimeout(() => {
+      api
+        .get(`/laptops?priceMin=${budget[0]}&priceMax=${budget[1]}&pageSize=1`)
+        .then((r) => setBudgetCount(r.data.meta?.total ?? null))
+        .catch(() => setBudgetCount(null));
+    }, 400);
+    return () => clearTimeout(id);
+  }, [budget]);
+
   /** Khi Mo hinh C doc xong cau noi: dien san moi lua chon ben duoi. Nguoi dung van sua duoc -
    * he thong goi y chu khong ep (nguyen tac "ton trong quyet dinh nguoi dung", docs/07 SS1). */
   function applyParsedNeed(need: ParsedNeed, text: string) {
@@ -205,9 +219,14 @@ export function Wizard() {
       )}
       {!showNudge && <div style={{ marginBottom: 24 }} />}
 
-      <h3>
+      <h3 style={{ marginBottom: 4 }}>
         Ngân sách: {formatShortVnd(budget[0])} – {formatShortVnd(budget[1])}
       </h3>
+      {budgetCount != null && (
+        <div style={{ fontSize: 13, color: t.textTertiary, marginBottom: 8 }}>
+          Có {budgetCount.toLocaleString('vi-VN')} mẫu trong khoảng này
+        </div>
+      )}
       <Slider
         range
         min={BUDGET_MIN}

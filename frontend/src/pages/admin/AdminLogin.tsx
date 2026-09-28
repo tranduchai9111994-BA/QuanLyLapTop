@@ -3,9 +3,11 @@ import { Button, Form, Input, Card, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 
-/** Man dang nhap RIENG cho khu quan tri (khac tai khoan khach hang neu sau nay co).
- * `initialValues` dien san tai khoan demo (xem docs/00_README.md muc 5) de test nhanh, khong
- * anh huong bao mat that vi day chi la du lieu demo cho do an. */
+// docs/08_FRONTEND_SPEC.md muc 16: dien san tai khoan demo CHI khi VITE_DEMO=true (moi truong
+// demo/do an) - tranh loai gia tri nay lot ra man dang nhap that neu co ngay trien khai san xuat.
+const DEMO_VALUES = import.meta.env.VITE_DEMO === 'true' ? { email: 'admin@smartlap.vn', password: 'Demo@123' } : undefined;
+
+/** Man dang nhap RIENG cho khu quan tri (khac tai khoan khach hang neu sau nay co). */
 export function AdminLogin() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -34,7 +36,7 @@ export function AdminLogin() {
   return (
     <div style={{ maxWidth: 360, margin: '80px auto' }}>
       <Card title="Đăng nhập quản trị SmartLap">
-        <Form layout="vertical" onFinish={onFinish} initialValues={{ email: 'admin@smartlap.vn', password: 'Demo@123' }}>
+        <Form layout="vertical" onFinish={onFinish} initialValues={DEMO_VALUES}>
           <Form.Item name="email" label="Email" rules={[{ required: true }]}>
             <Input />
           </Form.Item>

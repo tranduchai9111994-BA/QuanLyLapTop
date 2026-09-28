@@ -218,6 +218,20 @@ export function AdminModels() {
               </LineChart>
             </ResponsiveContainer>
 
+            <h4 style={{ marginTop: 20 }}>Precision / Recall / F1 theo từng phân khúc</h4>
+            <Table
+              size="small"
+              pagination={false}
+              dataSource={metrics.test.labels.map((l) => ({ key: l, label: segmentColors[l]?.label ?? l, ...metrics.test.report[l] }))}
+              columns={[
+                { title: 'Phân khúc', dataIndex: 'label' },
+                { title: 'Precision', dataIndex: 'precision', className: 'tabular-nums', render: (v: number) => `${(v * 100).toFixed(1)}%` },
+                { title: 'Recall', dataIndex: 'recall', className: 'tabular-nums', render: (v: number) => `${(v * 100).toFixed(1)}%` },
+                { title: 'F1-score', dataIndex: 'f1-score', className: 'tabular-nums', render: (v: number) => `${(v * 100).toFixed(1)}%` },
+                { title: 'Số mẫu (support)', dataIndex: 'support', className: 'tabular-nums' },
+              ]}
+            />
+
             <h4 style={{ marginTop: 20 }}>Ma trận nhầm lẫn (confusion matrix)</h4>
             <Table
               size="small"
