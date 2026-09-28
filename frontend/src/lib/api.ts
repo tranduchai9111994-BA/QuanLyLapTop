@@ -1,15 +1,15 @@
 import axios from 'axios';
 
-// Client axios DUNG CHUNG cho toan bo app (khach hang lan quan tri) - moi noi goi API deu import
-// tu day thay vi tu tao axios rieng, de dam bao CUNG 1 cau hinh (baseURL, timeout, token).
+// Client axios DÙNG CHUNG cho toàn bộ app (khách hàng lẫn quản trị) - mọi nơi gọi API đều import
+// từ đây thay vì tự tạo axios riêng, để đảm bảo CÙNG 1 cấu hình (baseURL, timeout, token).
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api',
   timeout: 10_000,
 });
 
-// Tu dong dinh kem token dang nhap (neu co) vao MOI request gui di - nho vay cac trang quan tri
-// (CrudTable, AdminPrices,...) khong can tu viet header Authorization o tung noi goi rieng le.
-// Token duoc luu trong localStorage tu luc dang nhap thanh cong (xem AdminLogin.tsx).
+// Tự động đính kèm token đăng nhập (nếu có) vào MỌI request gửi đi - nhờ vậy các trang quản trị
+// (CrudTable, AdminPrices,...) không cần tự viết header Authorization ở từng nơi gọi riêng lẻ.
+// Token được lưu trong localStorage từ lúc đăng nhập thành công (xem AdminLogin.tsx).
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('smartlap_token');
   if (token) {
@@ -18,9 +18,9 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Hinh dang JSON CHUNG ma moi API cua backend tra ve (xem backend/src/middlewares/error.ts va
-// cac route handler) - `success` bao co loi hay khong, `data` la noi dung that su can dung,
-// `meta` chi co o cac API phan trang (vd GET /laptops), `error` chi co khi that bai.
+// Hình dạng JSON CHUNG mà mọi API của backend trả về (xem backend/src/middlewares/error.ts và
+// các route handler) - `success` báo có lỗi hay không, `data` là nội dung thật sự cần dùng,
+// `meta` chỉ có ở các API phân trang (vd GET /laptops), `error` chỉ có khi thất bại.
 export interface ApiEnvelope<T> {
   success: boolean;
   data: T;
