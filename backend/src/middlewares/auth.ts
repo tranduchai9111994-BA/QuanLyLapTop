@@ -21,14 +21,14 @@ declare global {
   }
 }
 
-/** Ky (sign) 1 JWT chua id/role/email - het han sau 8 gio nen nguoi dung phai dang nhap lai
- * dinh ky, khong can co che refresh token rieng cho quy mo do an nay. */
+/** Ký (sign) 1 JWT chứa id/role/email - hết hạn sau 8 giờ nên người dùng phải đăng nhập lại
+ * định kỳ, không cần cơ chế refresh token riêng cho quy mô đồ án này. */
 export function signToken(user: AuthUser): string {
   return jwt.sign(user, JWT_SECRET, { expiresIn: '8h' });
 }
 
-/** Middleware BAT BUOC dang nhap - dung cho cac route CHI danh cho STAFF/ADMIN (CRUD, quan ly
- * gia,...). Thieu header hoac token het han/sai deu nem loi 401 NGAY, khong cho di tiep. */
+/** Middleware BẮT BUỘC đăng nhập - dùng cho các route CHỈ dành cho STAFF/ADMIN (CRUD, quản lý
+ * giá,...). Thiếu header hoặc token hết hạn/sai đều ném lỗi 401 NGAY, không cho đi tiếp. */
 export function requireAuth(req: Request, _res: Response, next: NextFunction) {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) {
@@ -43,25 +43,25 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
   }
 }
 
-/** Middleware KHONG BAT BUOC dang nhap - dung cho cac route khach hang cung xem duoc (vd
- * GET /laptops) nhung neu CO dang nhap thi van muon biet `req.user` la ai (vd de ghi nhan
- * "khach quen"). Token sai/het han chi bi BO QUA IM LANG (coi nhu khach vang lai), khong bao loi -
- * khac han `requireAuth` o tren. */
+/** Middleware KHÔNG BẮT BUỘC đăng nhập - dùng cho các route khách hàng cũng xem được (vd
+ * GET /laptops) nhưng nếu CÓ đăng nhập thì vẫn muốn biết `req.user` là ai (vd để ghi nhận
+ * "khách quen"). Token sai/hết hạn chỉ bị BỎ QUA IM LẶNG (coi như khách vãng lai), không báo lỗi -
+ * khác hẳn `requireAuth` ở trên. */
 export function optionalAuth(req: Request, _res: Response, next: NextFunction) {
   const header = req.headers.authorization;
   if (header?.startsWith('Bearer ')) {
     try {
       req.user = jwt.verify(header.slice(7), JWT_SECRET) as AuthUser;
     } catch {
-      // bo qua, coi nhu khach vang lai
+      // bỏ qua, coi như khách vãng lai
     }
   }
   next();
 }
 
-/** Middleware kiem tra QUYEN (phai dung SAU `requireAuth` trong chuoi middleware, vi can
- * `req.user` da duoc dien san). Vd `requireRole('ADMIN')` chi cho ADMIN, con
- * `requireRole('STAFF', 'ADMIN')` cho ca 2 vai tro cung duoc phep. */
+/** Middleware kiểm tra QUYỀN (phải đứng SAU `requireAuth` trong chuỗi middleware, vì cần
+ * `req.user` đã được điền sẵn). Vd `requireRole('ADMIN')` chỉ cho ADMIN, còn
+ * `requireRole('STAFF', 'ADMIN')` cho cả 2 vai trò cùng được phép. */
 export function requireRole(...roles: Role[]) {
   return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user || !roles.includes(req.user.role)) {
