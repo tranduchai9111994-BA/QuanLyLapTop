@@ -6,6 +6,13 @@ export function formatVnd(amount: number | null | undefined): string {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
 }
 
+/** Số thường có dấu ngăn cách hàng nghìn kiểu Việt Nam: 17180000 -> "17.180.000", 1.5 -> "1,5".
+ * Dùng cho số không phải tiền (điểm benchmark, RAM...) hoặc bảng trộn nhiều đơn vị. */
+export function formatNumber(n: number | null | undefined, maxFractionDigits = 2): string {
+  if (n == null || Number.isNaN(n)) return '—';
+  return n.toLocaleString('vi-VN', { maximumFractionDigits: maxFractionDigits });
+}
+
 export function formatShortVnd(amount: number | null | undefined): string {
   if (amount == null) return '—';
   return `${Math.round(amount / 1_000_000)} tr`;

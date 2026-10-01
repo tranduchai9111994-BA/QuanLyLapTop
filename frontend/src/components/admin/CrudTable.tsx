@@ -4,6 +4,7 @@ import { UploadOutlined, DownloadOutlined, SearchOutlined } from '@ant-design/ic
 import * as XLSX from 'xlsx';
 import { api } from '../../lib/api';
 import { t } from '../../theme/tokens';
+import { formatNumber } from '../../utils/format';
 
 export type FieldType = 'text' | 'number' | 'boolean' | 'select';
 
@@ -19,6 +20,9 @@ export interface CrudField {
   min?: number;
   max?: number;
   step?: number;
+  /** Số lớn (giá tiền, điểm benchmark thô...): hiện dấu "." ngăn cách hàng nghìn ở cả cột bảng
+   * lẫn ô nhập (vd 17180000 -> 17.180.000). Chỉ ảnh hưởng hiển thị - giá trị lưu/gửi vẫn là số thuần. */
+  thousands?: boolean;
   /** Chu thich nho duoi o nhap (vd "Chon tu bang benchmark da co"). */
   help?: string;
   /** Tu tinh gia tri hien trong BANG tu ca dong du lieu - dung khi gia tri khong nam thang o
@@ -244,7 +248,9 @@ export function CrudTable({
             ? f.tableValue(row)
             : f.type === 'boolean'
               ? (v ? 'Có' : 'Không')
-              : f.type === 'select'
+              : f.thousands
+                ? formatNumber(v, 0)
+                : f.type === 'select'
                 ? (f.options?.find((o) => o.value === v)?.label ?? v)
                 : v,
       })),
@@ -349,7 +355,18 @@ export function CrudTable({
                 ]}
               >
                 {f.type === 'number' ? (
-                  <InputNumber style={{ width: '100%' }} min={f.min} max={f.max} step={f.step} />
+                  <InputNumber
+                    style={{ width: '100%' }}
+                    min={f.min}
+                    max={f.max}
+                    step={f.step}
+                    {...(f.thousands
+                      ? {
+                          formatter: (v: unknown) => `${v ?? ''}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.'),
+                          parser: (v: string | undefined) => Number((v ?? '').replace(/\./g, '')),
+                        }
+                      : {})}
+                  />
                 ) : f.type === 'boolean' ? (
                   <Switch />
                 ) : f.type === 'select' ? (

@@ -24,7 +24,7 @@ const COMMON_FIELDS = [
   { key: 'id', label: 'ID', type: 'number' as const, hideInForm: true },
   { key: 'pattern', label: 'Mã tra cứu (pattern)', type: 'text' as const, required: true },
   { key: 'displayName', label: 'Tên hiển thị', type: 'text' as const, required: true },
-  { key: 'rawScore', label: 'Điểm PassMark thô', type: 'number' as const, required: true },
+  { key: 'rawScore', label: 'Điểm PassMark thô', type: 'number' as const, required: true, thousands: true },
   { key: 'score', label: 'Điểm chuẩn hóa (0-100)', type: 'number' as const, required: true },
   { key: 'source', label: 'Nguồn tra cứu', type: 'text' as const, required: true },
   { key: 'checkedAt', label: 'Ngày tra (ISO)', type: 'text' as const, required: true },

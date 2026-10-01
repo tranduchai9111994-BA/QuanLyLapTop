@@ -96,7 +96,7 @@ export function AdminLaptops() {
           { key: 'srgb100', label: 'sRGB 100%', type: 'boolean' },
           { key: 'weightKg', label: 'Trọng lượng (kg)', type: 'number', required: true, ...NUMERIC_LIMITS.weightKg },
           { key: 'batteryWh', label: 'Pin (Wh)', type: 'number', ...NUMERIC_LIMITS.batteryWh },
-          { key: 'priceVnd', label: 'Giá (VND)', type: 'number', required: true, ...NUMERIC_LIMITS.priceVnd },
+          { key: 'priceVnd', label: 'Giá (VND)', type: 'number', required: true, thousands: true, ...NUMERIC_LIMITS.priceVnd },
           {
             key: 'segment',
             label: 'Phân khúc',

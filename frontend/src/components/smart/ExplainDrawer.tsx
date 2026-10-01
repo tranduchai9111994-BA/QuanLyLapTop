@@ -2,6 +2,7 @@ import { Drawer, Table, Tag } from 'antd';
 import type { RecommendationItemDto, RecommendationResult } from '../../types';
 import { segmentColors, t } from '../../theme/tokens';
 import { explainText } from '../../utils/explainText';
+import { formatNumber } from '../../utils/format';
 import { RadarComparison } from './RadarComparison';
 
 // Ten hien thi tieng Viet cho tung dac trung ky thuat (khoa tieng Anh khop voi ten cot trong
@@ -125,9 +126,9 @@ export function ExplainDrawer({
         dataSource={rows}
         columns={[
           { title: 'Đặc trưng', dataIndex: 'feature' },
-          { title: 'Bạn cần', dataIndex: 'need', className: 'tabular-nums' },
-          { title: 'Máy này', dataIndex: 'actual', className: 'tabular-nums' },
-          { title: 'Mức lệch', dataIndex: 'diff', className: 'tabular-nums' },
+          { title: 'Bạn cần', dataIndex: 'need', className: 'tabular-nums', render: (v: number) => formatNumber(v) },
+          { title: 'Máy này', dataIndex: 'actual', className: 'tabular-nums', render: (v: number) => formatNumber(v) },
+          { title: 'Mức lệch', dataIndex: 'diff', className: 'tabular-nums', render: (v: number) => formatNumber(v) },
         ]}
       />
 
