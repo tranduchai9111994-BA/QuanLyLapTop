@@ -10,10 +10,13 @@ const PORT = env.port;
 
 const app = createApp();
 
-/** ML service (Python/uvicorn) thuong khoi dong cham hon backend (Node). Neu dong bo lan dau
- * that bai vi ML chua kip san sang (ECONNREFUSED), thu lai vai lan thay vi bo cuoc va cho den
- * 02:00 hom sau (cron). Cac lan CRUD sau nay van goi snapshotSync() binh thuong. */
-async function syncWithRetry(maxAttempts = 5, delayMs = 3000) {
+/** ML service (Python/uvicorn) khởi động chậm hơn backend (Node) rất nhiều - đo thực tế trên máy
+ * dev có lúc mất ~110 giây (import pandas/sklearn + huấn luyện Mô hình C lúc startup). Nếu đồng
+ * bộ lần đầu thất bại vì ML chưa sẵn sàng (ECONNREFUSED), phải thử lại ĐỦ LÂU (60 lần x 5s = 5
+ * phút) thay vì bỏ cuộc sau 15 giây - bỏ cuộc sớm khiến ML chạy với catalog rỗng (trả 409) và mọi
+ * lượt gợi ý rơi vào chế độ dự phòng cho tới 02:00 hôm sau. Các lần CRUD sau này vẫn gọi
+ * snapshotSync() bình thường. */
+async function syncWithRetry(maxAttempts = 60, delayMs = 5000) {
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const result = await snapshotSync();
     if (result) return;
