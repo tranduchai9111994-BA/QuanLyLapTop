@@ -8,6 +8,9 @@ export const t = {
   primary600: '#1559C1',
   primary700: '#0F4494',
   ai500: '#06B6D4',
+  // Màu cam sáng dùng riêng cho đối tượng "Bạn cần" (mục tiêu) trên biểu đồ radar - đối lập hẳn
+  // với dải xanh -> cyan của "Máy này" để 2 vùng không chìm vào nhau (hex được phép khai báo ở đây).
+  chartNeed: '#F97316',
   aiGradient: 'linear-gradient(135deg, #1A73E8 0%, #06B6D4 100%)',
   bgPage: '#F5F9FF',
   bgSurface: '#FFFFFF',
