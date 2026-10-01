@@ -25,7 +25,7 @@ model User {
 model Brand {
   id   Int    @id @default(autoincrement())
   name String @unique @db.NVarChar(60)
-  /// Hang uy tin thuong hieu 1..5 (5 = uy tin nhat) - dung lam dac trung cho Mo hinh B
+  /// Hạng uy tín thương hiệu 1..5 (5 = uy tín nhất) - dùng làm đặc trưng cho Mô hình B
   tier Int    @default(3)
 
   laptops Laptop[]
@@ -59,7 +59,7 @@ model Laptop {
   id             Int      @id @default(autoincrement())
   sku            String   @unique @db.NVarChar(80)
   name           String   @db.NVarChar(200)
-  /// Dong san pham (vd "Legion", "TUF Gaming") - gia ban gan voi tung dong/model cu the
+  /// Dòng sản phẩm (vd "Legion", "TUF Gaming") - giá bán gắn với từng dòng/model cụ thể
   series         String?  @db.NVarChar(80)
   brandId        Int
   cpuId          Int
@@ -76,13 +76,13 @@ model Laptop {
   weightKg       Float
   batteryWh      Float?
   priceVnd       Int
-  /// Gia niem yet TRUOC khuyen mai (null = khong dang giam gia). priceVnd luon la GIA HIEN
-  /// TAI (da giam neu co) - discountPercent tinh tu 2 cot nay, khong luu rieng de tranh lech
-  /// du lieu khi mot trong hai gia thay doi.
+  /// Giá niêm yết TRƯỚC khuyến mãi (null = không đang giảm giá). priceVnd luôn là GIÁ HIỆN
+  /// TẠI (đã giảm nếu có) - discountPercent tính từ 2 cột này, không lưu riêng để tránh lệch
+  /// dữ liệu khi một trong hai giá thay đổi.
   originalPriceVnd Int?
-  /// So luot da ban - dung lam tin hieu "do pho bien" trong xep hang Mo hinh B, tuong tu cac
-  /// san Thuong mai dien tu that (may ban chay duoc uu tien hien thi ngay ca khi khong phai
-  /// khop nhu cau hoan hao nhat).
+  /// Số lượt đã bán - dùng làm tín hiệu "độ phổ biến" trong xếp hạng Mô hình B, tương tự các
+  /// sàn Thương mại điện tử thật (máy bán chạy được ưu tiên hiển thị ngay cả khi không phải
+  /// khớp nhu cầu hoàn hảo nhất).
   salesCount     Int      @default(0)
   imageUrl       String?  @db.NVarChar(500)
   sourceUrl      String?  @db.NVarChar(500)
@@ -106,7 +106,7 @@ model Laptop {
   @@index([isActive])
 }
 
-/// Nhan phan khuc hien hanh cua mot laptop - nguon huan luyen Mo hinh A
+/// Nhãn phân khúc hiện hành của một laptop - nguồn huấn luyện Mô hình A
 model SegmentLabel {
   id           Int      @id @default(autoincrement())
   laptopId     Int      @unique
@@ -150,7 +150,7 @@ model ModelVersion {
   note         String?   @db.NVarChar(500)
 }
 
-/// Telemetry: moi luot tu van
+/// Telemetry: mỗi lượt tư vấn
 model RecommendationSession {
   id              String   @id @default(uuid())
   userId          Int?
@@ -217,7 +217,7 @@ model Favorite {
   @@id([userId, laptopId])
 }
 
-/// Ghi de tri thuc: ghim / loai
+/// Ghi đè tri thức: ghim / loại
 model LaptopPin {
   id        Int       @id @default(autoincrement())
   laptopId  Int
@@ -231,7 +231,7 @@ model LaptopPin {
   laptop Laptop @relation(fields: [laptopId], references: [id])
 }
 
-/// Cau hinh tri thuc dang key-value
+/// Cấu hình tri thức dạng key-value
 model KnowledgeConfig {
   key       String   @id @db.NVarChar(80)
   valueJson String   @db.NVarChar(Max)
