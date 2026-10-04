@@ -207,7 +207,7 @@ def build_model_a_preprocessor() -> ColumnTransformer:
             "num",  # nhóm 2: 7 cột số thường (không log)
             Pipeline([
                 ("impute", SimpleImputer(strategy="median")),
-                ("sc", StandardScaler()),
+                ("sc", StandardScaler()),  # z-score: (x - trung bình) / độ lệch chuẩn
             ]),
             NUMERIC,
         ),
