@@ -17,24 +17,24 @@ from sklearn.preprocessing import FunctionTransformer, StandardScaler
 
 # ram_gb, ssd_gb: lấy LOG2 trước khi chuẩn hóa (xem build_model_a_preprocessor), vì 8GB->16GB và
 # 16GB->32GB đều là "gấp đôi" nên phải có khoảng cách bằng nhau.
-NUMERIC_LOG = ["ram_gb", "ssd_gb"]
+NUMERIC_LOG = ["ram_gb", "ssd_gb"]  # nhóm 1 (2 cột): lấy log2 rồi mới chuẩn hóa
 
 # Đặc trưng số bình thường, chuẩn hóa z-score trực tiếp
-NUMERIC = ["cpu_score", "gpu_score", "screen_inch", "ppi", "refresh_hz", "weight_kg", "battery_wh"]
+NUMERIC = ["cpu_score", "gpu_score", "screen_inch", "ppi", "refresh_hz", "weight_kg", "battery_wh"]  # nhóm 2 (7 cột): chuẩn hóa thẳng
 
 # Đặc trưng nhị phân (0/1), giữ nguyên vì đã ở thang 0-1
-BINARY = ["gpu_dedicated", "srgb_100"]
+BINARY = ["gpu_dedicated", "srgb_100"]  # nhóm 3 (2 cột): giữ nguyên 0/1
 
 # Đặc trưng đầu vào của MÔ HÌNH A (phân lớp phân khúc). price_vnd cố ý KHÔNG có (quyết định D-04):
 # nếu có, mô hình sẽ học phân khúc theo GIÁ thay vì CẤU HÌNH THẬT.
-MODEL_A_FEATURES = NUMERIC_LOG + NUMERIC + BINARY
+MODEL_A_FEATURES = NUMERIC_LOG + NUMERIC + BINARY  # ★ 11 cột = 2 + 7 + 2: đầu vào Mô hình A
 
 # Đặc trưng đầu vào của MÔ HÌNH B (truy hồi/xếp hạng). Ngược với Mô hình A, giá và độ "đáng tiền"
 # (value_index) PHẢI có vì mục đích của Mô hình B là cân bằng hiệu năng và giá.
 #
 # `discount_percent` và `sales_score` mô phỏng hành vi mua sắm thực tế: máy giảm giá sâu và bán
 # chạy có thể được ưu tiên hơn máy rẻ hơn nhưng ít khuyến mãi/ít người mua.
-MODEL_B_FEATURES = MODEL_A_FEATURES + [
+MODEL_B_FEATURES = MODEL_A_FEATURES + [  # ★ Mô hình B = 11 cột của A + 5 cột dưới = 16 cột
     "price_vnd", "brand_tier", "value_index", "discount_percent", "sales_score",
 ]
 
