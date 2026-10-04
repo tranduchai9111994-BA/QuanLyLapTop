@@ -223,12 +223,15 @@ Tự kiểm tra bằng Excel: mở `data/processed/catalog_vn.csv`, cột cân n
 gần giống cột "cả 1.000 máy" (khác 800 máy một chút vì mô hình chỉ học trên 800).
 
 **Xem trực tiếp bên trong `model.joblib`:** file này là **nhị phân** (mở bằng VS Code chỉ thấy cảnh báo "binary"),
-nên dùng lệnh sau (chạy trong thư mục `ml-service`) để in ra dạng đọc được:
+nên dùng lệnh sau để in ra dạng đọc được. **Phải đứng trong thư mục `ml-service`** (dòng nhắc lệnh phải
+là `PS D:\QL_Laptop\ml-service>`); nếu đứng ở `D:\QL_Laptop` sẽ báo lỗi `No module named 'app'`:
 
 ```
+cd ml-service                                                # bỏ qua nếu đã đứng trong ml-service
 python -m app.lifecycle.inspect_model                        # bản đang dùng (ghi trong file artifacts/LATEST)
 python -m app.lifecycle.inspect_model clf-2026.09.27-012747  # một bản cụ thể
 ```
+(Trên PowerShell có thể gộp 1 dòng: `cd ml-service; python -m app.lifecycle.inspect_model`.)
 Kết quả gồm: trung bình/độ lệch chuẩn của từng cột (bước chuẩn hóa), `k = 7`, cách đo `euclidean`, và
 **"số máy đã ghi nhớ = 800"**. Lưu ý kNN không "học công thức", nó **ghi nhớ 800 máy đã gán nhãn** rồi so sánh
 máy mới với chúng. Phần chữ dễ đọc (tham số tốt nhất, điểm macro-F1, số mẫu) có sẵn trong

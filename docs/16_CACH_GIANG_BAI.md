@@ -67,6 +67,9 @@ Khi giải thích đoạn code, ghi rõ chỗ nào:
   không phải cả 1.000), lưu ở đâu (vd `model.joblib`), cách tính lại độc lập (đoạn Python hoặc Excel
   `AVERAGE`/`STDEV.P`) và chỉ ra hai kết quả khớp nhau. Nếu có số gần giống nhưng khác (vd tính trên 800 vs
   1.000 máy) thì nói rõ vì sao khác.
+- **Lệnh terminal phải kèm "đang đứng ở thư mục nào"** (người học chạy sai chỗ, báo `No module named 'app'`):
+  ghi rõ thư mục cần đứng (và `cd ...` nếu cần), dùng đúng cú pháp PowerShell (nối lệnh bằng `;`, không dùng
+  `&&`), **tự chạy thử đúng như người học sẽ gõ** từ thư mục gốc dự án trước khi hướng dẫn.
 - **Không nhảy cóc phép tính** (người học không chuyên code, đã phàn nàn khi bảng chỉ có kết quả cuối):
   khi một con số trong bảng được tính ra, **viết từng bước** theo thứ tự: số đầu vào (kèm nguồn, vd trung
   bình/độ lệch chuẩn lấy từ mô hình) -> công thức -> thay số -> kết quả từng bước -> kết quả cuối, đủ
