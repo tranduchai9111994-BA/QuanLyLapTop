@@ -74,7 +74,7 @@ d(máy 1, máy 2) = √( Σ (đặc trưng_j của máy 1 − đặc trưng_j c�
 
 ## 1.4 Dữ liệu đưa vào được xử lý thế nào (và vì sao)
 
-Code: `ml-service/app/features.py` — `MODEL_A_FEATURES` (dòng 35), `build_model_a_preprocessor()` (dòng 225).
+Code: `ml-service/app/features.py` — `MODEL_A_FEATURES` (dòng 30), `build_model_a_preprocessor()` (dòng 188).
 
 | Nhóm | Đặc trưng | Xử lý | Vì sao |
 |---|---|---|---|
@@ -168,8 +168,8 @@ Có test chặn lỗi này: `ml-service/tests/test_classifier.py` (`test_scaler_
 | Mô hình, GridSearch, baseline, đường cong k | `ml-service/app/classifier.py` |
 | Huấn luyện + lưu phiên bản | `ml-service/app/train.py`, `ml-service/app/registry.py` |
 | Đo lại kiểm thử chéo, ma trận nhầm lẫn | `ml-service/app/evaluate.py`, `ml-service/artifacts/evaluation.json` |
-| Endpoint `/predict-segment` | `ml-service/app/main.py` (dòng 100) |
-| Backend: gọi mô hình + quyết định VERIFIED/NEEDS_REVIEW | `backend/src/modules/laptops/segment.service.ts` (`applySegmentLabel`, dòng 118) |
+| Endpoint `/predict-segment` | `ml-service/app/main.py` (hàm `predict_segment`, dòng 86–120) |
+| Backend: gọi mô hình + quyết định VERIFIED/NEEDS_REVIEW | `backend/src/modules/laptops/segment.service.ts` (`predictSegment` dòng 59; `applySegmentLabel` dòng 104) |
 | Giao diện gợi ý phân khúc + 7 láng giềng | `frontend/src/components/admin/SegmentSuggester.tsx` |
 | Hàng đợi duyệt nhãn + khóa nhãn | `frontend/src/pages/admin/AdminReviewQueue.tsx` |
 | Kiểm thử | `ml-service/tests/test_classifier.py` |
