@@ -99,14 +99,13 @@ def _require_catalog() -> pd.DataFrame:
 
 @app.post("/predict-segment")
 def predict_segment(req: PredictSegmentRequest) -> dict:
-    """Mo hinh A: cho 1 hoac nhieu cau hinh laptop, du doan PHAN KHUC (Gaming/Office/...) kem xac
-    suat tung nhan - dung khi nhan vien them may MOI vao he thong (chua ai gan nhan tay)."""
+    """Mô hình A: nhận 1 hoặc nhiều cấu hình laptop, dự đoán PHÂN KHÚC kèm xác suất từng nhãn.
+    Dùng khi nhân viên thêm máy MỚI (chưa ai gán nhãn tay)."""
     if registry.model is None:
-        raise HTTPException(status_code=503, detail="Chua co mo hinh phan lop duoc kich hoat")
-    X = pd.DataFrame(req.items)
-    # Neu request thieu cot nao trong dac trung Mo hinh A can (vd may moi chua co du lieu day
-    # du), dien 0 tam de khong bi loi thieu cot - chap nhan do chinh xac giam nhe cho truong hop
-    # hiem gap nay, con hon la tra loi 500 cho ca request
+        raise HTTPException(status_code=503, detail="Chưa có mô hình phân lớp được kích hoạt")
+    X = pd.DataFrame(req.items)  # danh sách dict -> bảng (1 máy = 1 hàng, 1 đặc trưng = 1 cột)
+    # Thiếu cột nào thì điền 0 để khỏi lỗi 500. Lưu ý 0 KHÔNG trung tính (vd cpu_score=0 = CPU cực
+    # yếu); chỉ là lưới an toàn vì backend luôn gửi đủ 11 đặc trưng.
     for col in MODEL_A_FEATURES:
         if col not in X.columns:
             X[col] = 0
