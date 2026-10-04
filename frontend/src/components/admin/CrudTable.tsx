@@ -13,27 +13,24 @@ export interface CrudField {
   label: string;
   type: FieldType;
   required?: boolean;
-  options?: { label: string; value: number | string }[]; // cho type = 'select'
+  options?: { label: string; value: number | string }[]; // dùng cho type = 'select'
   hideInTable?: boolean;
   hideInForm?: boolean;
-  /** Gioi han cho o nhap so - chan gia tri vo ly (vd RAM am, SSD = 0) ngay tren giao dien. */
+  /** Giới hạn cho ô nhập số, chặn giá trị vô lý (vd RAM âm) ngay trên giao diện. */
   min?: number;
   max?: number;
   step?: number;
-  /** Số lớn (giá tiền, điểm benchmark thô...): hiện dấu "." ngăn cách hàng nghìn ở cả cột bảng
-   * lẫn ô nhập (vd 17180000 -> 17.180.000). Chỉ ảnh hưởng hiển thị - giá trị lưu/gửi vẫn là số thuần. */
+  /** Số lớn: hiện dấu "." ngăn cách hàng nghìn (17180000 -> 17.180.000), chỉ ảnh hưởng hiển thị. */
   thousands?: boolean;
-  /** Chu thich nho duoi o nhap (vd "Chon tu bang benchmark da co"). */
+  /** Chú thích nhỏ dưới ô nhập. */
   help?: string;
-  /** Tu tinh gia tri hien trong BANG tu ca dong du lieu - dung khi gia tri khong nam thang o
-   * `row[key]` (vd phan khuc nam trong `row.segmentLabel.segment`). Neu tra ve chuoi thi o tim
-   * kiem cung tim theo chuoi nay. */
+  /** Tự tính giá trị hiện trong bảng từ cả dòng (khi giá trị không nằm ở `row[key]`). Nếu trả về
+   * chuỗi thì ô tìm kiếm cũng tìm theo chuỗi này. */
   tableValue?: (row: any) => ReactNode;
 }
 
-/** Bang CRUD dung chung: 1 component phuc vu nhieu thuc the (Brand, CPU/GPU Benchmark, Laptop)
- * thay vi viet rieng tung man - tiet kiem code nhung van goi dung API/quyen da co san o backend.
- * Co san: tim kiem (loc client-side tren du lieu da tai), xuat/nhap Excel, form dang luoi 2 cot. */
+/** Bảng CRUD dùng chung cho nhiều thực thể (Brand, CPU/GPU Benchmark, Laptop). Có tìm kiếm
+ * (lọc client-side), xuất/nhập Excel, form dạng lưới 2 cột. */
 export function CrudTable({
   title,
   endpoint,
@@ -45,35 +42,30 @@ export function CrudTable({
   afterSave,
 }: {
   title: string;
-  /** Duong dan goc dung cho POST/PUT/DELETE, vd "/brands" (khong kem query string). */
+  /** Đường dẫn gốc cho POST/PUT/DELETE, vd "/brands" (không kèm query string). */
   endpoint: string;
-  /** Duong dan dung rieng cho GET danh sach, vd "/laptops?pageSize=500". Mac dinh = endpoint. */
+  /** Đường dẫn riêng cho GET danh sách, vd "/laptops?pageSize=500". Mặc định = endpoint. */
   listEndpoint?: string;
   fields: CrudField[];
   transformSubmit?: (values: any) => any;
-  /** Chuyen doi ban ghi truoc khi do vao form Sua (vd ghep resWidth/resHeight thanh mot muc chon). */
+  /** Chuyển bản ghi trước khi đổ vào form Sửa (vd ghép resWidth/resHeight thành một mục chọn). */
   transformEdit?: (row: any) => any;
-  /** Noi dung phu hien trong modal (vd o AI goi y phan khuc khi them laptop moi). `isEdit` cho
-   * biet dang o che do SUA (co ban ghi cu) hay THEM MOI - vd canh bao "sua diem se anh huong moi
-   * may dung linh kien nay" chi hop ly khi dang sua, khong phai luc them moi. */
+  /** Nội dung phụ trong modal (vd ô AI gợi ý phân khúc). `isEdit` cho biết đang SỬA hay THÊM MỚI. */
   renderFormExtra?: (form: any, isEdit: boolean) => ReactNode;
-  /** Goi sau khi luu thanh cong voi ban ghi server tra ve - de man cu the hien them thong bao
-   * rieng (vd Laptop canh bao "AI chi tin cay 45%, da dua vao hang doi can xac minh"). */
+  /** Gọi sau khi lưu thành công với bản ghi server trả về, để màn cụ thể hiện thông báo riêng. */
   afterSave?: (saved: any) => void;
 }) {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  // Tang moi lan mo modal -> `renderFormExtra` duoc dung lai tu dau (key doi), khong con giu ket
-  // qua cu cua lan mo truoc (vd du doan AI cua may khac hien sai cho may dang sua).
+  // Tăng mỗi lần mở modal để `renderFormExtra` được dựng lại, không giữ kết quả của lần trước.
   const [formKey, setFormKey] = useState(0);
   const [searchText, setSearchText] = useState('');
   const [importing, setImporting] = useState(false);
   const [form] = Form.useForm();
 
-  /** Tai lai danh sach tu API (goi lai sau moi lan them/sua/xoa/nhap Excel thanh cong, de bang
-   * luon khop voi du lieu that tren server, khong tu suy doan cap nhat state cuc bo). */
+  /** Tải lại danh sách từ API sau mỗi lần thêm/sửa/xóa/nhập Excel để bảng khớp dữ liệu server. */
   function load() {
     setLoading(true);
     api
@@ -83,8 +75,7 @@ export function CrudTable({
       .finally(() => setLoading(false));
   }
 
-  // Tai lai neu component duoc dung cho MOT thuc the khac (vd chuyen tu man Brand sang man
-  // Laptop - cung 1 component CrudTable nhung endpoint doi) - khong chi chay 1 lan luc mount
+  // Tải lại khi endpoint đổi (cùng một CrudTable dùng cho thực thể khác), không chỉ lúc mount
   useEffect(load, [endpoint, listEndpoint]);
 
   const filteredRows = useMemo(() => {
@@ -97,16 +88,14 @@ export function CrudTable({
           if (typeof v === 'string' && v.toLowerCase().includes(q)) return true;
         }
         const raw = row[f.key];
-        // Truong 'select' (vd gpuId=14) phai so theo NHAN hien thi ("NVIDIA GeForce RTX 4070"),
-        // khong phai so voi ID so - nguoi dung go ten may/linh kien, khong go ID.
+        // Trường 'select' so theo nhãn hiển thị chứ không phải ID, vì người dùng gõ tên
         const display = f.type === 'select' ? f.options?.find((o) => o.value === raw)?.label ?? raw : raw;
         return String(display ?? '').toLowerCase().includes(q);
       })
     );
   }, [rows, searchText, fields]);
 
-  /** Mo modal o che do THEM MOI: `editing = null` bao cho `handleSubmit` biet phai goi POST
-   * (khong phai PUT), va xoa trang form cu (neu lan truoc dang sua do dang dang do). */
+  /** Mở modal chế độ THÊM MỚI: `editing = null` để `handleSubmit` gọi POST, và xóa trắng form. */
   function openCreate() {
     setEditing(null);
     form.resetFields();
@@ -114,9 +103,8 @@ export function CrudTable({
     setModalOpen(true);
   }
 
-  /** Mo modal o che do SUA: do san du lieu cua dong dang chon vao form. `transformEdit` (neu co)
-   * dung de "giai nen" du lieu truoc khi hien - vd Laptop luu resWidth/resHeight rieng trong DB
-   * nhung form chi co 1 o chon "Do phan giai" ghep ca 2, nen phai ghep lai truoc khi do vao form. */
+  /** Mở modal chế độ SỬA: đổ dữ liệu dòng đang chọn vào form (qua `transformEdit` nếu có, vd ghép
+   * resWidth/resHeight thành ô "Độ phân giải"). */
   function openEdit(row: any) {
     setEditing(row);
     form.setFieldsValue(transformEdit ? transformEdit(row) : row);
@@ -124,11 +112,10 @@ export function CrudTable({
     setModalOpen(true);
   }
 
-  /** Luu form (dung chung cho ca THEM MOI va SUA - phan biet bang `editing` co gia tri hay
-   * khong). `transformSubmit` (neu co) lam nguoc lai `transformEdit`: bien gia tri form ve dung
-   * dinh dang API can (vd tach "Do phan giai" da chon thanh resWidth/resHeight rieng). */
+  /** Lưu form cho cả THÊM MỚI và SỬA (phân biệt bằng `editing`). `transformSubmit` làm ngược lại
+   * `transformEdit`: đưa giá trị form về đúng định dạng API. */
   async function handleSubmit() {
-    const values = await form.validateFields(); // nem loi neu co truong bat buoc con trong -> AntD tu hien loi tren tung o
+    const values = await form.validateFields(); // ném lỗi nếu còn trường bắt buộc trống, AntD tự hiện lỗi
     const payload = transformSubmit ? transformSubmit(values) : values;
     try {
       const r = editing
@@ -137,7 +124,7 @@ export function CrudTable({
       message.success(editing ? 'Đã cập nhật.' : 'Đã thêm mới.');
       afterSave?.(r.data.data);
       setModalOpen(false);
-      load(); // tai lai danh sach de bang hien dung du lieu vua luu
+      load(); // tải lại để bảng hiện đúng dữ liệu vừa lưu
     } catch (err: any) {
       message.error(err?.response?.data?.error?.message ?? 'Không lưu được, vui lòng thử lại.');
     }
@@ -153,25 +140,21 @@ export function CrudTable({
     }
   }
 
-  /** Chuyen 1 gia tri THO trong du lieu (vd `gpuId = 14`, `srgb100 = true`) thanh dang DE DOC
-   * trong file Excel xuat ra (vd "NVIDIA GeForce RTX 4070", "1") - nguoi dung mo file Excel xem
-   * bang mat thuong, khong phai lap trinh vien doc JSON. */
+  /** Chuyển giá trị thô (vd `gpuId = 14`, `srgb100 = true`) thành dạng dễ đọc trong file Excel xuất. */
   function exportLabel(f: CrudField, value: any) {
     if (f.type === 'boolean') return value ? 1 : 0;
     if (f.type === 'select') return f.options?.find((o) => o.value === value)?.label ?? value;
     return value;
   }
 
-  /** Xuat TOAN BO du lieu dang loc (filteredRows - neu dang go tim kiem thi chi xuat ket qua
-   * dang loc, khong xuat het bang goc) ra file .xlsx, 1 sheet, ten sheet = ten man (cat con 31
-   * ky tu vi Excel gioi han do dai ten sheet). */
+  /** Xuất dữ liệu đang lọc (filteredRows) ra file .xlsx 1 sheet; tên sheet cắt còn 31 ký tự do
+   * giới hạn của Excel. */
   function handleExport() {
     const exportFields = fields.filter((f) => !f.hideInTable || f.key === 'id');
     const data = filteredRows.map((row) =>
       Object.fromEntries(
         exportFields.map((f) => {
-          // Truong co tableValue dang chuoi (vd phan khuc nam long trong segmentLabel) -> xuat
-          // dung chuoi dang hien tren bang, neu khong se ra o trong vi row[f.key] khong ton tai
+          // Có tableValue dạng chuỗi thì xuất chuỗi đó, vì row[f.key] có thể không tồn tại
           const shown = f.tableValue?.(row);
           return [f.label, typeof shown === 'string' ? shown : exportLabel(f, row[f.key])];
         })
@@ -183,9 +166,8 @@ export function CrudTable({
     XLSX.writeFile(wb, `${title.replace(/\s+/g, '_')}.xlsx`);
   }
 
-  /** Nhap hang loat tu Excel/CSV: cot phai dat ten dung `field.label` (giong file xuat ra ->
-   * co the sua truc tiep file da xuat roi nhap lai). Moi dong goi POST rieng (phu hop quy mo
-   * quan tri vai tram dong; du lieu lon hon nen lam API nhap hang loat rieng o backend). */
+  /** Nhập hàng loạt từ Excel/CSV: tên cột phải đúng `field.label` (khớp file xuất). Mỗi dòng gọi
+   * POST riêng, phù hợp quy mô vài trăm dòng. */
   async function handleImport(file: File) {
     setImporting(true);
     try {
@@ -193,9 +175,8 @@ export function CrudTable({
       const wb = XLSX.read(buf, { type: 'array' });
       const sheet = wb.Sheets[wb.SheetNames[0]];
       const jsonRows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet);
-      // Nhap MOI cot da xuat, tru ID (ID do database cap). Khong loc theo hideInForm nua: vd
-      // Laptop an resWidth/resHeight khoi form (form dung 1 o "Do phan giai") nhung file xuat co 2
-      // cot nay - bo qua chung thi dong nhap vao thieu do phan giai va bi tu choi.
+      // Nhập mọi cột đã xuất trừ ID; không lọc theo hideInForm vì resWidth/resHeight ẩn khỏi form
+      // nhưng vẫn cần cho dòng nhập.
       const importFields = fields.filter((f) => f.key !== 'id');
 
       let success = 0;
@@ -207,9 +188,8 @@ export function CrudTable({
           if (raw === undefined || raw === '') continue;
           if (f.type === 'boolean') payload[f.key] = raw === 1 || raw === true || raw === 'Có';
           else if (f.type === 'select') {
-            // File xuat ra ghi o chon bang NHAN hien thi (vd "Intel Core i9-13900H"), khong phai
-            // ID - nen phai tra nguoc nhan -> gia tri. Truoc day ep thang Number(raw) nen file vua
-            // xuat ra nhap lai bi NaN. Van chap nhan file ghi san gia tri (ID hoac ma phan khuc).
+            // File xuất ghi nhãn hiển thị chứ không phải ID nên tra ngược nhãn -> giá trị; vẫn chấp
+            // nhận file ghi sẵn giá trị (ID hoặc mã phân khúc).
             const opt = f.options?.find((o) => o.label === String(raw) || String(o.value) === String(raw));
             if (opt) payload[f.key] = opt.value;
           } else if (f.type === 'number') payload[f.key] = Number(raw);
@@ -229,11 +209,10 @@ export function CrudTable({
     } finally {
       setImporting(false);
     }
-    return false; // ngan Upload tu upload len server mac dinh
+    return false; // chặn Upload tự upload lên server
   }
 
-  // Dung TU DONG sinh cot bang tu khai bao `fields` - them 1 truong moi vao `fields` la du, KHONG
-  // can sua rieng phan hien thi bang o day (tranh quen sua 1 trong 2 cho, dan den lech du lieu)
+  // Cột bảng tự sinh từ `fields`: thêm trường mới vào `fields` là đủ, không cần sửa ở đây
   const columns = [
     ...fields
       .filter((f) => !f.hideInTable)
@@ -241,8 +220,7 @@ export function CrudTable({
         title: f.label,
         dataIndex: f.key,
         key: f.key,
-        // boolean -> "Co"/"Khong"; select -> tra nhan hien thi tu ID (vd 14 -> "RTX 4070");
-        // con lai hien nguyen gia tri tho (text/number)
+        // boolean -> "Có"/"Không"; select -> nhãn hiển thị từ ID; còn lại hiện nguyên giá trị
         render: (v: any, row: any) =>
           f.tableValue
             ? f.tableValue(row)
@@ -275,8 +253,7 @@ export function CrudTable({
   ];
 
   const formFields = fields.filter((f) => !f.hideInForm);
-  // Form nhieu truong (vd Laptop co ~15 truong) hien theo LUOI 2 cot cho gon, thay vi 1 cot dai
-  // le xuong het man hinh; form it truong (vd Brand chi co ten+tier) van giu 1 cot cho don gian
+  // Form nhiều trường (vd Laptop) hiện lưới 2 cột cho gọn; form ít trường giữ 1 cột
   const useGrid = formFields.length > 4;
 
   return (
@@ -327,7 +304,7 @@ export function CrudTable({
         okText="Lưu"
         cancelText="Hủy"
         width={useGrid ? 720 : 480}
-        // Form nhap laptop kha dai - khong cho dong khi lo bam ra ngoai (mat het du lieu dang nhap)
+        // Không đóng khi bấm ra ngoài để tránh mất dữ liệu đang nhập
         maskClosable={false}
       >
         <Form form={form} layout="vertical">
@@ -348,7 +325,7 @@ export function CrudTable({
                 valuePropName={f.type === 'boolean' ? 'checked' : undefined}
                 rules={[
                   ...(f.required ? [{ required: true, message: `Vui lòng nhập ${f.label}` }] : []),
-                  // Chan gia tri ngoai khoang cho phep (vd RAM am, gia 0 dong) ngay khi bam Luu
+                  // Chặn giá trị ngoài khoảng cho phép ngay khi bấm Lưu
                   ...(f.type === 'number' && (f.min !== undefined || f.max !== undefined)
                     ? [{ type: 'number' as const, min: f.min, max: f.max, message: `${f.label} phải trong khoảng ${f.min ?? '-∞'} – ${f.max ?? '∞'}` }]
                     : []),

@@ -10,30 +10,24 @@ interface Prediction {
   label: string;
   proba: number;
   distribution: Record<string, number>;
-  /** k may trong tap huan luyen gan nhat da bo phieu (FR-09) - nhan + khoang cach. */
+  /** k máy gần nhất trong tập huấn luyện đã bỏ phiếu (FR-09): nhãn + khoảng cách. */
   neighbors: { label: string; distance: number }[];
 }
 
-/** Tieu chi 3 - "he thong thong minh len": khi nhan vien nhap MAY MOI, Mo hinh A tu doc cau hinh
- * va GOI Y phan khuc kem do tin cay + danh sach k lang gieng da bo phieu. Nhan vien chi can chap
- * nhan hoac chon nhan khac o o "Phan khuc" ben duoi, roi bam Luu.
- * Viec LUU nhan do backend lam (segment.service.ts): giu nhan AI -> nguon MODEL, doi nhan khac ->
- * nguon ADMIN; bo trong o "Phan khuc" -> backend tu dung du doan, do tin cay < nguong thi vao
- * hang doi "Can xac minh". */
+/** Khi nhập máy mới, Mô hình A đọc cấu hình và gợi ý phân khúc kèm độ tin cậy + k láng giềng đã
+ * bỏ phiếu. Việc lưu nhãn do backend làm (segment.service.ts): giữ nhãn AI -> nguồn MODEL, đổi
+ * nhãn -> nguồn ADMIN; để trống thì backend tự dùng dự đoán, dưới ngưỡng tin cậy thì vào hàng
+ * đợi "Cần xác minh". */
 export function SegmentSuggester({ form }: { form: FormInstance }) {
   const [pred, setPred] = useState<Prediction | null>(null);
   const [loading, setLoading] = useState(false);
-  // Theo doi o "Phan khuc" dang chon gi de biet nguoi dung dang giu hay doi nhan AI goi y
+  // Theo dõi ô "Phân khúc" để biết người dùng giữ hay đổi nhãn AI gợi ý
   const chosenSegment = Form.useWatch('segment', form);
 
   async function suggest() {
     const v = form.getFieldsValue();
-    // CHU Y: form CrudTable dung 1 o "resolution" gop (vd "2560x1440") khi dang THEM MOI - cac
-    // truong `resWidth`/`resHeight` rieng le CHI duoc tinh ra luc bam "Luu" (xem
-    // AdminLaptops.tsx transformSubmit), nen luc dang nhap (chua bam Luu) chung LUON undefined
-    // trong form. Truoc day ham nay kiem tra thang `resWidth`/`resHeight` nen luon bao "thieu du
-    // lieu" du da chon Do phan giai day du - phai tu tach `resolution` ra tai day, giong het cach
-    // transformSubmit lam, thi moi lay dung gia tri de goi API du doan.
+    // Form chỉ có ô "resolution" gộp (vd "2560x1440"); resWidth/resHeight chỉ được tính lúc bấm
+    // "Lưu" (AdminLaptops.tsx transformSubmit) nên ở đây phải tự tách ra như transformSubmit.
     let resWidth: number | undefined = v.resWidth;
     let resHeight: number | undefined = v.resHeight;
     if ((resWidth === undefined || resHeight === undefined) && v.resolution) {
@@ -66,11 +60,10 @@ export function SegmentSuggester({ form }: { form: FormInstance }) {
       });
       const p: Prediction = r.data.data;
       setPred(p);
-      // O "Phan khuc" con trong -> dien san nhan AI de nguoi dung chi can bam Luu. Neu nguoi dung
-      // da tu chon roi thi KHONG ghi de - ton trong lua chon cua nguoi (co nut "Dung nhan AI").
+      // Ô "Phân khúc" còn trống thì điền sẵn nhãn AI; nếu người dùng đã chọn thì không ghi đè.
       if (!form.getFieldValue('segment')) form.setFieldValue('segment', p.label);
     } catch (err: any) {
-      // Hien dung thong bao tu server (vd "hay tai lai trang") thay vi doan bua la loi ML service
+      // Hiện đúng thông báo từ server thay vì đoán là lỗi ML service
       message.error(
         err?.response?.data?.error?.message ??
           'Không gọi được mô hình. Kiểm tra dịch vụ ML có đang chạy không.'
@@ -90,7 +83,7 @@ export function SegmentSuggester({ form }: { form: FormInstance }) {
         <div style={{ marginTop: 10 }}>
           <ConfidenceIndicator distribution={pred.distribution} />
 
-          {/* FR-09: cho thay LY DO du doan - chinh k may gan nhat da bo phieu, khong phai hop den */}
+          {/* FR-09: cho thấy lý do dự đoán (k máy gần nhất đã bỏ phiếu), không phải hộp đen */}
           <div style={{ marginTop: 8, fontSize: 12, color: t.textSecondary }}>
             {pred.neighbors.length} máy gần nhất trong dữ liệu huấn luyện đã bỏ phiếu:{' '}
             {Object.entries(

@@ -10,21 +10,16 @@ import { SEGMENTS, applySegmentLabel, predictSegment } from './segment.service';
 
 export const laptopsRouter = Router();
 
-// Cac gia tri chuan + nguong hop le. Phai khop voi frontend/src/constants/laptopSpecs.ts va
-// ml-service/app/data_check.py. Day la TUYEN PHONG THU CUOI: giao dien da cho chon san, nhung
-// API van phai tu chan du lieu vo ly (vd RAM am, gia 0 dong) du ai goi truc tiep.
+// Giá trị chuẩn + ngưỡng hợp lệ, phải khớp frontend/src/constants/laptopSpecs.ts và
+// ml-service/app/data_check.py. Đây là tuyến phòng thủ cuối: API tự chặn dữ liệu vô lý dù ai gọi.
 const VALID_RAM = [4, 8, 12, 16, 24, 32, 64, 96, 128] as const;
 const VALID_SSD = [128, 256, 512, 1024, 2048, 4096] as const;
 
 const laptopInputSchema = z.object({
   sku: z.string().min(2, 'Mã SKU quá ngắn').max(80),
   name: z.string().min(2, 'Tên máy quá ngắn').max(200),
-  // CHU Y: cac truong duoi day la NULLABLE THAT trong Prisma schema (co dau `?`), nghia la khi
-  // doc tu DB ve, gia tri thieu se la `null` (KHONG PHAI `undefined`). `.optional()` cua zod CHI
-  // chap nhan `undefined`, se BAO LOI neu nhan `null` - day chinh la loi da bat duoc qua CRUD
-  // test tren browser (sua may co san `batteryWh = null` bi tra ve "Du lieu gui len khong hop
-  // le"). Phai dung `.nullable().optional()` (tuong duong `.nullish()`) cho MOI truong nullable
-  // that trong DB, khong chi optional o phia frontend.
+  // Các trường nullable thật trong Prisma trả về `null` (không phải `undefined`) khi đọc từ DB,
+  // mà `.optional()` của zod chỉ nhận `undefined` -> phải dùng `.nullable().optional()`.
   series: z.string().max(80).nullable().optional(),
   brandId: z.number().int().positive(),
   cpuId: z.number().int().positive(),
@@ -45,8 +40,7 @@ const laptopInputSchema = z.object({
   screenInch: z.number().min(10, 'Màn hình nhỏ hơn 10 inch là không hợp lệ').max(20),
   resWidth: z.number().int().min(1024).max(7680),
   resHeight: z.number().int().min(600).max(4320),
-  // refreshHz co @default(60) trong schema (KHONG co dau `?`) nen khong bao gio null - chi can
-  // .optional() la du
+  // refreshHz có @default(60) nên không bao giờ null
   refreshHz: z.number().int().min(30).max(500).optional(),
   srgb100: z.boolean().optional(),
   weightKg: z.number().min(0.8, 'Trọng lượng tối thiểu 0,8 kg').max(4.5, 'Trọng lượng tối đa 4,5 kg'),
@@ -54,13 +48,12 @@ const laptopInputSchema = z.object({
   priceVnd: z.number().int().min(3_000_000, 'Giá tối thiểu 3 triệu').max(200_000_000, 'Giá tối đa 200 triệu'),
   imageUrl: z.string().nullable().optional(),
   sourceUrl: z.string().nullable().optional(),
-  // Phan khuc nguoi dung chon/chap nhan trong form. KHONG bat buoc: bo trong thi Mo hinh A tu
-  // gan (xem segment.service.ts). Khong phai cot cua bang Laptop - luu rieng vao SegmentLabel.
+  // Không bắt buộc: bỏ trống thì Mô hình A tự gán (xem segment.service.ts). Lưu vào SegmentLabel.
   segment: z.enum(SEGMENTS).nullable().optional(),
 });
 
 async function computeAndUpsertLaptop(id: number | null, input: z.infer<typeof laptopInputSchema>) {
-  // Tach `segment` ra: day la du lieu cua bang SegmentLabel, Prisma se bao loi neu dua vao Laptop
+  // Tách `segment` ra vì thuộc bảng SegmentLabel, đưa vào Laptop sẽ bị Prisma báo lỗi
   const { segment: _segment, ...body } = input;
   const [cpu, gpu, agg] = await Promise.all([
     prisma.cpuBenchmark.findUniqueOrThrow({ where: { id: body.cpuId } }),
@@ -79,8 +72,7 @@ async function computeAndUpsertLaptop(id: number | null, input: z.infer<typeof l
   });
   const data = { ...body, ppi, performanceIdx, valueIdx };
   if (id) {
-    // Ghi LICH SU GIA neu gia thay doi - de moi duong sua gia deu duoc luu vet, khong chi
-    // rieng man "Quan ly gia" (PATCH /:id/price)
+    // Ghi lịch sử giá nếu giá đổi, để mọi đường sửa giá đều được lưu vết
     const current = await prisma.laptop.findUnique({ where: { id }, select: { priceVnd: true } });
     const updated = await prisma.laptop.update({ where: { id }, data });
     if (current && current.priceVnd !== body.priceVnd) {
@@ -104,11 +96,8 @@ const listSchema = z.object({
   ramMin: z.coerce.number().optional(),
   weightMax: z.coerce.number().optional(),
   q: z.string().optional(),
-  // Sap xep DA TIEU CHI (checkbox chon nhieu, ket hop duoc): nguoi dung co the chon dong thoi
-  // "Hieu nang cao nhat" + "Dang tien nhat" -> sap theo hieu nang TRUOC, nhung may hoa nhau ve
-  // hieu nang thi sap tiep theo do "dang tien". Chuoi cach nhau boi dau phay, THU TU trong chuoi
-  // la THU TU UU TIEN (phan tu dau tien uu tien cao nhat). Van nhan 1 gia tri don (khong dau
-  // phay) de tuong thich nguoc voi cac noi dang goi `sort=price_desc` (vd AdminPrices.tsx).
+  // Sắp xếp đa tiêu chí: chuỗi cách nhau bởi dấu phẩy, thứ tự trong chuỗi là thứ tự ưu tiên.
+  // Vẫn nhận 1 giá trị đơn (vd `sort=price_desc` ở AdminPrices.tsx) để tương thích ngược.
   sort: z
     .string()
     .optional()
@@ -141,8 +130,7 @@ laptopsRouter.get('/compare', async (req, res, next) => {
   }
 });
 
-// CHU Y: route TINH phai khai bao TRUOC route dong '/:id', neu khong Express se coi
-// "price-changes" la gia tri cua :id (loi da tung gap: Number("price-changes") = NaN).
+// Route tĩnh phải khai báo TRƯỚC route động '/:id', nếu không "price-changes" bị coi là :id.
 laptopsRouter.get('/price-changes', requireAuth, requireRole('STAFF', 'ADMIN'), async (req, res, next) => {
   try {
     const limit = Number(req.query.limit ?? 30);
@@ -152,7 +140,7 @@ laptopsRouter.get('/price-changes', requireAuth, requireRole('STAFF', 'ADMIN'), 
   }
 });
 
-// Chi tiet 1 may - KHONG yeu cau dang nhap (trang Chi tiet la khach hang cong khai xem duoc)
+// Chi tiết 1 máy: công khai, không yêu cầu đăng nhập
 laptopsRouter.get('/:id', async (req, res, next) => {
   try {
     const data = await laptopsService.getLaptopDetail(Number(req.params.id));
@@ -162,9 +150,8 @@ laptopsRouter.get('/:id', async (req, res, next) => {
   }
 });
 
-/** Luu laptop roi GAN NHAN PHAN KHUC ngay sau do (buoc bi thieu truoc day khien laptop moi khong
- * bao gio duoc goi y). Dong bo sang ML service SAU khi co nhan, de may moi vao ngay catalog goi y.
- * Tra ve laptop kem nhan va `labelWarning` (vd do tin cay thap) cho giao dien hien thong bao. */
+/** Lưu laptop, gán nhãn phân khúc, rồi đồng bộ sang ML service để máy mới vào ngay catalog gợi ý.
+ * Trả về laptop kèm nhãn và `labelWarning` (vd độ tin cậy thấp). */
 async function saveLaptopWithLabel(id: number | null, input: z.infer<typeof laptopInputSchema>, userId?: number) {
   const laptop = await computeAndUpsertLaptop(id, input);
   const { label, warning } = await applySegmentLabel(laptop.id, input, input.segment ?? undefined, userId);
@@ -192,10 +179,8 @@ laptopsRouter.put('/:id', requireAuth, requireRole('STAFF', 'ADMIN'), async (req
   }
 });
 
-// XOA MEM (chi dat isActive=false), KHONG xoa that ban ghi khoi DB - vi may da xoa co the van
-// duoc tham chieu boi PriceHistory/InteractionEvent/RecommendationSession cu (xoa that se vi
-// pham khoa ngoai hoac mat lich su). He qua CAN BIET: ma SKU cua may da "xoa" VAN CON bi chiem
-// trong DB, khong the tao lai may moi voi CUNG SKU do (da phat hien qua CRUD test tren browser).
+// Xóa mềm (isActive=false) vì máy còn được PriceHistory/InteractionEvent/RecommendationSession
+// tham chiếu. Hệ quả: SKU của máy đã "xóa" vẫn bị chiếm, không tạo lại được với cùng SKU.
 laptopsRouter.delete('/:id', requireAuth, requireRole('STAFF', 'ADMIN'), async (req, res, next) => {
   try {
     await prisma.laptop.update({ where: { id: Number(req.params.id) }, data: { isActive: false } });
@@ -207,13 +192,12 @@ laptopsRouter.delete('/:id', requireAuth, requireRole('STAFF', 'ADMIN'), async (
 });
 
 // ---------------------------------------------------------------------------
-// Quan ly gia (gia nha cung cap thay doi lien tuc)
+// Quản lý giá
 // ---------------------------------------------------------------------------
 const priceSchema = z.object({
   priceVnd: z.number().int().min(3_000_000, 'Giá tối thiểu 3 triệu').max(200_000_000, 'Giá tối đa 200 triệu'),
   note: z.string().max(300).optional(),
-  // Khuyen mai + luot ban: null cho originalPriceVnd = "khong con khuyen mai" (khac voi undefined
-  // = "khong doi truong nay"), nen dung .nullable().optional() thay vi chi .optional().
+  // originalPriceVnd: null = "hết khuyến mãi", undefined = "không đổi" -> cần .nullable().optional()
   originalPriceVnd: z
     .number()
     .int()
@@ -237,7 +221,7 @@ laptopsRouter.patch('/:id/price', requireAuth, requireRole('STAFF', 'ADMIN'), as
       body.originalPriceVnd,
       body.salesCount
     );
-    await snapshotSync(); // day gia moi sang ML service ngay, khong doi cron
+    await snapshotSync(); // đẩy giá mới sang ML service ngay, không chờ cron
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -270,8 +254,7 @@ laptopsRouter.post('/bulk-price', requireAuth, requireRole('ADMIN'), async (req,
   }
 });
 
-// Nut "AI goi y phan khuc" trong form laptop: chi DU DOAN de nguoi dung xem truoc (khong luu).
-// Viec luu nhan xay ra khi bam Luu form (saveLaptopWithLabel), dung cung ham predictSegment.
+// Nút "AI gợi ý phân khúc": chỉ dự đoán để xem trước, không lưu (lưu ở saveLaptopWithLabel).
 laptopsRouter.post('/predict-segment', requireAuth, requireRole('STAFF', 'ADMIN'), async (req, res, next) => {
   try {
     res.json({ success: true, data: await predictSegment(req.body) });

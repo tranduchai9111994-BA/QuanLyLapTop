@@ -7,23 +7,16 @@ import { SEGMENT_LABEL_VI } from '../../constants/enums';
 import { computePpi } from './laptops.service';
 
 /**
- * Nghiep vu GAN NHAN PHAN KHUC cho laptop (FR-09, tieu chi 3 "he thong tu phan loai may moi").
+ * Gán nhãn phân khúc cho laptop (FR-09). Mỗi lần tạo/sửa laptop (kể cả nhập Excel) đều kết thúc
+ * bằng 1 nhãn lưu vào SegmentLabel; snapshotSync bỏ qua laptop chưa có nhãn.
  *
- * Vi sao can file rieng: truoc day nut "AI goi y phan khuc" chi HIEN THI ket qua, khong luu nhan
- * nao ca. Ma snapshotSync.ts bo qua moi laptop chua co nhan khi dong bo sang ML service -> laptop
- * them moi tu trang quan tri KHONG BAO GIO duoc goi y. File nay dam bao MOI lan tao/sua laptop
- * (ke ca nhap Excel) deu ket thuc bang 1 nhan phan khuc duoc luu vao bang SegmentLabel.
- *
- * Quy tac quyet dinh nhan:
- *  - Nguoi dung CO chon phan khuc -> luu dung phan khuc do, trang thai VERIFIED (nguoi da quyet).
- *    Nguon nhan: `MODEL` neu trung voi du doan cua Mo hinh A (nguoi dung chap nhan goi y),
- *    `ADMIN` neu khac (nguoi dung tu chon nhan khac).
- *  - Nguoi dung KHONG chon -> dung du doan cua Mo hinh A, nguon `MODEL`. Do tin cay >= nguong
- *    (`confidence_threshold` trong cau hinh tri thuc, mac dinh 0,6) -> VERIFIED; thap hon ->
- *    NEEDS_REVIEW (vao hang doi "Can xac minh" cho nhan vien duyet lai).
- *  - Nhan dang bi KHOA (`locked`) va nguoi dung khong chon lai -> giu nguyen, khong ghi de.
- *  - ML service khong phan hoi va nguoi dung khong chon -> khong gan duoc nhan, tra ve canh bao
- *    (khong chan viec luu laptop, vi thong tin may van dung).
+ * Quy tắc:
+ *  - Người dùng chọn phân khúc -> lưu đúng nhãn đó, VERIFIED; nguồn `MODEL` nếu trùng dự đoán
+ *    của Mô hình A, `ADMIN` nếu khác.
+ *  - Không chọn -> dùng dự đoán Mô hình A (nguồn `MODEL`): độ tin cậy >= `confidence_threshold`
+ *    (mặc định 0,6) -> VERIFIED, thấp hơn -> NEEDS_REVIEW (hàng đợi "Cần xác minh").
+ *  - Nhãn đã khóa (`locked`) và người dùng không chọn lại -> giữ nguyên.
+ *  - ML service lỗi và không chọn -> không gán được nhãn, trả cảnh báo (vẫn lưu laptop).
  */
 
 export const SEGMENTS = ['OFFICE', 'ULTRABOOK', 'GAMING', 'CREATOR'] as const;
@@ -31,7 +24,7 @@ export type SegmentCode = (typeof SEGMENTS)[number];
 
 const DEFAULT_CONFIDENCE_THRESHOLD = 0.6;
 
-/** Cac thong so can de Mo hinh A du doan phan khuc (cung bo dac trung luc huan luyen). */
+/** Đặc trưng đầu vào của Mô hình A (cùng bộ đặc trưng lúc huấn luyện). */
 export interface SegmentFeatures {
   cpuId: number;
   gpuId: number;
@@ -50,12 +43,12 @@ export interface SegmentPrediction {
   label: SegmentCode;
   proba: number;
   distribution: Record<string, number>;
-  /** k laptop trong tap huan luyen gan nhat da "bo phieu" cho du doan nay. */
+  /** k laptop gần nhất trong tập huấn luyện đã "bỏ phiếu" cho dự đoán này. */
   neighbors: { label: string; distance: number }[];
   modelVersion: string | null;
 }
 
-/** Doc nguong tin cay tu cau hinh tri thuc (quan tri vien chinh duoc), khong co thi dung 0,6. */
+/** Đọc ngưỡng tin cậy từ cấu hình tri thức, mặc định 0,6. */
 async function getConfidenceThreshold(): Promise<number> {
   const row = await prisma.knowledgeConfig.findUnique({ where: { key: 'confidence_threshold' } });
   const value = fromJson<number | null>(row?.valueJson, null);
@@ -105,9 +98,8 @@ export async function predictSegment(f: SegmentFeatures): Promise<SegmentPredict
 }
 
 /**
- * Luu nhan phan khuc cho 1 laptop vua tao/sua theo quy tac o dau file.
- * `requested` = phan khuc nguoi dung chon trong form (co the khong co).
- * Tra ve nhan da luu (hoac null) kem `warning` de giao dien bao cho nguoi dung biet.
+ * Lưu nhãn phân khúc cho laptop theo quy tắc đầu file. `requested` là phân khúc người dùng chọn
+ * (có thể không có). Trả về nhãn đã lưu kèm `warning` để giao diện thông báo.
  */
 export async function applySegmentLabel(
   laptopId: number,
@@ -116,7 +108,7 @@ export async function applySegmentLabel(
   userId: number | undefined
 ) {
   const existing = await prisma.segmentLabel.findUnique({ where: { laptopId } });
-  // Nhan da bi khoa va nguoi dung khong chu dong chon lai -> ton trong quyet dinh cu
+  // Nhãn đã khóa và người dùng không chọn lại -> tôn trọng quyết định cũ
   if (existing?.locked && !requested) {
     return { label: existing, warning: null as string | null };
   }
@@ -125,7 +117,7 @@ export async function applySegmentLabel(
   try {
     prediction = await predictSegment(features);
   } catch (err) {
-    // ML service tat/loi: van luu duoc neu nguoi dung da tu chon phan khuc
+    // ML service lỗi: vẫn lưu được nếu người dùng đã tự chọn phân khúc
     logger.warn(`Khong du doan duoc phan khuc cho laptop ${laptopId}`, err instanceof Error ? err.message : err);
   }
 

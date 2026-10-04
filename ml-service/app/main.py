@@ -1,11 +1,8 @@
 """FastAPI routes cho ML service (docs/06 SS4).
 
-File nay la "cong vao" duy nhat cua toan bo ML service - moi request tu backend (Node.js) deu di
-qua day. No KHONG chua logic thuat toan (dieu do nam o retriever.py/classifier.py/text_classifier.py),
-chi lam nhiem vu: nhan request -> goi dung ham thuat toan -> tra ve JSON. Bien duy nhat luu TRANG
-THAI trong bo nho la `_state` (dict o duoi) - vi day la 1 tien trinh Python song song voi backend,
-KHONG dung chung DB, nen catalog/scaler/model phai duoc "day" (sync) tu backend sang qua
-`/catalog/sync` moi khi du lieu doi, roi giu trong RAM cho cac request `/recommend` sau do dung.
+Đây là "cổng vào" duy nhất của ML service: nhận request từ backend (Node.js), gọi đúng hàm thuật
+toán (retriever.py/classifier.py/text_classifier.py) rồi trả JSON. Trạng thái nằm trong RAM ở
+`_state`; vì không dùng chung DB với backend nên catalog/scaler phải được đẩy sang qua `/catalog/sync`.
 """
 from __future__ import annotations
 
@@ -25,29 +22,26 @@ from app.text_classifier import NeedTextModel
 
 app = FastAPI(title="SmartLap ML service")
 
-# "Bo nho lam viec" cua ca service - khong phai database, se MAT SACH neu tat process (do la ly do
-# backend luon phai goi lai /catalog/sync moi khi khoi dong lai ML service, xem snapshotSync.ts):
-#   catalog       : DataFrame toan bo laptop dang ban, da duoc lam giau dac trung (Mo hinh B dung)
-#   scaler        : StandardScaler da "hoc" thong ke (trung binh/do lech chuan) tren catalog nay
-#   index_built_at: thoi diem catalog duoc dong bo lan gan nhat (backend/frontend hien thi de biet
-#                   du lieu goi y co "cu" khong)
-#   text_model    : Mo hinh C (TF-IDF+kNN) da huan luyen san, dung cho o nhap cau tu do
+# Bộ nhớ làm việc của service (không phải database, mất khi tắt process nên backend phải gọi lại
+# /catalog/sync mỗi lần khởi động, xem snapshotSync.ts):
+#   catalog       : DataFrame laptop đang bán đã làm giàu đặc trưng (Mô hình B dùng)
+#   scaler        : StandardScaler đã fit trên catalog này
+#   index_built_at: thời điểm đồng bộ catalog gần nhất
+#   text_model    : Mô hình C (TF-IDF+kNN) cho ô nhập câu tự do
 _state: dict = {"catalog": None, "scaler": None, "index_built_at": None, "text_model": None}
 
 
 @app.on_event("startup")
 def on_startup() -> None:
-    # Nap mo hinh phan lop (Mo hinh A) MOI NHAT da luu tren dia (khong huan luyen lai luc khoi
-    # dong - train.py chi chay khi goi rieng /train hoac `python -m app.train`)
+    # Nạp Mô hình A mới nhất đã lưu trên đĩa (không huấn luyện lại lúc khởi động)
     registry.activate_latest()
-    # Mo hinh C nhe (132 cau) nen huan luyen ngay luc khoi dong, khong can nap tu artifact
+    # Mô hình C nhẹ (132 câu) nên huấn luyện ngay lúc khởi động
     _state["text_model"] = NeedTextModel(n_neighbors=7).fit()
 
 
 @app.get("/health")
 def health() -> dict:
-    """Kiem tra nhanh service con song khong, dang dung phien ban mo hinh nao, catalog da dong
-    bo chua - dung boi launcher (start-smartlap.ps1) va cac cong cu debug thu cong (curl)."""
+    """Kiểm tra service còn sống, phiên bản mô hình đang dùng và catalog đã đồng bộ chưa."""
     catalog = _state["catalog"]
     return {
         "status": "ok",
@@ -59,21 +53,14 @@ def health() -> dict:
 
 @app.post("/catalog/sync")
 def catalog_sync(req: CatalogSyncRequest) -> dict:
-    """Nhan TOAN BO danh sach laptop dang ban tu backend (goi moi khi co may moi/sua gia/deploy
-    lai), thay the HOAN TOAN catalog dang giu trong bo nho, roi fit lai scaler tren du lieu moi.
-
-    Day KHONG phai dong bo GIA TANG DAN (incremental) - la thay the toan bo 1 lan, don gian va
-    it loi hon nhieu so voi cap nhat tung phan, chap nhan doi voi quy mo ~1000 may cua do an.
-    """
+    """Nhận TOÀN BỘ danh sách laptop từ backend, thay thế hoàn toàn catalog trong RAM rồi fit lại
+    scaler. Không đồng bộ gia tăng: thay cả lần cho đơn giản, ít lỗi (quy mô ~1000 máy)."""
     df = pd.DataFrame(req.items)
-    # Doi ten "id" (ten cot backend gui) -> "laptop_id" (ten noi bo cac ham retriever.py dung),
-    # dong thoi dat lam index de tra cuu nhanh theo id (vd trong /similar ben duoi)
+    # Đổi "id" (tên backend gửi) -> "laptop_id" (tên nội bộ retriever.py), dùng làm index để tra nhanh
     df = df.rename(columns={"id": "laptop_id"}).set_index("laptop_id", drop=False)
 
-    # Backend gui `discount_percent` (co san, tinh don gian tu 2 gia) va `sales_count` THO.
-    # sales_count can duoc quy doi ve `sales_score` (thang 0-100, LOG hoa) NGAY TAI DAY vi phep
-    # tinh nay phu thuoc gia tri MAX cua CA SNAPSHOT (giong cach lam trong features.enrich_catalog
-    # khi huan luyen tu CSV) - khong the tinh truoc o backend cho tung may rieng le.
+    # sales_count thô phải đổi sang sales_score (0-100, log) ngay đây vì cần MAX của cả snapshot
+    # (giống features.enrich_catalog), backend không tính trước được cho từng máy.
     if "discount_percent" not in df.columns:
         df["discount_percent"] = 0.0
     if "sales_count" in df.columns:
@@ -90,8 +77,7 @@ def catalog_sync(req: CatalogSyncRequest) -> dict:
 
 
 def _require_catalog() -> pd.DataFrame:
-    """Ham dung chung: bat cu endpoint nao can doc catalog deu goi ham nay truoc, de bao loi ro
-    rang (409 - "chua san sang") thay vi crash mo ho neu ai do goi /recommend truoc /catalog/sync."""
+    """Báo lỗi 409 rõ ràng nếu endpoint cần catalog mà chưa gọi /catalog/sync."""
     if _state["catalog"] is None:
         raise HTTPException(status_code=409, detail="Catalog chua duoc dong bo (/catalog/sync)")
     return _state["catalog"]
@@ -110,10 +96,8 @@ def predict_segment(req: PredictSegmentRequest) -> dict:
     proba = registry.model.predict_proba(X[MODEL_A_FEATURES])
     labels = registry.model.classes_
 
-    # FR-09: lay chinh k lang gieng da "bo phieu" - dua qua buoc chuan hoa ("prep") roi hoi buoc
-    # kNN. `knn._y` la nhan (da ma hoa thanh so) cua tap huan luyen, sklearn luu san sau khi fit;
-    # doi lai ra ten phan khuc bang `knn.classes_`. Dung de nhan vien thay DUOC ly do mo hinh
-    # chon nhan nay (vd "5/7 may gan nhat la Gaming"), khong phai 1 con so hop den.
+    # FR-09: lấy chính k láng giềng đã "bỏ phiếu" để nhân viên thấy lý do (vd "5/7 máy gần nhất là
+    # Gaming"). `knn._y` là nhãn đã mã hóa của tập huấn luyện, đổi lại tên bằng `knn.classes_`.
     prep = registry.model.named_steps["prep"]
     knn = registry.model.named_steps["knn"]
     neigh_dist, neigh_idx = knn.kneighbors(prep.transform(X[MODEL_A_FEATURES]))
@@ -121,13 +105,12 @@ def predict_segment(req: PredictSegmentRequest) -> dict:
 
     results = []
     for row_i, row_proba in enumerate(proba):
-        # Sap xep xac suat GIAM DAN de lay nhan co xac suat cao nhat len dau (order[0])
+        # Xác suất giảm dần, order[0] là nhãn cao nhất
         order = np.argsort(row_proba)[::-1]
         results.append({
             "label": labels[order[0]],
             "proba": float(row_proba[order[0]]),
-            # Tra ve CA PHAN BO xac suat (khong chi 1 nhan) de frontend hien thi "89% Gaming, 11%
-            # Do hoa" - giup nhan vien thay duoc muc do CHAC CHAN cua du doan, khong chi 1 con so
+            # Trả cả phân bố xác suất để frontend hiện mức độ chắc chắn (vd "89% Gaming, 11% Đồ họa")
             "distribution": {labels[i]: float(row_proba[i]) for i in order},
             "neighbors": [
                 {"label": str(train_labels[j]), "distance": round(float(d), 4)}
@@ -139,10 +122,9 @@ def predict_segment(req: PredictSegmentRequest) -> dict:
 
 @app.post("/parse-need")
 def parse_need_endpoint(payload: dict) -> dict:
-    """{text: "con hoc ke toan, can may ben, re"} -> ho so nhu cau day du (Mo hinh C).
+    """{text: "con hoc ke toan, can may ben, re"} -> hồ sơ nhu cầu đầy đủ (Mô hình C).
 
-    Day la duong vao "thong minh" thay cho viec nguoi dung tu keo thanh truot: he thong doc
-    cau noi tu nhien roi TU suy ra nhom nhu cau, muc uu tien, ngan sach va rang buoc.
+    Đọc câu nói tự nhiên rồi tự suy ra nhóm nhu cầu, mức ưu tiên, ngân sách và ràng buộc.
     """
     text = (payload.get("text") or "").strip()
     if not text:
@@ -156,7 +138,7 @@ def parse_need_endpoint(payload: dict) -> dict:
 
 @app.post("/infer-segment")
 def infer_segment_endpoint(payload: dict) -> dict:
-    """{activities: [...]}. -> suy phan khuc tu hoat dong khi nguoi dung chon 'Chua ro'."""
+    """{activities: [...]}. -> suy phân khúc từ hoạt động khi người dùng chọn 'Chưa rõ'."""
     catalog = _require_catalog()
     if registry.model is None:
         raise HTTPException(status_code=503, detail="Chua co mo hinh phan lop duoc kich hoat")
@@ -168,41 +150,38 @@ def infer_segment_endpoint(payload: dict) -> dict:
 
 @app.post("/recommend")
 def recommend_endpoint(req: RecommendRequest) -> dict:
-    """Mo hinh B: dau vao la ho so nhu cau day du (ngan sach, muc uu tien, phan khuc mong muon,
-    rang buoc bat buoc) + danh sach `candidateIds` (may da qua LOC CUNG o backend - ngan sach,
-    RAM toi thieu,...), tra ve TOP-N may gan nhat kem % phu hop va giai thich. Day la ham duoc
-    goi khi nguoi dung bam "Xem ket qua" tren man Wizard.
+    """Mô hình B: từ hồ sơ nhu cầu + `candidateIds` (máy đã qua lọc cứng ở backend), trả TOP-N máy
+    gần nhất kèm % phù hợp và giải thích. Được gọi khi người dùng bấm "Xem kết quả" ở Wizard.
     """
     catalog = _require_catalog()
-    # Chi xet trong so may DA duoc backend loc cung san (ngan sach, RAM toi thieu,...) - Mo hinh
-    # B khong tu loc lai tu dau, chi xep hang trong tap ung vien da duoc thu hep
+    # Chỉ xếp hạng trong tập ứng viên đã được backend lọc cứng
     candidates = catalog.loc[catalog["laptop_id"].isin(req.candidateIds)]
     if candidates.empty:
         return {"ideal": {}, "weights": {}, "items": []}
 
-    # Buoc 1: dung "may trong mo" tu muc uu tien (xem retriever.build_ideal_vector)
+    # Bước 1: dựng "máy trong mơ" từ mức ưu tiên (retriever.build_ideal_vector)
     ideal = build_ideal_vector(
         candidates, req.priorities.model_dump(), req.must, req.budget.model_dump(), req.segment
     )
-    # Buoc 2: tinh trong so tung dac trung theo muc uu tien + phan khuc (xem retriever.build_weights)
+    # Bước 2: trọng số từng đặc trưng theo ưu tiên + phân khúc (retriever.build_weights)
     weights = build_weights(
         req.priorities.model_dump(),
         req.segment,
         brand_weight=req.brandWeight,
         base_weights_override=req.baseWeightsOverride,
     )
-    # Buoc 3: chay kNN that su voi metric mot phia. Loc MEM phan khuc: phan khuc mong muon la
-    # mot dac trung trong metric, khong loai bo ung vien khac phan khuc (xem retriever.recommend)
+    # Bước 3: kNN với metric một phía. Lọc MỀM phân khúc: phân khúc mong muốn chỉ là một đặc trưng
+    # trong metric, không loại máy khác phân khúc (retriever.recommend)
     dist, idx = recommend(
         candidates, _state["scaler"], ideal, weights, req.topN, preferred_segment=req.segment
     )
-    # Buoc 4: doi khoang cach kNN (con so kho hieu voi nguoi dung thuong) thanh % de hien thi
+    # Bước 4: đổi khoảng cách thành % dễ hiểu
     pct = match_pct(dist)
 
     picked = candidates.iloc[idx]
     items = []
     for rank, (dist_i, pct_i, (_, row)) in enumerate(zip(dist, pct, picked.iterrows()), start=1):
-        # Buoc 5: sinh giai thich (may nay hon/kem may trong mo o diem nao) cho tung may trong top-N
+        # Bước 5: giải thích máy này hơn/kém máy trong mơ ở điểm nào
         explanation = build_explanation(row.to_dict(), ideal, weights, req.budget.max)
         items.append({
             "rank": rank,
@@ -217,16 +196,14 @@ def recommend_endpoint(req: RecommendRequest) -> dict:
 
 @app.post("/similar")
 def similar_endpoint(req: SimilarRequest) -> dict:
-    """"May tuong tu" tren trang Chi tiet: cho 1 laptop dang xem, tim k may KHAC giong no nhat
-    (item-item, khong lien quan gi den ho so nhu cau nguoi dung) - dung Euclidean hai phia thong
-    thuong (xem retriever.similar_items), khac voi /recommend dung khoang cach mot phia."""
+    """"Máy tương tự" ở trang Chi tiết: tìm k máy KHÁC giống máy đang xem nhất (item-item, không
+    liên quan hồ sơ nhu cầu), dùng Euclidean hai phía (retriever.similar_items)."""
     catalog = _require_catalog()
     if req.laptopId not in catalog.index:
         raise HTTPException(status_code=404, detail="Khong tim thay laptop trong catalog da dong bo")
-    # Vi tri (so thu tu hang) cua may dang xem trong DataFrame - can de tim lang gieng CUA no
+    # Vị trí hàng của máy đang xem, cần để tìm láng giềng của nó
     pos = catalog.index.get_loc(req.laptopId)
-    # k+1 vi ket qua tra ve LUON GOM CHINH NO (khoang cach 0, hang dau) - similar_items() se tu
-    # bo phan tu dau nay, nen phai xin thua 1 tu dau de con lai dung k may THAT SU khac no
+    # k+1 vì kết quả luôn gồm chính nó (khoảng cách 0), similar_items() sẽ bỏ phần tử đầu này
     dist, idx = similar_items(catalog, _state["scaler"], pos, k=req.k + 1)
     picked = catalog.iloc[idx]
     items = [
@@ -238,22 +215,19 @@ def similar_endpoint(req: SimilarRequest) -> dict:
 
 @app.post("/train")
 def train_endpoint(req: TrainRequest) -> dict:
-    """Kich hoat huan luyen lai Mo hinh A + Mo hinh C tu xa (khong can vao terminal go
-    `python -m app.train`) - dung khi admin muon huan luyen lai ngay sau khi sua nhieu du lieu.
-    Import `train` NGAY TRONG ham (khong import o dau file) de tranh vong lap import va vi day
-    la thao tac NANG, hiem khi goi, khong can tai san luc khoi dong service."""
+    """Kích hoạt huấn luyện lại Mô hình A + Mô hình C từ xa (thay cho `python -m app.train`).
+    Import `train` trong hàm để tránh vòng lặp import và vì thao tác này nặng, hiếm khi gọi."""
     from app import train as train_module
 
-    train_module.main()  # chay toan bo pipeline: GridSearchCV, danh gia, luu artifact moi ra dia
-    registry.activate_latest()  # nap artifact VUA tao ngay lap tuc, khong can restart service
+    train_module.main()  # chạy cả pipeline: GridSearchCV, đánh giá, lưu artifact mới
+    registry.activate_latest()  # nạp ngay artifact vừa tạo, không cần restart
     return {"version": registry.version, "metadata": registry.metadata}
 
 
 @app.post("/models/{version}/activate")
 def activate_model(version: str) -> dict:
-    """Chuyen ve dung 1 phien ban mo hinh CU da luu (vd ban moi train te hon, muon quay lai ban
-    truoc) - moi artifact duoc luu voi ten thu muc rieng (vd `clf-2026.09.27-...`), khong bao gio
-    bi ghi de, nen luon "rollback" duoc."""
+    """Chuyển về một phiên bản mô hình cũ đã lưu (rollback). Mỗi artifact có thư mục riêng, không
+    bao giờ bị ghi đè."""
     try:
         registry.activate(version)
     except FileNotFoundError as exc:
@@ -263,8 +237,7 @@ def activate_model(version: str) -> dict:
 
 @app.get("/models/{version}")
 def get_model(version: str) -> dict:
-    """Xem thong tin chi tiet (tham so tot nhat, macro-F1, confusion matrix,...) cua 1 phien ban
-    mo hinh CU THE - dung khi muon so sanh nhieu lan train voi nhau."""
+    """Xem chi tiết (tham số tốt nhất, macro-F1, confusion matrix,...) của một phiên bản mô hình."""
     try:
         return registry.load_metadata(version)
     except FileNotFoundError as exc:

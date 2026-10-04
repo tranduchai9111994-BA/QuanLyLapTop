@@ -7,8 +7,8 @@ from pydantic import BaseModel, Field
 
 
 class CatalogSyncRequest(BaseModel):
-    """Backend day snapshot da tinh san dac trung (cpu_score, gpu_score, ppi, gpu_dedicated,...).
-    Dung dict linh hoat vi ML service khong so huu schema catalog (Backend la nguon su that)."""
+    """Backend đẩy snapshot đã tính sẵn đặc trưng (cpu_score, gpu_score, ppi, gpu_dedicated,...).
+    Dùng dict linh hoạt vì ML service không sở hữu schema catalog (Backend là nguồn sự thật)."""
     items: list[dict[str, Any]]
 
 
@@ -35,12 +35,11 @@ class RecommendRequest(BaseModel):
     priorities: Priorities
     must: dict[str, Any] = Field(default_factory=dict)
     topN: int = 5
-    # Trong so uy tin thuong hieu (tang len khi nguoi dung nhac den "ben", "bao hanh tot")
+    # Trọng số uy tín thương hiệu (tăng khi người dùng nhắc "bền", "bảo hành tốt")
     brandWeight: float = 1.0
-    # FR-13: quan tri vien sua duoc trong so NEN mac dinh tung nhom dac trung theo phan khuc
-    # (KnowledgeConfig key "default_weights") - None = dung BASE_WEIGHT_BY_SEGMENT co san trong
-    # retriever.py. Dang {"GAMING": {"performance": 1.3, ...}, ...}, chi ghi de phan khuc nao co
-    # mat trong dict, cac phan khuc con lai van dung gia tri mac dinh trong code.
+    # FR-13: admin sửa trọng số NỀN theo phân khúc (KnowledgeConfig "default_weights"). None = dùng
+    # BASE_WEIGHT_BY_SEGMENT trong retriever.py; dạng {"GAMING": {"performance": 1.3, ...}}, chỉ ghi
+    # đè phân khúc có mặt trong dict.
     baseWeightsOverride: Optional[dict[str, dict[str, float]]] = None
 
 

@@ -30,10 +30,8 @@ const SEGMENT_OPTIONS = ['OFFICE', 'ULTRABOOK', 'GAMING', 'CREATOR'].map((s) => 
 }));
 
 /**
- * UC-10: hàng đợi "Cần xác minh" — nhân viên/quản trị viên duyệt lại các máy mà Mô hình A tự gán
- * nhãn nhưng ĐỘ TIN CẬY THẤP (dưới ngưỡng cấu hình, xem KnowledgeConfig.confidence_threshold).
- * Máy trong hàng đợi VẪN ĐANG được gợi ý tạm cho khách bằng nhãn AI gán - duyệt càng sớm càng
- * giảm rủi ro gợi ý sai phân khúc, không phải "máy bị ẩn chờ duyệt mới hiện".
+ * UC-10: hàng đợi "Cần xác minh" - duyệt lại máy Mô hình A gán nhãn với độ tin cậy dưới ngưỡng
+ * (KnowledgeConfig.confidence_threshold). Máy trong hàng đợi vẫn được gợi ý tạm bằng nhãn AI.
  */
 export function AdminReviewQueue() {
   const [items, setItems] = useState<QueueItem[]>([]);

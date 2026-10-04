@@ -1,4 +1,4 @@
-"""Nap / kich hoat phien ban mo hinh (docs/06 SS2)."""
+"""Nạp / kích hoạt phiên bản mô hình (docs/06 SS2)."""
 from __future__ import annotations
 
 import json
