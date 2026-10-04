@@ -1,6 +1,6 @@
 """Kiem tra chat luong du lieu catalog VN (xem docs/03 §7).
 
-Chay: python -m app.data_check  (tu thu muc ml-service)
+Chay: python -m app.data.data_check  (tu thu muc ml-service)
 """
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 CATALOG_PATH = ROOT / "data" / "processed" / "catalog_vn.csv"
 CPU_BENCH_PATH = ROOT / "data" / "processed" / "cpu_benchmark.csv"
 GPU_BENCH_PATH = ROOT / "data" / "processed" / "gpu_benchmark.csv"

@@ -83,7 +83,7 @@ này (hoặc xoá dòng đó) trước khi triển khai thật.
 ```bash
 # ML service
 cd ml-service && pip install -r requirements.txt
-python -m app.data_check && python -m app.train && python -m app.evaluate && pytest
+python -m app.data.data_check && python -m app.lifecycle.train && python -m app.lifecycle.evaluate && pytest
 uvicorn app.main:app --reload --port 8001
 
 # Backend (terminal khác) — cấu hình kết nối theo backend/.env.example (DATABASE_URL, JWT_SECRET,

@@ -1,7 +1,7 @@
 import numpy as np
 
-from app.explain import build_explanation
-from app.retriever import build_ideal_vector, build_weights, fit_scaler, recommend, similar_items
+from app.models.explain import build_explanation
+from app.models.retriever import build_ideal_vector, build_weights, fit_scaler, recommend, similar_items
 
 
 def test_identity_top1(enriched_catalog):

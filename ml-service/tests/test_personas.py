@@ -7,11 +7,11 @@
 Khac ban cu: khong con ep "phan khuc suy ra phai dung", vi he thong da chuyen sang LOC MEM -
 phan khuc chi la mot dac trung trong metric, khong phai dieu kien loai bo.
 """
-from app.classifier import build_pipeline
-from app.features import MODEL_A_FEATURES
-from app.retriever import build_ideal_vector, build_weights, fit_scaler, recommend
-from app.segment_inference import infer_segment
-from app.text_classifier import NeedTextModel
+from app.models.classifier import build_pipeline
+from app.data.features import MODEL_A_FEATURES
+from app.models.retriever import build_ideal_vector, build_weights, fit_scaler, recommend
+from app.models.segment_inference import infer_segment
+from app.models.text_classifier import NeedTextModel
 
 
 def _run_persona(catalog, model, scaler, persona):

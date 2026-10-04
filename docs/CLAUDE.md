@@ -34,6 +34,6 @@
 ## Lệnh chuẩn
 ```
 backend:    npm run dev | npm run test | npx prisma migrate dev | npm run seed
-ml-service: uvicorn app.main:app --reload --port 8001 | pytest | python -m app.train
+ml-service: uvicorn app.main:app --reload --port 8001 | pytest | python -m app.lifecycle.train
 frontend:   npm run dev | npm run build | npm run lint
 ```

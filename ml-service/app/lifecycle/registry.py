@@ -7,7 +7,7 @@ from pathlib import Path
 import joblib
 from sklearn.pipeline import Pipeline
 
-ARTIFACTS_DIR = Path(__file__).resolve().parent.parent / "artifacts"
+ARTIFACTS_DIR = Path(__file__).resolve().parents[2] / "artifacts"
 
 
 class ModelRegistry:

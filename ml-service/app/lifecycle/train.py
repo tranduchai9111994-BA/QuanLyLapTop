@@ -1,4 +1,4 @@
-"""Huan luyen Mo hinh A + luu artifact (docs/04 SS3, SS8). Chay: python -m app.train"""
+"""Huan luyen Mo hinh A + luu artifact (docs/04 SS3, SS8). Chay: python -m app.lifecycle.train"""
 from __future__ import annotations
 
 import hashlib
@@ -17,13 +17,13 @@ import sklearn
 from sklearn.metrics import ConfusionMatrixDisplay, classification_report, confusion_matrix, f1_score
 from sklearn.model_selection import train_test_split
 
-from app.classifier import RANDOM_STATE, dummy_baseline, grid_search, k_curve, rule_based_baseline
-from app.features import MODEL_A_FEATURES, enrich_catalog
-from app.text_classifier import NeedTextModel, build_text_pipeline, normalize_text
+from app.models.classifier import RANDOM_STATE, dummy_baseline, grid_search, k_curve, rule_based_baseline
+from app.data.features import MODEL_A_FEATURES, enrich_catalog
+from app.models.text_classifier import NeedTextModel, build_text_pipeline, normalize_text
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 DATA_DIR = ROOT / "data"
-ARTIFACTS_DIR = Path(__file__).resolve().parent.parent / "artifacts"
+ARTIFACTS_DIR = Path(__file__).resolve().parents[2] / "artifacts"
 
 
 def dataset_hash(path: Path) -> str:

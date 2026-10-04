@@ -28,9 +28,9 @@ Ba mô hình kNN độc lập, mỗi mô hình dùng lớp scikit-learn khác nh
 
 | Mô hình | Bài toán | Lớp scikit-learn | File |
 |---|---|---|---|
-| A — Phân loại phân khúc | "Cấu hình này thuộc phân khúc nào?" | `KNeighborsClassifier` | `app/classifier.py` |
-| B — Truy hồi gợi ý | "Máy nào gần nhu cầu nhất?" | `NearestNeighbors` + metric tự viết | `app/retriever.py` |
-| C — Phân loại câu tự do | "Câu này thuộc nhóm nhu cầu nào?" | `KNeighborsClassifier` (qua `Pipeline`) | `app/text_classifier.py` |
+| A — Phân loại phân khúc | "Cấu hình này thuộc phân khúc nào?" | `KNeighborsClassifier` | `app/models/classifier.py` |
+| B — Truy hồi gợi ý | "Máy nào gần nhu cầu nhất?" | `NearestNeighbors` + metric tự viết | `app/models/retriever.py` |
+| C — Phân loại câu tự do | "Câu này thuộc nhóm nhu cầu nào?" | `KNeighborsClassifier` (qua `Pipeline`) | `app/models/text_classifier.py` |
 
 ## 2. Cơ sở lý thuyết
 
@@ -48,9 +48,9 @@ Biến thể bỏ phiếu theo khoảng cách (`weights="distance"`): láng gi�
 
 ### 3.1 Mục đích sử dụng
 1. Gợi ý phân khúc khi nhân viên thêm laptop mới (endpoint `/predict-segment`).
-2. Suy phân khúc từ hoạt động khi người dùng wizard chọn "Chưa rõ" (endpoint `/infer-segment`, dùng lại chính mô hình đã huấn luyện qua `app/segment_inference.py`).
+2. Suy phân khúc từ hoạt động khi người dùng wizard chọn "Chưa rõ" (endpoint `/infer-segment`, dùng lại chính mô hình đã huấn luyện qua `app/models/segment_inference.py`).
 
-### 3.2 Cấu hình — `build_pipeline()` + `grid_search()` ([ml-service/app/classifier.py](../ml-service/app/classifier.py))
+### 3.2 Cấu hình — `build_pipeline()` + `grid_search()` ([ml-service/app/models/classifier.py](../ml-service/app/models/classifier.py))
 
 ```python
 RANDOM_STATE = 42
@@ -77,17 +77,17 @@ search = GridSearchCV(
 
 `StratifiedKFold` giữ đúng tỉ lệ 4 phân khúc trong mỗi fold — quan trọng vì lớp CREATOR ít mẫu hơn hẳn GAMING/OFFICE.
 
-### 3.3 Tách dữ liệu — `app/train.py`
+### 3.3 Tách dữ liệu — `app/lifecycle/train.py`
 
 - `train_test_split(test_size=0.2, stratify=y, random_state=42)` trên toàn bộ catalog đã làm giàu đặc trưng.
 - `GridSearchCV` chỉ chạy trên 80% train (5-fold CV nội bộ). 20% test chỉ được chạm **một lần** để tính `test_metrics` cuối cùng.
-- Lần chạy `python -m app.train` đầu tiên sẽ đóng băng 20% test đó thành `artifacts/golden_test.csv` (chỉ ghi nếu file chưa tồn tại) để so sánh công bằng giữa các phiên bản huấn luyện sau này.
+- Lần chạy `python -m app.lifecycle.train` đầu tiên sẽ đóng băng 20% test đó thành `artifacts/golden_test.csv` (chỉ ghi nếu file chưa tồn tại) để so sánh công bằng giữa các phiên bản huấn luyện sau này.
 
 ### 3.4 Vì sao macro-F1
 
 `GridSearchCV` chấm điểm bằng `scoring="f1_macro"`, không phải accuracy. Lớp CREATOR ít mẫu — accuracy có thể cao dù mô hình gần như bỏ qua lớp này; macro-F1 tính F1 riêng từng lớp rồi lấy trung bình đều, nên phạt rõ việc bỏ qua lớp nhỏ.
 
-### 3.5 Suy phân khúc từ hoạt động — `app/segment_inference.py`
+### 3.5 Suy phân khúc từ hoạt động — `app/models/segment_inference.py`
 
 Không huấn luyện mô hình mới. `ACTIVITY_TARGETS` ánh xạ từng hoạt động (`choi_game`, `do_hoa`, `dung_video`, `di_chuyen_nhieu`, `van_phong`, `hoc_tap`, `lap_trinh`, `thiet_ke`, `xem_phim`) sang phân vị mục tiêu cho từng đặc trưng. `build_activity_vector()` gộp nhiều hoạt động cho cùng một đặc trưng bằng cách lấy giá trị **lệch xa trung vị (50) nhất**, không phải trung bình cộng — hoạt động "đòi hỏi cao nhất" quyết định. Vector giả định thu được đưa qua `predict_proba()` của chính Mô hình A đã huấn luyện; `infer_segment()` còn trả về danh sách k láng giềng đã "bỏ phiếu" để giải thích.
 
@@ -95,7 +95,7 @@ Không huấn luyện mô hình mới. `ACTIVITY_TARGETS` ánh xạ từng hoạ
 
 Khác biệt quan trọng nhất so với kNN "sách giáo khoa": Euclidean chuẩn phạt hai chiều như nhau (máy mạnh hơn nhu cầu bị coi "xa" y hệt máy yếu hơn nhu cầu). Theo góp ý cần **không phạt máy mạnh hơn/rẻ hơn/nhẹ hơn mức cần**, đồ án tự thiết kế khoảng cách một phía và đưa thẳng vào tham số `metric` của `NearestNeighbors` (không xếp hạng lại ở ngoài).
 
-### 4.1 Bước 1 — Dựng vector nhu cầu lý tưởng q — `build_ideal_vector()` ([ml-service/app/retriever.py:88](../ml-service/app/retriever.py))
+### 4.1 Bước 1 — Dựng vector nhu cầu lý tưởng q — `build_ideal_vector()` ([ml-service/app/models/retriever.py:88](../ml-service/app/models/retriever.py))
 
 Với mỗi mức ưu tiên p ∈ {1..5}, tra `PERCENTILE_BY_PRIORITY = {1: 25, 2: 40, 3: 55, 4: 75, 5: 90}` để lấy phân vị trong tập ứng viên `candidates` (đã qua lọc cứng ở backend):
 
@@ -116,7 +116,7 @@ Ràng buộc bắt buộc đẩy q lên nếu có: `q["ram_gb"] = max(q["ram_gb"
 
 **Vì sao đặt `price_vnd`/`value_index` ở biên thay vì trung vị:** với khoảng cách một phía, máy rẻ hơn q không hề bị phạt — nếu q đặt giữa khoảng ngân sách thì mọi máy rẻ hơn đều có phạt = 0, mất khả năng phân biệt, khiến người ưu tiên tiết kiệm vẫn bị gợi ý máy đắt. Do đó q của các đặc trưng một phía phải nằm ở **biên mong muốn**.
 
-### 4.2 Bước 2 — Trọng số đặc trưng — `build_weights()` ([retriever.py:150](../ml-service/app/retriever.py))
+### 4.2 Bước 2 — Trọng số đặc trưng — `build_weights()` ([retriever.py:150](../ml-service/app/models/retriever.py))
 
 ```
 w_nhóm(thô) = mức_ưu_tiên(1..5) × base_nhóm(phân_khúc)
@@ -134,7 +134,7 @@ w_đặc_trưng = w_nhóm(thô) / số đặc trưng trong nhóm
 
 Nhóm `brand` nhân thêm `brand_weight` (chỉ tăng khi câu nhu cầu tự do có từ khoá "bền"/"uy tín", xem `text_classifier.PRIORITY_HINTS`), không có thanh trượt riêng cho người dùng. Nhóm `popularity` (`discount_percent`, `sales_score`) dùng trọng số **cố định** `POPULARITY_WEIGHT = 0.12`, không phụ thuộc mức ưu tiên. `screen_inch` cố định `0,05`; `gpu_dedicated` cố định `0,06`. Toàn bộ trọng số cuối cùng được chia cho tổng để Σw = 1.
 
-### 4.3 Bước 3 — Khoảng cách một phía và kNN thật — `one_sided_distance()` + `make_one_sided_metric()` ([retriever.py:201–241](../ml-service/app/retriever.py))
+### 4.3 Bước 3 — Khoảng cách một phía và kNN thật — `one_sided_distance()` + `make_one_sided_metric()` ([retriever.py:201–241](../ml-service/app/models/retriever.py))
 
 ```python
 # Hướng "tốt" của từng đặc trưng (FEATURE_DIRECTION):
@@ -164,7 +164,7 @@ nn.fit(Xs); dist, idx = nn.kneighbors(qs)
 
 `algorithm="brute"` bắt buộc vì metric tuỳ biến không tương thích với cấu trúc chỉ mục KD-Tree/Ball-Tree; với quy mô ~1000 máy, brute-force vẫn đủ nhanh.
 
-### 4.4 Bước 4 — Lọc mềm theo phân khúc ([retriever.py:271–277](../ml-service/app/retriever.py))
+### 4.4 Bước 4 — Lọc mềm theo phân khúc ([retriever.py:271–277](../ml-service/app/models/retriever.py))
 
 Thay vì loại cứng các máy khác phân khúc mong muốn, độ khớp phân khúc được thêm làm **một đặc trưng nữa** trong metric: nối thêm cột `seg_match ∈ {0,1}` vào `Xs`/`qs`, trọng số cố định `SEGMENT_SOFT_WEIGHT = 0.18`, hướng `+1` (khớp phân khúc càng cao càng tốt, nhưng không khớp chỉ bị phạt nhẹ chứ không loại). Nhờ vậy một máy tốt vượt trội ở các mặt khác vẫn có cơ hội lọt top-N dù khác phân khúc mong muốn.
 
@@ -172,7 +172,7 @@ Thay vì loại cứng các máy khác phân khúc mong muốn, độ khớp ph�
 
 Lọc cứng (ngân sách, RAM tối thiểu, máy bị cấm) xảy ra ở **backend**, trước khi gọi `/recommend` — Mô hình B chỉ xếp hạng trong tập `candidateIds` đã được backend thu hẹp sẵn, không tự lọc lại từ đầu.
 
-### 4.6 Máy tương tự (item-item) — `similar_items()` ([retriever.py:303](../ml-service/app/retriever.py))
+### 4.6 Máy tương tự (item-item) — `similar_items()` ([retriever.py:303](../ml-service/app/models/retriever.py))
 
 Dùng lại `MODEL_B_FEATURES` và `scaler` của Mô hình B nhưng Euclidean **hai phía** thông thường (ở đây cần tìm máy *giống nhau*, mạnh hơn hay yếu hơn đều tính là khác biệt): điểm truy vấn là chính vector của máy đang xem, `k+1` láng giềng rồi bỏ phần tử đầu (chính nó, khoảng cách 0).
 
@@ -180,13 +180,13 @@ Dùng lại `MODEL_B_FEATURES` và `scaler` của Mô hình B nhưng Euclidean *
 
 ### 5.1 Chọn k (Mô hình A)
 - k nhỏ (1–3): nhạy nhiễu, dễ overfit. k lớn: làm mờ ranh giới, thiên về lớp đông.
-- `k_curve()` ([ml-service/app/classifier.py:113](../ml-service/app/classifier.py)) tính macro-F1 trung bình (5-fold CV) cho từng k lẻ từ 1 đến 31, giữ nguyên `weights`/`metric` tốt nhất — sinh biểu đồ `k_curve.png` trong artifact mỗi lần `python -m app.train`.
+- `k_curve()` ([ml-service/app/models/classifier.py:113](../ml-service/app/models/classifier.py)) tính macro-F1 trung bình (5-fold CV) cho từng k lẻ từ 1 đến 31, giữ nguyên `weights`/`metric` tốt nhất — sinh biểu đồ `k_curve.png` trong artifact mỗi lần `python -m app.lifecycle.train`.
 - k thật sự được chọn là kết quả `GridSearchCV` (dò đồng thời k, weights, metric), không chọn tay từ đường cong.
 
 ### 5.2 Số chiều đặc trưng
 11 đặc trưng ở Mô hình A là ít, khoảng cách vẫn còn ý nghĩa phân biệt. Không mã hoá one-hot hãng máy vào Mô hình A vì sẽ tăng chiều và gây thiên lệch theo hãng — `brand_tier` chỉ dùng ở Mô hình B.
 
-### 5.3 Mất cân bằng lớp — `app/ablation.py::run_imbalance_configs()`
+### 5.3 Mất cân bằng lớp — `app/lifecycle/ablation.py::run_imbalance_configs()`
 So sánh trên cùng cross-validation:
 1. Không xử lý gì thêm.
 2. `weights="distance"`.
@@ -194,7 +194,7 @@ So sánh trên cùng cross-validation:
 
 ## 6. Đánh giá
 
-### 6.1 Mô hình A — `python -m app.train`
+### 6.1 Mô hình A — `python -m app.lifecycle.train`
 
 | Chỉ số | Mục tiêu |
 |---|---|
@@ -202,17 +202,17 @@ So sánh trên cùng cross-validation:
 | Vượt baseline đa số (`DummyClassifier`) | ≥ +0,30 macro-F1 |
 | Vượt baseline luật if-else | ≥ +0,05 macro-F1 |
 
-Baseline dùng để so sánh, cả hai định nghĩa trong `app/classifier.py`:
+Baseline dùng để so sánh, cả hai định nghĩa trong `app/models/classifier.py`:
 - `dummy_baseline()`: `DummyClassifier(strategy="most_frequent")`.
 - `rule_based_baseline()`: có GPU rời và refresh ≥ 120Hz → GAMING; sRGB 100% và CPU thuộc top 30% (phân vị 70) → CREATOR; nhẹ ≤ 1,4kg → ULTRABOOK; còn lại → OFFICE.
 
-Đầu ra `python -m app.train` ghi vào `artifacts/<version>/`: `metadata.json` (tham số tốt nhất, macro-F1 CV và test, classification report, confusion matrix dạng số, baseline, đường cong k), `confusion_matrix.png`, `k_curve.png`, `model.joblib` (Mô hình A), `text_model.joblib` (Mô hình C). Số liệu thật gần nhất xem `docs/14_KET_QUA_THUC_NGHIEM.md`.
+Đầu ra `python -m app.lifecycle.train` ghi vào `artifacts/<version>/`: `metadata.json` (tham số tốt nhất, macro-F1 CV và test, classification report, confusion matrix dạng số, baseline, đường cong k), `confusion_matrix.png`, `k_curve.png`, `model.joblib` (Mô hình A), `text_model.joblib` (Mô hình C). Số liệu thật gần nhất xem `docs/14_KET_QUA_THUC_NGHIEM.md`.
 
 > Nếu không đạt mục tiêu, báo cáo trung thực con số và phân tích nhầm lẫn giữa lớp nào (thường là GAMING ↔ CREATOR do cùng đòi hỏi cấu hình mạnh) từ ma trận nhầm lẫn.
 
-### 6.2 Mô hình B — `python -m app.evaluate`
+### 6.2 Mô hình B — `python -m app.lifecycle.evaluate`
 
-`app/evaluate.py::evaluate_model_a()` và các hàm liên quan đo:
+`app/lifecycle/evaluate.py::evaluate_model_a()` và các hàm liên quan đo:
 
 | Chỉ số | Cách đo |
 |---|---|
@@ -221,7 +221,7 @@ Baseline dùng để so sánh, cả hai định nghĩa trong `app/classifier.py`
 | Tỷ lệ persona đạt | 30 persona (`data/personas/personas.json`), đạt khi thỏa toàn bộ điều kiện `expect` |
 | "Công sức tìm kiếm" | So số máy trung bình phải duyệt thủ công so với dùng hệ thống (top-5) |
 
-### 6.3 Thí nghiệm cắt bỏ (ablation) — `python -m app.ablation`
+### 6.3 Thí nghiệm cắt bỏ (ablation) — `python -m app.lifecycle.ablation`
 
 `run_ablation()` so trên cùng cross-validation: baseline đầy đủ, bỏ `StandardScaler`, bỏ `refresh_hz`, bỏ `srgb_100`, đổi Manhattan thay Euclidean. Kết quả ghi vào `artifacts/<version>/experiments.json`, dùng minh chứng cho `03_DU_LIEU_VA_TIEN_XU_LY.md` §5.1 (vì sao phải chuẩn hoá) bằng số liệu thay vì chỉ lý thuyết.
 
@@ -237,7 +237,7 @@ FeatureUnion([
 KNeighborsClassifier(n_neighbors=k, metric="cosine", weights="distance")
 ```
 
-6 nhãn nhu cầu (`VAN_PHONG`, `HOC_TAP`, `LAP_TRINH`, `DO_HOA`, `GAMING`, `DI_DONG`), huấn luyện trên `data/need_phrases.json` (132 câu viết tay). `k` được chọn bằng `StratifiedKFold(5)` cross-validation trên `k ∈ {1, 3, 5, 7}` trong `train.py::train_text_model()`. Mô hình C **không nạp từ artifact lúc chạy service** — `main.py` huấn luyện lại ngay khi khởi động (`NeedTextModel(n_neighbors=7).fit()`) vì tập dữ liệu nhỏ, huấn luyện tức thời. `python -m app.train` vẫn lưu `text_model.joblib` và số liệu (`best_k`, `cv_f1_macro`, `f1_macro_by_k`) vào `metadata.json["text_model"]` để tra cứu/so sánh phiên bản.
+6 nhãn nhu cầu (`VAN_PHONG`, `HOC_TAP`, `LAP_TRINH`, `DO_HOA`, `GAMING`, `DI_DONG`), huấn luyện trên `data/need_phrases.json` (132 câu viết tay). `k` được chọn bằng `StratifiedKFold(5)` cross-validation trên `k ∈ {1, 3, 5, 7}` trong `train.py::train_text_model()`. Mô hình C **không nạp từ artifact lúc chạy service** — `main.py` huấn luyện lại ngay khi khởi động (`NeedTextModel(n_neighbors=7).fit()`) vì tập dữ liệu nhỏ, huấn luyện tức thời. `python -m app.lifecycle.train` vẫn lưu `text_model.joblib` và số liệu (`best_k`, `cv_f1_macro`, `f1_macro_by_k`) vào `metadata.json["text_model"]` để tra cứu/so sánh phiên bản.
 
 Phần trích số cụ thể (ngân sách, ràng buộc RAM/cân nặng) trong câu tự do dùng regex (`extract_budget()`, `extract_constraints()`), không phải kNN — vì đây là tri thức hỗ trợ (trích số), khác với việc phân loại nhóm nhu cầu (cần hiểu ý nghĩa, mới cần kNN).
 
@@ -246,7 +246,7 @@ Phần trích số cụ thể (ngân sách, ràng buộc RAM/cân nặng) trong 
 ### 8.1 Mô hình A
 Trả về `distribution` (xác suất từng nhãn) và `neighbors` (k láng giềng thật kèm nhãn, khoảng cách) trong response `/predict-segment` — ví dụ hiển thị "5/7 máy gần nhất là Gaming → dự đoán Gaming (71%)".
 
-### 8.2 Mô hình B — `build_explanation()` ([ml-service/app/explain.py](../ml-service/app/explain.py))
+### 8.2 Mô hình B — `build_explanation()` ([ml-service/app/models/explain.py](../ml-service/app/models/explain.py))
 Không phải văn bản do AI sinh: so từng đặc trưng của máy với vector lý tưởng `q`, trả về **mã** (`perf_above`, `gpu_dedicated`, `weight_over`, `price_under`, `ram_low`, `display_good`, …) kèm tham số và `tone: positive|warning`. Frontend (`frontend/src/utils/explainText.ts`) dịch mã đó thành câu tiếng Việt — tách riêng để dễ kiểm thử (so mã, không so chuỗi) và dễ đổi cách diễn đạt sau này.
 
 ## 9. Artifact và phiên bản
@@ -255,17 +255,17 @@ Không phải văn bản do AI sinh: so từng đặc trưng của máy với ve
 ml-service/artifacts/
 ├── LATEST                        # tên version đang active (text thuần)
 ├── golden_test.csv               # 20% test đóng băng từ lần train đầu tiên
-├── evaluation.json               # kết quả python -m app.evaluate (P@5, nDCG@5, search effort)
-└── clf-2026.09.27-160831/        # 1 thư mục / lần chạy python -m app.train
+├── evaluation.json               # kết quả python -m app.lifecycle.evaluate (P@5, nDCG@5, search effort)
+└── clf-2026.09.27-160831/        # 1 thư mục / lần chạy python -m app.lifecycle.train
     ├── model.joblib               # Pipeline Mô hình A đầy đủ (prep + knn)
     ├── text_model.joblib          # Pipeline Mô hình C
     ├── metadata.json
     ├── confusion_matrix.png
     ├── k_curve.png
-    └── experiments.json           # chỉ có nếu đã chạy python -m app.ablation cho version này
+    └── experiments.json           # chỉ có nếu đã chạy python -m app.lifecycle.ablation cho version này
 ```
 
-`metadata.json`: `version`, `type`, `trained_at`, `dataset_hash` (SHA-256 của `catalog_vn.csv`), `n_samples`, `class_counts`, `best_params`, `cv_f1_macro_mean/std`, `test_metrics` (macro-F1, classification report, confusion matrix, labels), `baseline` (dummy/rule macro-F1), `k_curve`, `feature_list`, `sklearn_version`, `text_model` (metadata Mô hình C). `app/registry.py` (`registry.activate_latest()`, `registry.activate(version)`) quản lý việc nạp/kích hoạt/rollback giữa các version, gọi từ `main.py` lúc khởi động và ở endpoint `/models/{version}/activate`.
+`metadata.json`: `version`, `type`, `trained_at`, `dataset_hash` (SHA-256 của `catalog_vn.csv`), `n_samples`, `class_counts`, `best_params`, `cv_f1_macro_mean/std`, `test_metrics` (macro-F1, classification report, confusion matrix, labels), `baseline` (dummy/rule macro-F1), `k_curve`, `feature_list`, `sklearn_version`, `text_model` (metadata Mô hình C). `app/lifecycle/registry.py` (`registry.activate_latest()`, `registry.activate(version)`) quản lý việc nạp/kích hoạt/rollback giữa các version, gọi từ `main.py` lúc khởi động và ở endpoint `/models/{version}/activate`.
 
 ## 10. Endpoint FastAPI (`ml-service/app/main.py`)
 

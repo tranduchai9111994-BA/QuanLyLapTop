@@ -23,7 +23,7 @@ from sklearn.model_selection import GridSearchCV, StratifiedKFold
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline
 
-from app.features import MODEL_A_FEATURES, build_model_a_preprocessor
+from app.data.features import MODEL_A_FEATURES, build_model_a_preprocessor
 
 RANDOM_STATE = 42  # cố định để kết quả tái lập được giữa các lần chạy (docs yêu cầu)
 

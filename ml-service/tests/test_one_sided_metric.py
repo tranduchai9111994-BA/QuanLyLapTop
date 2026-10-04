@@ -2,8 +2,8 @@
 import numpy as np
 import pandas as pd
 
-from app.features import MODEL_B_FEATURES
-from app.retriever import (
+from app.data.features import MODEL_B_FEATURES
+from app.models.retriever import (
     build_ideal_vector,
     build_weights,
     fit_scaler,

@@ -12,13 +12,13 @@ import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 
-from app.explain import build_explanation
-from app.features import MODEL_A_FEATURES, MODEL_B_FEATURES
-from app.registry import registry
-from app.retriever import build_ideal_vector, build_weights, fit_scaler, match_pct, recommend, similar_items
+from app.models.explain import build_explanation
+from app.data.features import MODEL_A_FEATURES, MODEL_B_FEATURES
+from app.lifecycle.registry import registry
+from app.models.retriever import build_ideal_vector, build_weights, fit_scaler, match_pct, recommend, similar_items
 from app.schemas import CatalogSyncRequest, PredictSegmentRequest, RecommendRequest, SimilarRequest, TrainRequest
-from app.segment_inference import infer_segment
-from app.text_classifier import NeedTextModel
+from app.models.segment_inference import infer_segment
+from app.models.text_classifier import NeedTextModel
 
 app = FastAPI(title="SmartLap ML service")
 
@@ -215,7 +215,7 @@ def similar_endpoint(req: SimilarRequest) -> dict:
 
 @app.post("/train")
 def train_endpoint(req: TrainRequest) -> dict:
-    """Kích hoạt huấn luyện lại Mô hình A + Mô hình C từ xa (thay cho `python -m app.train`).
+    """Kích hoạt huấn luyện lại Mô hình A + Mô hình C từ xa (thay cho `python -m app.lifecycle.train`).
     Import `train` trong hàm để tránh vòng lặp import và vì thao tác này nặng, hiếm khi gọi."""
     from app import train as train_module
 

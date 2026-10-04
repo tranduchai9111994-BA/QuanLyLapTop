@@ -74,7 +74,7 @@ d(máy 1, máy 2) = √( Σ (đặc trưng_j của máy 1 − đặc trưng_j c�
 
 ## 1.4 Dữ liệu đưa vào được xử lý thế nào (và vì sao)
 
-Code: `ml-service/app/features.py` — `MODEL_A_FEATURES` (dòng 30), `build_model_a_preprocessor()` (dòng 188).
+Code: `ml-service/app/data/features.py` — `MODEL_A_FEATURES` (dòng 30), `build_model_a_preprocessor()` (dòng 188).
 
 | Nhóm | Đặc trưng | Xử lý | Vì sao |
 |---|---|---|---|
@@ -113,7 +113,7 @@ thuật. (Giá chỉ được dùng ở Mô hình B.)
 
 ## 1.6 Chọn tham số — "ta không biết trước, nên thử rồi đo"
 
-Code: `ml-service/app/classifier.py` — `PARAM_GRID` (dòng 34–38), `grid_search()` (dòng 56).
+Code: `ml-service/app/models/classifier.py` — `PARAM_GRID` (dòng 34–38), `grid_search()` (dòng 56).
 
 `GridSearchCV` thử **mọi tổ hợp** rồi chọn bộ có macro-F1 cao nhất bằng kiểm thử chéo 5 phần:
 
@@ -164,10 +164,10 @@ Có test chặn lỗi này: `ml-service/tests/test_classifier.py` (`test_scaler_
 
 | Việc | File |
 |---|---|
-| Đặc trưng + tiền xử lý | `ml-service/app/features.py` |
-| Mô hình, GridSearch, baseline, đường cong k | `ml-service/app/classifier.py` |
-| Huấn luyện + lưu phiên bản | `ml-service/app/train.py`, `ml-service/app/registry.py` |
-| Đo lại kiểm thử chéo, ma trận nhầm lẫn | `ml-service/app/evaluate.py`, `ml-service/artifacts/evaluation.json` |
+| Đặc trưng + tiền xử lý | `ml-service/app/data/features.py` |
+| Mô hình, GridSearch, baseline, đường cong k | `ml-service/app/models/classifier.py` |
+| Huấn luyện + lưu phiên bản | `ml-service/app/lifecycle/train.py`, `ml-service/app/lifecycle/registry.py` |
+| Đo lại kiểm thử chéo, ma trận nhầm lẫn | `ml-service/app/lifecycle/evaluate.py`, `ml-service/artifacts/evaluation.json` |
 | Endpoint `/predict-segment` | `ml-service/app/main.py` (hàm `predict_segment`, dòng 86–120) |
 | Backend: gọi mô hình + quyết định VERIFIED/NEEDS_REVIEW | `backend/src/modules/laptops/segment.service.ts` (`predictSegment` dòng 59; `applySegmentLabel` dòng 104) |
 | Giao diện gợi ý phân khúc + 7 láng giềng | `frontend/src/components/admin/SegmentSuggester.tsx` |
@@ -204,8 +204,8 @@ Có test chặn lỗi này: `ml-service/tests/test_classifier.py` (`test_scaler_
 
 # PHẦN 2 — Thành viên 2: Mô hình C (hiểu câu tự do, TF-IDF + kNN cosine)
 
-*(Sẽ bổ sung khi nhóm học xong. Code: `ml-service/app/text_classifier.py`; giao diện: ô nhập câu ở Wizard.)*
+*(Sẽ bổ sung khi nhóm học xong. Code: `ml-service/app/models/text_classifier.py`; giao diện: ô nhập câu ở Wizard.)*
 
 # PHẦN 3 — Thành viên 3: Mô hình B (xếp hạng top-5, kNN khoảng cách một phía)
 
-*(Sẽ bổ sung khi nhóm học xong. Code: `ml-service/app/retriever.py`, `ml-service/app/explain.py`; giao diện: trang Kết quả + "Vì sao gợi ý?".)*
+*(Sẽ bổ sung khi nhóm học xong. Code: `ml-service/app/models/retriever.py`, `ml-service/app/models/explain.py`; giao diện: trang Kết quả + "Vì sao gợi ý?".)*

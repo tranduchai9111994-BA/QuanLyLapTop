@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from app.features import MODEL_A_FEATURES
+from app.data.features import MODEL_A_FEATURES
 
 ACTIVITY_TARGETS = {
     "choi_game": {"gpu_score": 75, "refresh_hz": 75, "gpu_dedicated": 1, "cpu_score": 60},

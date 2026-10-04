@@ -24,7 +24,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline, FeatureUnion
 
 RANDOM_STATE = 42
-DATA_DIR = Path(__file__).resolve().parents[2] / "data"
+DATA_DIR = Path(__file__).resolve().parents[3] / "data"
 PHRASES_PATH = DATA_DIR / "need_phrases.json"
 
 # ---------------------------------------------------------------------------

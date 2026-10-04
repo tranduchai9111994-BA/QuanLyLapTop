@@ -1,6 +1,6 @@
 """Danh gia dinh luong Mo hinh B (truy hoi) va Mo hinh C (phan loai cau tu do).
 
-Chay: python -m app.evaluate
+Chay: python -m app.lifecycle.evaluate
 
 Mo hinh B duoc so voi 3 BASELINE de chung minh kNN co gia tri thuc su:
   - price_asc   : sap xep theo gia tang dan (cach nguoi dung hay lam nhat)
@@ -22,16 +22,16 @@ import pandas as pd
 from sklearn.model_selection import StratifiedKFold, cross_val_predict, cross_val_score
 from sklearn.metrics import classification_report, confusion_matrix
 
-from app.classifier import build_pipeline
-from app.features import MODEL_A_FEATURES, enrich_catalog
-from app.retriever import build_ideal_vector, build_weights, fit_scaler, recommend
-from app.segment_inference import infer_segment
-from app.text_classifier import NeedTextModel, build_text_pipeline, normalize_text
+from app.models.classifier import build_pipeline
+from app.data.features import MODEL_A_FEATURES, enrich_catalog
+from app.models.retriever import build_ideal_vector, build_weights, fit_scaler, recommend
+from app.models.segment_inference import infer_segment
+from app.models.text_classifier import NeedTextModel, build_text_pipeline, normalize_text
 
 RANDOM_STATE = 42
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 DATA_DIR = ROOT / "data"
-ARTIFACTS_DIR = Path(__file__).resolve().parent.parent / "artifacts"
+ARTIFACTS_DIR = Path(__file__).resolve().parents[2] / "artifacts"
 TOP_K = 5
 
 

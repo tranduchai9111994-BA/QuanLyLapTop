@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from app.features import enrich_catalog
+from app.data.features import enrich_catalog
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "data"

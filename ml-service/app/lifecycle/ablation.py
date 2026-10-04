@@ -1,5 +1,5 @@
 """Thi nghiem cat bo (docs/04 SS6.3) + xu ly mat can bang lop (SS5.3).
-Chay: python -m app.ablation
+Chay: python -m app.lifecycle.ablation
 """
 from __future__ import annotations
 
@@ -17,12 +17,12 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, StandardScaler
 
-from app.classifier import RANDOM_STATE, build_pipeline, grid_search
-from app.features import BINARY, MODEL_A_FEATURES, NUMERIC, NUMERIC_LOG, enrich_catalog
+from app.models.classifier import RANDOM_STATE, build_pipeline, grid_search
+from app.data.features import BINARY, MODEL_A_FEATURES, NUMERIC, NUMERIC_LOG, enrich_catalog
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 DATA_DIR = ROOT / "data"
-ARTIFACTS_DIR = Path(__file__).resolve().parent.parent / "artifacts"
+ARTIFACTS_DIR = Path(__file__).resolve().parents[2] / "artifacts"
 
 
 def load_data() -> pd.DataFrame:
@@ -99,7 +99,7 @@ def run_imbalance_configs(df: pd.DataFrame, best_k: int, best_metric: str) -> li
         from imblearn.over_sampling import RandomOverSampler
         from imblearn.pipeline import Pipeline as ImbPipeline
 
-        from app.features import build_model_a_preprocessor
+        from app.data.features import build_model_a_preprocessor
 
         imb_pipe = ImbPipeline([
             ("prep", build_model_a_preprocessor()),

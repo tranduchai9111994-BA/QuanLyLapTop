@@ -30,7 +30,7 @@ minh hoạ và luyện tập kịch bản bảo vệ (`11_KICH_BAN_DEMO_VA_HOI_D
 **Việc:** `features.py`, `classifier.py`, `train.py` (grid search, baseline, ablation, Kaggle), `retriever.py`, `explain.py`, `registry.py`, FastAPI routes, tests.
 **Nghiệm thu:**
 - [x] `pytest` xanh toàn bộ test 04 §9
-- [x] `python -m app.train` sinh artifact + `metadata.json` + ảnh confusion matrix + đường cong k
+- [x] `python -m app.lifecycle.train` sinh artifact + `metadata.json` + ảnh confusion matrix + đường cong k
 - [x] Bảng kết quả Mô hình A đủ các dòng: Dummy, Luật, kNN tốt nhất, 3 cấu hình mất cân bằng, ablation, Kaggle
 - [x] `/recommend` trả kết quả < 50 ms với catalog 300 máy
 

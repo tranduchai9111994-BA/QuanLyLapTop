@@ -7,8 +7,8 @@ Luong:
      => bo sung vao tap huan luyen.
   3. Huan luyen lai Mo hinh C va so sanh chi so TRUOC / SAU.
 
-Chay: python -m app.retrain_from_feedback            (che do that: goi API backend)
-      python -m app.retrain_from_feedback --demo     (che do demo: mo phong cau moi, khong can backend)
+Chay: python -m app.lifecycle.retrain_from_feedback            (che do that: goi API backend)
+      python -m app.lifecycle.retrain_from_feedback --demo     (che do demo: mo phong cau moi, khong can backend)
 
 Ghi chu trung thuc: day la vong lap hoc BAN GIAM SAT don gian (human-in-the-loop). Cau chi duoc
 nhan vao khi co tin hieu 👍 - khong tu dong tin moi du doan cua chinh minh (tranh "echo chamber").
@@ -23,9 +23,9 @@ import numpy as np
 import requests
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 
-from app.text_classifier import NeedTextModel, build_text_pipeline, normalize_text
+from app.models.text_classifier import NeedTextModel, build_text_pipeline, normalize_text
 
-DATA_DIR = Path(__file__).resolve().parents[2] / "data"
+DATA_DIR = Path(__file__).resolve().parents[3] / "data"
 PHRASES_PATH = DATA_DIR / "need_phrases.json"
 BACKEND_URL = "http://localhost:4000/api"
 
@@ -183,7 +183,7 @@ def main() -> int:
         data["samples"].extend(new_samples)
         PHRASES_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"\n  Da ghi {len(new_samples)} cau moi vao {PHRASES_PATH.name}.")
-        print("  Chay lai `python -m app.train` de kich hoat mo hinh moi.")
+        print("  Chay lai `python -m app.lifecycle.train` de kich hoat mo hinh moi.")
     else:
         print("\n  (Chay lai voi --apply de thuc su ghi cau moi vao tap huan luyen)")
     return 0

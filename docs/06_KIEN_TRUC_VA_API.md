@@ -43,20 +43,25 @@ backend/src/
     ├── dashboard/            # dashboard.routes.ts (KPI, alerts) + feedback.routes con (summary, need-texts)
     └── jobs/                 # alertScan.ts, snapshotSync.ts (không có routes.ts — chạy qua cron/nội bộ)
 
-ml-service/app/
-├── main.py                # toàn bộ route FastAPI, state toàn cục trong RAM
-├── schemas.py              # pydantic request/response models
-├── features.py             # dựng đặc trưng, ColumnTransformer
-├── classifier.py           # Mô hình A (phân loại phân khúc)
-├── retriever.py            # Mô hình B (kNN xếp hạng theo vector lý tưởng)
-├── text_classifier.py      # Mô hình C (đọc câu nhu cầu tự do — NeedTextModel)
-├── explain.py               # dựng giải thích cho từng gợi ý
-├── segment_inference.py     # suy phân khúc từ danh sách hoạt động
-├── train.py                 # huấn luyện lại, lưu artifact theo version
-├── registry.py              # nạp / kích hoạt / rollback phiên bản model trên đĩa
-├── retrain_from_feedback.py # học thêm Mô hình C từ câu nhu cầu thật được 👍 (docs/09)
-├── ablation.py, evaluate.py, data_check.py
-└── artifacts/                # các phiên bản model đã lưu (model + metadata.json)
+ml-service/app/                 # chia 3 nhóm theo vai trò; phụ thuộc chỉ đi 1 chiều main -> models -> data
+├── main.py                     # cổng vào: toàn bộ route FastAPI, state (catalog...) trong RAM
+├── schemas.py                  # pydantic request/response models
+├── data/                       # NHÓM 1: dữ liệu -> đặc trưng
+│   ├── features.py             #   dựng đặc trưng, ColumnTransformer
+│   └── data_check.py           #   kiểm tra chất lượng dữ liệu
+├── models/                     # NHÓM 2: 3 mô hình
+│   ├── classifier.py           #   Mô hình A (phân loại phân khúc)
+│   ├── segment_inference.py    #   Mô hình A dùng ở Wizard: suy phân khúc từ hoạt động
+│   ├── retriever.py            #   Mô hình B (kNN xếp hạng theo vector lý tưởng)
+│   ├── explain.py              #   giải thích từng gợi ý của Mô hình B
+│   └── text_classifier.py      #   Mô hình C (đọc câu nhu cầu tự do - NeedTextModel)
+└── lifecycle/                  # NHÓM 3: huấn luyện, lưu, đánh giá
+    ├── train.py                #   huấn luyện, lưu artifact theo version
+    ├── evaluate.py, ablation.py#   đo chất lượng, thí nghiệm bật/tắt đặc trưng
+    ├── retrain_from_feedback.py#   học thêm Mô hình C từ câu nhu cầu thật được 👍 (docs/09)
+    └── registry.py             #   nạp / kích hoạt / rollback phiên bản model trên đĩa
+
+ml-service/artifacts/           # các phiên bản model đã lưu (model + metadata.json), ngoài app/
 ```
 
 ## 3. API Backend

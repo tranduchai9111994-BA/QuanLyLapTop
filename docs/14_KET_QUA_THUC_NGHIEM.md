@@ -2,7 +2,7 @@
 
 > Mọi con số dưới đây đều **truy được về file artifact**: `ml-service/artifacts/evaluation.json`
 > và `ml-service/artifacts/<version>/metadata.json`. Tái tạo bằng:
-> `cd ml-service && python -m app.train && python -m app.evaluate`
+> `cd ml-service && python -m app.lifecycle.train && python -m app.lifecycle.evaluate`
 
 ## 1. Bộ dữ liệu
 
@@ -131,10 +131,10 @@ Hiện trạng:
 - Dữ liệu: 35% số máy trong catalog đang giảm giá (5–25%), có `originalPriceVnd` (giá gốc) và
   `salesCount` (lượt bán, tương quan với độ "đáng tiền" + uy tín thương hiệu + có đang giảm giá hay
   không) — sinh tại [data/generate_catalog.py](../data/generate_catalog.py).
-- Đặc trưng cho Mô hình B ([ml-service/app/features.py](../ml-service/app/features.py)):
+- Đặc trưng cho Mô hình B ([ml-service/app/data/features.py](../ml-service/app/data/features.py)):
   `discount_percent` (% giảm giá) và `sales_score` (lượt bán, log-hoá về thang 0–100 để không bị vài
   máy bán chạy đột biến lấn át).
-- Nhóm trọng số trong metric kNN ([ml-service/app/retriever.py](../ml-service/app/retriever.py)):
+- Nhóm trọng số trong metric kNN ([ml-service/app/models/retriever.py](../ml-service/app/models/retriever.py)):
   `"popularity": ["discount_percent", "sales_score"]`, trọng số **cố định** 0,12 (không cho người
   dùng chỉnh qua thanh trượt ưu tiên — đây là tín hiệu nền, không phải tiêu chí người dùng tự chọn).
 - Hướng tối ưu: cả hai đặc trưng đều "càng cao càng tốt" và **không phạt khi vượt** — máy giảm giá
@@ -171,7 +171,7 @@ danh sách láng giềng.
 
 ### 5.2 Học từ phản hồi người dùng
 
-`python -m app.retrain_from_feedback --demo` mô phỏng dòng thời gian thực tế: người dùng gõ câu với
+`python -m app.lifecycle.retrain_from_feedback --demo` mô phỏng dòng thời gian thực tế: người dùng gõ câu với
 từ ngữ hệ thống chưa từng học ("tiệm tạp hóa", "khai báo thuế", "quay tiktok").
 
 | | Kết quả |

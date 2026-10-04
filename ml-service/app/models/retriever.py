@@ -16,7 +16,7 @@ import pandas as pd
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
 
-from app.features import MODEL_B_FEATURES
+from app.data.features import MODEL_B_FEATURES
 
 PERCENTILE_BY_PRIORITY = {1: 25, 2: 40, 3: 55, 4: 75, 5: 90}
 

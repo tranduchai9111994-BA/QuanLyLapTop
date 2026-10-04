@@ -1,7 +1,7 @@
 import numpy as np
 
-from app.classifier import build_pipeline
-from app.features import MODEL_A_FEATURES
+from app.models.classifier import build_pipeline
+from app.data.features import MODEL_A_FEATURES
 
 
 def test_scaler_inside_pipeline():

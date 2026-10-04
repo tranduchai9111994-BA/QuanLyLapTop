@@ -49,11 +49,11 @@ Việc dùng dữ liệu tổng hợp là lựa chọn thực tế cho quy mô �
 
 `data/processed/cpu_benchmark.csv` và `gpu_benchmark.csv` có các cột `pattern`, `display_name`, `raw_score` (điểm PassMark thô: CPU Mark cho CPU, G3D Mark cho GPU), `source`; `gpu_benchmark.csv` còn có cột `dedicated` (0/1) nếu có sẵn.
 
-- `build_bench_lookup()` ([ml-service/app/features.py:63](../ml-service/app/features.py)) quy đổi điểm thô về thang 0–100: `score = 100 × raw_score / max(raw_score)` trên toàn bảng — máy mạnh nhất trong bảng benchmark được 100 điểm.
-- Khớp tên (`match_score()`, [features.py:83](../ml-service/app/features.py)): chuẩn hoá chuỗi bằng `normalize_name()` (viết thường, bỏ `"(r)"`, `"(tm)"`, `"processor"`, gọn khoảng trắng), khớp chính xác trước, nếu không có thử khớp một phần (chuỗi trong catalog chứa `pattern` hoặc ngược lại). Không khớp được → `enrich_catalog()` raise `ValueError` liệt kê toàn bộ tên CPU/GPU không khớp — **không tự đoán mò**.
-- `gpu_dedicated`: ưu tiên cột `dedicated` thật trong `gpu_benchmark.csv` nếu có; nếu bảng cũ chưa có cột này thì suy từ từ khoá trong tên GPU (`geforce`, `radeon rx`, `rtx`, `quadro`, `arc a` → `is_gpu_dedicated()`, [features.py:102](../ml-service/app/features.py)).
+- `build_bench_lookup()` ([ml-service/app/data/features.py:63](../ml-service/app/data/features.py)) quy đổi điểm thô về thang 0–100: `score = 100 × raw_score / max(raw_score)` trên toàn bảng — máy mạnh nhất trong bảng benchmark được 100 điểm.
+- Khớp tên (`match_score()`, [features.py:83](../ml-service/app/data/features.py)): chuẩn hoá chuỗi bằng `normalize_name()` (viết thường, bỏ `"(r)"`, `"(tm)"`, `"processor"`, gọn khoảng trắng), khớp chính xác trước, nếu không có thử khớp một phần (chuỗi trong catalog chứa `pattern` hoặc ngược lại). Không khớp được → `enrich_catalog()` raise `ValueError` liệt kê toàn bộ tên CPU/GPU không khớp — **không tự đoán mò**.
+- `gpu_dedicated`: ưu tiên cột `dedicated` thật trong `gpu_benchmark.csv` nếu có; nếu bảng cũ chưa có cột này thì suy từ từ khoá trong tên GPU (`geforce`, `radeon rx`, `rtx`, `quadro`, `arc a` → `is_gpu_dedicated()`, [features.py:102](../ml-service/app/data/features.py)).
 
-## 4. Làm giàu đặc trưng — `enrich_catalog()` ([ml-service/app/features.py:120](../ml-service/app/features.py))
+## 4. Làm giàu đặc trưng — `enrich_catalog()` ([ml-service/app/data/features.py:120](../ml-service/app/data/features.py))
 
 Hàm bắt buộc chạy trước khi đưa dữ liệu vào bất kỳ mô hình kNN nào (`train.py`, `evaluate.py`, và `main.py` lúc `/catalog/sync`). Từ catalog thô, tính thêm:
 
@@ -79,7 +79,7 @@ Hàm bắt buộc chạy trước khi đưa dữ liệu vào bất kỳ mô hìn
 | `gpu_dedicated`, `srgb_100` | passthrough (đã là 0/1) | ✅ | ✅ |
 | `price_vnd`, `brand_tier`, `value_index`, `discount_percent`, `sales_score` | StandardScaler (qua `fit_scaler` của Mô hình B) | ❌ | ✅ |
 
-`MODEL_A_FEATURES = NUMERIC_LOG + NUMERIC + BINARY` ([features.py:35](../ml-service/app/features.py)); `MODEL_B_FEATURES = MODEL_A_FEATURES + ["price_vnd", "brand_tier", "value_index", "discount_percent", "sales_score"]` ([features.py:44](../ml-service/app/features.py)).
+`MODEL_A_FEATURES = NUMERIC_LOG + NUMERIC + BINARY` ([features.py:35](../ml-service/app/data/features.py)); `MODEL_B_FEATURES = MODEL_A_FEATURES + ["price_vnd", "brand_tier", "value_index", "discount_percent", "sales_score"]` ([features.py:44](../ml-service/app/data/features.py)).
 
 **`price_vnd` cố ý không có mặt trong Mô hình A** (quyết định thiết kế D-04, được test `test_price_not_in_classifier` chặn tái phát): nếu đưa giá vào, mô hình sẽ "học" phân khúc theo giá thay vì theo cấu hình thật — hai máy cùng cấu hình nhưng khác giá vẫn phải cùng phân khúc. Giá chỉ tham gia xếp hạng ở Mô hình B.
 
@@ -87,7 +87,7 @@ Hàm bắt buộc chạy trước khi đưa dữ liệu vào bất kỳ mô hìn
 
 kNN dựa trên khoảng cách. Không chuẩn hoá thì `price_vnd` (hàng chục triệu) và `ssd_gb` (hàng trăm) sẽ lấn át hoàn toàn `weight_kg` (1–3 kg). Dùng `log2` cho `ram_gb`/`ssd_gb` vì chênh 8→16 GB có ý nghĩa ngang 16→32 GB (cùng là gấp đôi), không phải bằng 1/2 giá trị tuyệt đối.
 
-### 5.2 Pipeline thật — `build_model_a_preprocessor()` ([features.py:225](../ml-service/app/features.py))
+### 5.2 Pipeline thật — `build_model_a_preprocessor()` ([features.py:225](../ml-service/app/data/features.py))
 
 ```python
 ColumnTransformer([
@@ -104,7 +104,7 @@ ColumnTransformer([
 ])
 ```
 
-Bước này nằm **trong** `Pipeline` của Mô hình A ([ml-service/app/classifier.py:41](../ml-service/app/classifier.py)) để `StandardScaler`/`SimpleImputer` chỉ được `fit` trên tập train ở mỗi fold cross-validation — tránh rò rỉ dữ liệu (data leakage). Với Mô hình B, chuẩn hoá dùng `fit_scaler()` ([ml-service/app/retriever.py:81](../ml-service/app/retriever.py)) — một `StandardScaler` đơn fit trên toàn catalog hiện hành (không cross-validate, vì đây là bài toán truy hồi không có nhãn).
+Bước này nằm **trong** `Pipeline` của Mô hình A ([ml-service/app/models/classifier.py:41](../ml-service/app/models/classifier.py)) để `StandardScaler`/`SimpleImputer` chỉ được `fit` trên tập train ở mỗi fold cross-validation — tránh rò rỉ dữ liệu (data leakage). Với Mô hình B, chuẩn hoá dùng `fit_scaler()` ([ml-service/app/models/retriever.py:81](../ml-service/app/models/retriever.py)) — một `StandardScaler` đơn fit trên toàn catalog hiện hành (không cross-validate, vì đây là bài toán truy hồi không có nhãn).
 
 Thiếu dữ liệu vượt 10% một cột → `data_check.py` báo lỗi, không tự động loại cột.
 
@@ -113,9 +113,9 @@ Thiếu dữ liệu vượt 10% một cột → `data_check.py` báo lỗi, khô
 - `data/personas/personas.json`: 30 hồ sơ nhu cầu (sinh bởi `data/generate_personas.py`), mỗi hồ sơ có ràng buộc kiểm chứng được (`expect`), dùng cho `ml-service/tests/test_personas.py` và `test_priority_sensitivity.py`, đo tỷ lệ persona đạt kỳ vọng.
 - `data/need_phrases.json`: 132 câu tiếng Việt viết tay gắn nhãn 1 trong 6 nhóm nhu cầu (`VAN_PHONG`, `HOC_TAP`, `LAP_TRINH`, `DO_HOA`, `GAMING`, `DI_DONG`) — **đây mới là dữ liệu huấn luyện thật** của Mô hình C (kNN phân loại văn bản, xem `docs/04_MO_HINH_KNN.md` và `docs/13_GIAI_THICH_THUAT_TOAN_KNN.md`).
 
-## 7. Kiểm tra chất lượng dữ liệu — `ml-service/app/data_check.py`
+## 7. Kiểm tra chất lượng dữ liệu — `ml-service/app/data/data_check.py`
 
-Chạy `python -m app.data_check` (từ thư mục `ml-service/`). Kiểm tra trên `data/processed/catalog_vn.csv`:
+Chạy `python -m app.data.data_check` (từ thư mục `ml-service/`). Kiểm tra trên `data/processed/catalog_vn.csv`:
 
 - Trùng `sku` → lỗi.
 - CPU/GPU không khớp bảng benchmark (cùng logic khớp tên ở mục 3) → lỗi, liệt kê tên không khớp.

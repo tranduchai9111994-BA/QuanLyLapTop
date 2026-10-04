@@ -10,7 +10,7 @@ o tung buoc, ma doi hoi: muc 5 phai TOT HON RO RET so voi muc 1.
 import numpy as np
 import pytest
 
-from app.retriever import build_ideal_vector, build_weights, fit_scaler, recommend
+from app.models.retriever import build_ideal_vector, build_weights, fit_scaler, recommend
 
 SEGMENTS = ["OFFICE", "ULTRABOOK", "GAMING", "CREATOR"]
 BASE = {"performance": 3, "mobility": 3, "display": 3, "price": 3}
