@@ -122,8 +122,8 @@ rồi mình góp ý. Câu hỏi hội đồng đã soạn cho từng mô hình n
 | TV1 — luồng gọi: `predictSegment` (BE) → `predict_segment` (ML), khi nào được gọi | ✅ |
 | TV1 — `features.py`: 11 đặc trưng (3 nhóm), A khác B ở chỗ nào, vì sao A không có giá | ✅ |
 | TV1 — vì sao RAM/SSD lấy log₂ | ✅ |
-| TV1 — **chuẩn hóa z-score (`StandardScaler`)** với số thật cột `weight_kg` | ⏭ **Bước kế tiếp** |
-| TV1 — tìm 7 láng giềng + bỏ phiếu (`predict_proba`, `kneighbors`) | ⏳ |
+| TV1 — chuẩn hóa z-score (`StandardScaler`) với số thật cột `weight_kg`, ví dụ 2 máy A/B (60% / 40%) | ✅ |
+| TV1 — **tìm 7 láng giềng + bỏ phiếu** (`predict_proba`, `kneighbors`; `models/classifier.py`, `main.py` dòng 96) | **Bước kế tiếp** |
 | TV1 — huấn luyện: `GridSearchCV`, `Pipeline` chống rò rỉ dữ liệu, macro-F1 | ⏳ |
 | TV1 — hàng đợi Duyệt nhãn / khóa nhãn (`applySegmentLabel`) | ⏳ |
 | **TV2 / Mô hình C** — TF-IDF + kNN cosine (`models/text_classifier.py`) | ⏳ |
