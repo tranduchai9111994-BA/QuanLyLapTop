@@ -217,7 +217,7 @@ def similar_endpoint(req: SimilarRequest) -> dict:
 def train_endpoint(req: TrainRequest) -> dict:
     """Kích hoạt huấn luyện lại Mô hình A + Mô hình C từ xa (thay cho `python -m app.lifecycle.train`).
     Import `train` trong hàm để tránh vòng lặp import và vì thao tác này nặng, hiếm khi gọi."""
-    from app import train as train_module
+    from app.lifecycle import train as train_module
 
     train_module.main()  # chạy cả pipeline: GridSearchCV, đánh giá, lưu artifact mới
     registry.activate_latest()  # nạp ngay artifact vừa tạo, không cần restart
