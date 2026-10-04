@@ -62,6 +62,11 @@ Khi giải thích đoạn code, ghi rõ chỗ nào:
 - Dùng **phép so sánh quen thuộc**: ML ↔ backend (`requirements.txt` ↔ `package.json`, FastAPI ↔ Express…),
   "bản đồ + Pytago" cho khoảng cách, "hỏi ý kiến hàng xóm" cho bỏ phiếu kNN.
 - Thuật ngữ mới: định nghĩa **ngay lần đầu**, rồi mới dùng.
+- **Không nhảy cóc phép tính** (người học không chuyên code, đã phàn nàn khi bảng chỉ có kết quả cuối):
+  khi một con số trong bảng được tính ra, **viết từng bước** theo thứ tự: số đầu vào (kèm nguồn, vd trung
+  bình/độ lệch chuẩn lấy từ mô hình) -> công thức -> thay số -> kết quả từng bước -> kết quả cuối, đủ
+  để người học bấm máy tính tự kiểm tra. Nêu rõ số nào là làm tròn của số nào. Cho cả phép tính "đối
+  chiếu" (trước/sau) để thấy chỗ khác nhau, rồi mời người học tự tính lại một ví dụ khác.
 
 ### 1.7 Cuối mỗi bước
 1. Tóm tắt **một câu** (câu mẫu A gọi B).
