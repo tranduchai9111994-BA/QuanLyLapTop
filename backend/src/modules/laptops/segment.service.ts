@@ -63,18 +63,17 @@ async function getConfidenceThreshold(): Promise<number> {
 }
 
 /**
- * Goi Mo hinh A du doan phan khuc tu cau hinh may. Tra CPU/GPU ra diem PassMark tu bang
- * benchmark, tinh ppi, roi gui dung ten dac trung ML service can (snake_case).
- * Nem AppError neu CPU/GPU khong ton tai; loi mang toi ML service thi nem nguyen loi goc de noi
- * goi tu quyet dinh (route /predict-segment bao loi, con applySegmentLabel thi bo qua).
+ * Gọi Mô hình A (ML service) dự đoán phân khúc từ cấu hình máy: tra điểm CPU/GPU trong bảng
+ * benchmark, tính ppi, rồi gửi đúng 11 đặc trưng ML cần. Ném AppError nếu CPU/GPU không tồn tại;
+ * lỗi mạng tới ML thì ném nguyên lỗi để nơi gọi tự quyết (route báo lỗi, applySegmentLabel bỏ qua).
  */
 export async function predictSegment(f: SegmentFeatures): Promise<SegmentPrediction> {
   const [cpu, gpu] = await Promise.all([
     prisma.cpuBenchmark.findUnique({ where: { id: f.cpuId } }),
     prisma.gpuBenchmark.findUnique({ where: { id: f.gpuId } }),
   ]);
-  // Bao loi ro rang thay vi 500 chung chung: hay gap khi trang dang mo tu truoc luc nap lai
-  // du lieu (ID trong dropdown da cu) - luc do nguoi dung chi can tai lai trang.
+  // Báo lỗi rõ thay vì 500 chung chung: hay gặp khi trang mở từ trước lúc dữ liệu đổi (ID trong
+  // dropdown đã cũ) - người dùng chỉ cần tải lại trang.
   if (!cpu || !gpu) {
     throw new AppError(
       404,
@@ -95,7 +94,7 @@ export async function predictSegment(f: SegmentFeatures): Promise<SegmentPredict
         refresh_hz: f.refreshHz ?? 60,
         srgb_100: f.srgb100 ? 1 : 0,
         weight_kg: f.weightKg,
-        // Pin chua nhap -> dung 55 Wh (muc pho bien) de khong lam lech du doan
+        // Chưa nhập pin -> dùng 55 Wh (mức phổ biến) để không làm lệch dự đoán
         battery_wh: f.batteryWh ?? 55,
       },
     ],
