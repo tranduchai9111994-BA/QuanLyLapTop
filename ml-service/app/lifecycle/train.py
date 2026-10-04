@@ -1,4 +1,4 @@
-"""Huan luyen Mo hinh A + luu artifact (docs/04 SS3, SS8). Chay: python -m app.lifecycle.train"""
+"""Huấn luyện Mô hình A và C rồi lưu thành phiên bản mới (docs/04 SS3, SS8). Chạy: python -m app.lifecycle.train"""
 from __future__ import annotations
 
 import hashlib
@@ -40,32 +40,33 @@ def load_dataset() -> tuple[pd.DataFrame, Path]:
 
 
 def main() -> int:
-    df, catalog_path = load_dataset()
+    df, catalog_path = load_dataset()  # Bước 1: đọc CSV 1.000 máy, tra điểm CPU/GPU để có các cột số
     X = df
     y = df["segment"]
 
+    # Bước 2: chia 80% (800 máy) để học, 20% (200 máy) để kiểm tra; giữ đúng tỷ lệ 4 phân khúc
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, stratify=y, random_state=RANDOM_STATE
     )
 
-    golden_path = ARTIFACTS_DIR / "golden_test.csv"
+    golden_path = ARTIFACTS_DIR / "golden_test.csv"  # đóng băng tập kiểm tra ở lần train đầu tiên
     if not golden_path.exists():
         ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
         X_test.to_csv(golden_path, index=False)
         print(f"Da dong bang golden_test.csv ({len(X_test)} mau)")
 
-    search = grid_search(X_train, y_train)
+    search = grid_search(X_train, y_train)  # Bước 3: thử mọi tổ hợp (k, cách đo, trọng số phiếu), chấm bằng kiểm thử chéo 5 phần
     best_pipe = search.best_estimator_
     best_params = search.best_params_
     print("Best params:", best_params)
     print(f"CV f1_macro mean={search.best_score_:.4f}")
 
-    y_pred_test = best_pipe.predict(X_test[MODEL_A_FEATURES])
+    y_pred_test = best_pipe.predict(X_test[MODEL_A_FEATURES])  # Bước 4: chấm điểm trên 200 máy chưa từng thấy
     test_f1_macro = f1_score(y_test, y_pred_test, average="macro")
     report = classification_report(y_test, y_pred_test, output_dict=True)
     cm = confusion_matrix(y_test, y_pred_test, labels=sorted(y.unique()))
 
-    # baseline
+    # Bước 5: 2 mốc so sánh (đoán lớp đông nhất / luật if-else tự viết)
     dummy = dummy_baseline(y_train)
     dummy_pred = dummy.predict(np.zeros((len(y_test), 1)))
     dummy_f1 = f1_score(y_test, dummy_pred, average="macro")
@@ -73,13 +74,16 @@ def main() -> int:
     rule_pred = rule_based_baseline(X_test)
     rule_f1 = f1_score(y_test, rule_pred, average="macro")
 
+    # Bước 6: tính đường cong chọn k (macro-F1 theo từng k) để vẽ biểu đồ
     curve = k_curve(X_train, y_train, best_params["knn__weights"], best_params["knn__metric"])
 
+    # Bước 7: lưu mô hình vào thư mục phiên bản mới (tên theo ngày giờ), không ghi đè bản cũ
     version = f"clf-{datetime.now(timezone.utc).strftime('%Y.%m.%d-%H%M%S')}"
     out_dir = ARTIFACTS_DIR / version
     out_dir.mkdir(parents=True, exist_ok=True)
     joblib.dump(best_pipe, out_dir / "model.joblib")
 
+    # Bước 8: ghi tham số tốt nhất, điểm số, số mẫu... vào metadata.json (file đọc được bằng VS Code)
     metadata = {
         "version": version,
         "type": "classifier",
@@ -98,6 +102,7 @@ def main() -> int:
     }
     (out_dir / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
 
+    # Bước 9: vẽ 2 ảnh (ma trận nhầm lẫn, đường cong k) để dùng cho slide
     labels_sorted = sorted(y.unique())
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels_sorted)
     disp.plot(cmap="Blues", xticks_rotation=45)
@@ -120,13 +125,13 @@ def main() -> int:
     plt.savefig(out_dir / "k_curve.png", dpi=150)
     plt.close()
 
-    # --- Mo hinh C: phan loai cau nhu cau tu do (TF-IDF + kNN) ---
+    # Bước 10: huấn luyện Mô hình C (phân loại câu nhu cầu tự do, TF-IDF + kNN)
     text_meta = train_text_model(out_dir)
     metadata["text_model"] = text_meta
     (out_dir / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
 
     latest_path = ARTIFACTS_DIR / "LATEST"
-    latest_path.write_text(version, encoding="utf-8")
+    latest_path.write_text(version, encoding="utf-8")  # Bước 11: ghi tên bản vừa train vào LATEST (ML nạp bản này khi bật)
 
     print(f"Test macro-F1={test_f1_macro:.4f} (muc tieu >= 0.75)")
     print(f"Vuot dummy: +{test_f1_macro - dummy_f1:.4f} (muc tieu >= 0.30)")
@@ -138,7 +143,7 @@ def main() -> int:
 
 
 def train_text_model(out_dir: Path) -> dict:
-    """Huan luyen Mo hinh C tren tap cau nhu cau, chon k bang cross-validation, luu joblib."""
+    """Huấn luyện Mô hình C trên tập câu nhu cầu, chọn k bằng kiểm thử chéo, lưu thành joblib."""
     from sklearn.model_selection import StratifiedKFold, cross_val_score
 
     model = NeedTextModel()
