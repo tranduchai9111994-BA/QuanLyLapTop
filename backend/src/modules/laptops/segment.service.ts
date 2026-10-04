@@ -55,8 +55,9 @@ async function getConfidenceThreshold(): Promise<number> {
   return typeof value === 'number' ? value : DEFAULT_CONFIDENCE_THRESHOLD;
 }
 
-/** Gọi Mô hình A (ML service) dự đoán phân khúc: tra điểm CPU/GPU, tính ppi, gửi 11 đặc trưng. */
+/** Hàm A: gọi sang ML (hàm B `predict_segment`) để lấy phân khúc dự đoán của 1 máy. */
 export async function predictSegment(f: SegmentFeatures): Promise<SegmentPrediction> {
+  // Form chỉ có cpuId/gpuId, ML cần ĐIỂM -> tra điểm trong bảng benchmark
   const [cpu, gpu] = await Promise.all([
     prisma.cpuBenchmark.findUnique({ where: { id: f.cpuId } }),
     prisma.gpuBenchmark.findUnique({ where: { id: f.gpuId } }),
@@ -69,8 +70,9 @@ export async function predictSegment(f: SegmentFeatures): Promise<SegmentPredict
       'Không tìm thấy CPU/GPU đã chọn. Dữ liệu có thể vừa được cập nhật — hãy tải lại trang rồi chọn lại.'
     );
   }
+  // ★ Gọi sang ML: đường dẫn này khớp @app.post("/predict-segment") bên main.py
   const r = await mlClient.post('/predict-segment', {
-    items: [
+    items: [ // gói 11 đặc trưng của 1 máy
       {
         cpu_score: cpu.score,
         gpu_score: gpu.score,
@@ -87,8 +89,8 @@ export async function predictSegment(f: SegmentFeatures): Promise<SegmentPredict
       },
     ],
   });
-  const item = r.data.items[0];
-  return {
+  const item = r.data.items[0]; // ML trả danh sách; ta chỉ gửi 1 máy nên lấy phần tử đầu
+  return { // chọn các trường cần dùng để trả cho nơi gọi
     label: item.label,
     proba: item.proba,
     distribution: item.distribution,

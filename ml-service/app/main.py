@@ -83,8 +83,8 @@ def _require_catalog() -> pd.DataFrame:
     return _state["catalog"]
 
 
-@app.post("/predict-segment")
-def predict_segment(req: PredictSegmentRequest) -> dict:
+@app.post("/predict-segment")  # cổng nhận từ backend (predictSegment, segment.service.ts)
+def predict_segment(req: PredictSegmentRequest) -> dict:  # hàm B: req.items = bảng thông số backend gửi
     """Mô hình A: dự đoán PHÂN KHÚC (kèm xác suất từng nhãn) cho máy mới chưa có nhãn."""
     if registry.model is None:
         raise HTTPException(status_code=503, detail="Chưa có mô hình phân lớp được kích hoạt")
@@ -93,15 +93,15 @@ def predict_segment(req: PredictSegmentRequest) -> dict:
     for col in MODEL_A_FEATURES:
         if col not in X.columns:
             X[col] = 0
-    proba = registry.model.predict_proba(X[MODEL_A_FEATURES])
-    labels = registry.model.classes_
+    proba = registry.model.predict_proba(X[MODEL_A_FEATURES])  # ★ mô hình: chuẩn hóa -> 7 láng giềng -> tỷ lệ phiếu 4 nhãn
+    labels = registry.model.classes_  # tên 4 nhãn, cùng thứ tự các cột của proba
 
     # FR-09: lấy chính k láng giềng đã "bỏ phiếu" để nhân viên thấy lý do (vd "5/7 máy gần nhất là
     # Gaming"). `knn._y` là nhãn đã mã hóa của tập huấn luyện, đổi lại tên bằng `knn.classes_`.
     prep = registry.model.named_steps["prep"]
     knn = registry.model.named_steps["knn"]
-    neigh_dist, neigh_idx = knn.kneighbors(prep.transform(X[MODEL_A_FEATURES]))
-    train_labels = knn.classes_[knn._y]
+    neigh_dist, neigh_idx = knn.kneighbors(prep.transform(X[MODEL_A_FEATURES]))  # 7 máy gần nhất: khoảng cách + vị trí
+    train_labels = knn.classes_[knn._y]  # nhãn của từng máy trong tập huấn luyện
 
     results = []
     for row_i, row_proba in enumerate(proba):
@@ -117,7 +117,7 @@ def predict_segment(req: PredictSegmentRequest) -> dict:
                 for j, d in zip(neigh_idx[row_i], neigh_dist[row_i])
             ],
         })
-    return {"items": results, "modelVersion": registry.version}
+    return {"items": results, "modelVersion": registry.version}  # trả về cho backend (hàm A)
 
 
 @app.post("/parse-need")
