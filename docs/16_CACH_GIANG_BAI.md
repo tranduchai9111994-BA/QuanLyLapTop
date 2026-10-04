@@ -62,6 +62,11 @@ Khi giải thích đoạn code, ghi rõ chỗ nào:
 - Dùng **phép so sánh quen thuộc**: ML ↔ backend (`requirements.txt` ↔ `package.json`, FastAPI ↔ Express…),
   "bản đồ + Pytago" cho khoảng cách, "hỏi ý kiến hàng xóm" cho bỏ phiếu kNN.
 - Thuật ngữ mới: định nghĩa **ngay lần đầu**, rồi mới dùng.
+- **Mọi con số phải nêu NGUỒN và cách TỰ KIỂM TRA** (người học từng hỏi "trung bình, độ lệch chuẩn lấy ở
+  đâu?"): ghi số đó do dòng code nào tạo ra (`file:dòng`), tính trên dữ liệu nào (vd 800 máy huấn luyện,
+  không phải cả 1.000), lưu ở đâu (vd `model.joblib`), cách tính lại độc lập (đoạn Python hoặc Excel
+  `AVERAGE`/`STDEV.P`) và chỉ ra hai kết quả khớp nhau. Nếu có số gần giống nhưng khác (vd tính trên 800 vs
+  1.000 máy) thì nói rõ vì sao khác.
 - **Không nhảy cóc phép tính** (người học không chuyên code, đã phàn nàn khi bảng chỉ có kết quả cuối):
   khi một con số trong bảng được tính ra, **viết từng bước** theo thứ tự: số đầu vào (kèm nguồn, vd trung
   bình/độ lệch chuẩn lấy từ mô hình) -> công thức -> thay số -> kết quả từng bước -> kết quả cuối, đủ
@@ -69,6 +74,10 @@ Khi giải thích đoạn code, ghi rõ chỗ nào:
   chiếu" (trước/sau) để thấy chỗ khác nhau, rồi mời người học tự tính lại một ví dụ khác.
 
 ### 1.7 Cuối mỗi bước
+0. **CHẠY THỬ TRÊN ỨNG DỤNG để demo** (bước bắt buộc, từng bị thiếu): sau khi giải thích xong, chỉ người học
+   **bấm gì, ở màn hình nào, kết quả mong đợi là gì**, và **tự thử trước trên app thật** (trình duyệt) để
+   chắc từng nhãn nút/kết quả khớp. Nếu thao tác sẽ ghi dữ liệu thì dùng cách chỉ-xem (vd mở form Sửa rồi
+   bấm Hủy), hoặc dặn xóa dữ liệu thử sau khi xong. Ghi kịch bản vào `15_...` để dùng làm demo/slide.
 1. Tóm tắt **một câu** (câu mẫu A gọi B).
 2. Một **câu hỏi kiểm tra** để người học tự diễn đạt lại (vd "RAM 128GB thì khoảng cách 64→128 sau
    log₂ là bao nhiêu?").
@@ -123,6 +132,7 @@ rồi mình góp ý. Câu hỏi hội đồng đã soạn cho từng mô hình n
 | TV1 — `features.py`: 11 đặc trưng (3 nhóm), A khác B ở chỗ nào, vì sao A không có giá | ✅ |
 | TV1 — vì sao RAM/SSD lấy log₂ | ✅ |
 | TV1 — chuẩn hóa z-score (`StandardScaler`) với số thật cột `weight_kg`, ví dụ 2 máy A/B (60% / 40%) | ✅ |
+| TV1 — nguồn của trung bình/độ lệch chuẩn (tính trên 800 máy huấn luyện, lưu trong `model.joblib`) + kịch bản demo trên app (mục 3 của `15_...`) | ✅ |
 | TV1 — **tìm 7 láng giềng + bỏ phiếu** (`predict_proba`, `kneighbors`; `models/classifier.py`, `main.py` dòng 96) | **Bước kế tiếp** |
 | TV1 — huấn luyện: `GridSearchCV`, `Pipeline` chống rò rỉ dữ liệu, macro-F1 | ⏳ |
 | TV1 — hàng đợi Duyệt nhãn / khóa nhãn (`applySegmentLabel`) | ⏳ |

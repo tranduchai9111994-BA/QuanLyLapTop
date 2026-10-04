@@ -202,6 +202,52 @@ Có test chặn lỗi này: `ml-service/tests/test_classifier.py` (`test_scaler_
 
 ---
 
+## 1.11 Trung bình và độ lệch chuẩn (z-score) lấy ở đâu, kiểm tra thế nào
+
+| Câu hỏi | Trả lời |
+|---|---|
+| Ai tính? | `StandardScaler` (dòng `("sc", StandardScaler())` ở `ml-service/app/data/features.py`), tự tính lúc **huấn luyện** |
+| Tính trên dữ liệu nào? | **800 máy huấn luyện** (80% của 1.000 máy), do `train_test_split(test_size=0.2, stratify, random_state=42)` ở `ml-service/app/lifecycle/train.py` dòng 47; 200 máy còn lại chỉ dùng kiểm tra |
+| Lưu ở đâu? | Trong file mô hình `ml-service/artifacts/clf-.../model.joblib`; khi có máy mới, ML dùng đúng 2 con số này, **không tính lại** |
+| Công thức? | trung bình = tổng ÷ n; độ lệch chuẩn = √(tổng (x − trung bình)² ÷ n) (chia n, tức `ddof=0`; Excel: `STDEV.P`) |
+
+**Kiểm chứng độc lập (chạy thật):** tính lại trên đúng 800 máy huấn luyện bằng cách khác, ra cùng số với số
+mô hình đã lưu:
+
+| Cột | Mô hình lưu sẵn | Tự tính lại trên 800 máy | Tính trên cả 1.000 máy (khác một chút) |
+|---|---|---|---|
+| `weight_kg` | 1,8325 / 0,5652 | 1,8325 / 0,5652 | 1,8342 / 0,5672 |
+| `gpu_score` | 30,9521 / 28,9868 | 30,9521 / 28,9868 | 30,9108 / 28,6739 |
+
+Tự kiểm tra bằng Excel: mở `data/processed/catalog_vn.csv`, cột cân nặng, dùng `AVERAGE` và `STDEV.P` sẽ ra số
+gần giống cột "cả 1.000 máy" (khác 800 máy một chút vì mô hình chỉ học trên 800).
+
+## 1.12 Kịch bản DEMO trên ứng dụng (đã thử thật trên app)
+
+Điều kiện: 3 dịch vụ đang chạy (shortcut Desktop `SmartLap`), đăng nhập quản trị `admin@smartlap.vn` / `Demo@123`.
+
+**Demo 1 — "AI gợi ý phân khúc", trường hợp CHẮC CHẮN (7/7 phiếu)**
+1. Menu trái: **Dữ liệu → Laptop**. Gõ `TUF Gaming 0001` vào ô Tìm kiếm.
+2. Bấm **Sửa** ở dòng `ASUS TUF Gaming 0001`.
+3. Trong form bấm nút **"AI gợi ý phân khúc từ cấu hình"**.
+4. Kết quả mong đợi: `Dự đoán: Gaming 100%`; "7 máy gần nhất ... đã bỏ phiếu: 7 Gaming"; khoảng cách `0.00 (chính nó), 1.79, 1.83, 1.99, 2.12, 2.14, 2.24`.
+5. Bấm **Hủy** (không lưu gì). *Lời nói gợi ý:* "7 máy giống nhất đều là Gaming nên AI chắc chắn 100%".
+
+**Demo 2 — trường hợp RANH GIỚI (cần xác minh)**
+1. Cũng ở trang Laptop, tìm `Predator Helios 0051`, bấm **Sửa**, bấm nút AI như trên.
+2. Kết quả mong đợi: xác suất `Văn phòng 14% / Mỏng nhẹ 43% / Gaming 0% / Đồ họa 43%`; "3 Đồ họa, 3 Mỏng nhẹ, 1 Văn phòng"; khoảng cách `1.80 ... 2.29`; nhãn **"Cần xác minh"** và dòng cảnh báo "Hệ thống chưa chắc chắn".
+3. Bấm **Hủy**. *Lời nói gợi ý:* "hai nhóm hòa phiếu 3-3 nên độ tin cậy chỉ 43%, dưới ngưỡng 60%, máy sẽ vào hàng đợi cho người xác nhận". (Khi hòa phiếu giao diện hiện nhãn đứng sau là Mỏng nhẹ; không sao, đó là hòa.)
+
+**Demo 3 — để trống phân khúc, AI tự gán khi Lưu**
+1. Laptop → **+ Thêm mới**, điền thông số (CPU `Intel Core i9-13900H`, GPU `RTX 4070`, RAM 32, SSD 1024, màn 16", 240 Hz, nặng 2,6 kg, giá 45 triệu, SKU bất kỳ), **để trống ô Phân khúc** (có nút xóa nếu đã lỡ chọn).
+2. Bấm **Lưu**. Mong đợi thông báo "Đã gán phân khúc: Gaming"; hàng mới có cột Phân khúc là Gaming.
+3. **Xóa máy thử** sau khi demo (nút Xóa ở dòng đó).
+
+**Demo 4 — hàng đợi "Duyệt nhãn"**: menu **Dữ liệu → Duyệt nhãn** (có huy hiệu số máy đang chờ). Mỗi thẻ hiện
+phân bố xác suất, ô chọn phân khúc, checkbox "Khóa nhãn, không cho mô hình thay đổi", nút Duyệt.
+
+---
+
 # PHẦN 2 — Thành viên 2: Mô hình C (hiểu câu tự do, TF-IDF + kNN cosine)
 
 *(Sẽ bổ sung khi nhóm học xong. Code: `ml-service/app/models/text_classifier.py`; giao diện: ô nhập câu ở Wizard.)*
