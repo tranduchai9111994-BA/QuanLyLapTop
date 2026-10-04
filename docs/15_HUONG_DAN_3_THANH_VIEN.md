@@ -238,6 +238,32 @@ máy mới với chúng. Phần chữ dễ đọc (tham số tốt nhất, đi�
 `artifacts/<phiên bản>/metadata.json`. Chú ý: nhiều thư mục phiên bản là các lần huấn luyện cũ; bản đang dùng
 là bản ghi trong file `LATEST`.
 
+## 1.13 Tính khoảng cách đủ 11 cột (ví dụ thật: Acer Predator Helios 0051 và láng giềng gần nhất)
+
+Máy cần đoán: `Acer Predator Helios 0051` (nhãn thật CREATOR, thuộc tập kiểm tra nên không nằm trong 800 máy).
+Láng giềng #1: `Gigabyte G5 0276` (CREATOR). Trung bình/độ lệch chuẩn lấy từ `model.joblib` (xem 1.11).
+
+Ví dụ đổi 2 cột sang z-score (RAM có thêm bước log2):
+- RAM máy cần đoán: log2(32) = 5; z = (5 − 3,7938) ÷ 0,7913 = **1,52**. Láng giềng: log2(16) = 4; z = (4 − 3,7938) ÷ 0,7913 = **0,26**.
+- GPU máy cần đoán: z = (16,67 − 30,9521) ÷ 28,9868 = **−0,49**. Láng giềng: z = (27,08 − 30,9521) ÷ 28,9868 = **−0,13**.
+
+| Cột | Máy cần đoán | Láng giềng | z cần đoán | z láng giềng | Hiệu | Hiệu² |
+|---|---|---|---|---|---|---|
+| ram_gb | 32 | 16 | 1,52 | 0,26 | 1,26 | 1,597 |
+| ssd_gb | 512 | 512 | 0,11 | 0,11 | 0,00 | 0,000 |
+| cpu_score | 42,43 | 40,00 | −0,32 | −0,44 | 0,12 | 0,014 |
+| gpu_score | 16,67 | 27,08 | −0,49 | −0,13 | −0,36 | 0,129 |
+| screen_inch | 13,60 | 13,30 | −1,84 | −2,16 | 0,31 | 0,097 |
+| ppi | 221,98 | 255,36 | 1,91 | 2,89 | −0,98 | 0,961 |
+| refresh_hz | 120 | 120 | 0,46 | 0,46 | 0,00 | 0,000 |
+| weight_kg | 1,74 | 2,09 | −0,16 | 0,46 | −0,62 | 0,384 |
+| battery_wh | 55 | 58 | −0,27 | −0,06 | −0,21 | 0,042 |
+| gpu_dedicated | 1 | 1 | 1,00 | 1,00 | 0,00 | 0,000 |
+| srgb_100 | 1 | 1 | 1,00 | 1,00 | 0,00 | 0,000 |
+
+Tổng Hiệu² = 3,2244 → khoảng cách = √3,2244 = **1,7957** (giao diện hiện `#1 · khoảng cách 1.80`).
+Cột đóng góp nhiều nhất: RAM 49,5%, ppi 29,8%, cân nặng 11,9%; 5 cột giống hệt (hiệu = 0) không đóng góp gì.
+
 ## 1.12 Kịch bản DEMO trên ứng dụng (đã thử thật trên app)
 
 Điều kiện: 3 dịch vụ đang chạy (shortcut Desktop `SmartLap`), đăng nhập quản trị `admin@smartlap.vn` / `Demo@123`.
