@@ -238,31 +238,53 @@ máy mới với chúng. Phần chữ dễ đọc (tham số tốt nhất, đi�
 `artifacts/<phiên bản>/metadata.json`. Chú ý: nhiều thư mục phiên bản là các lần huấn luyện cũ; bản đang dùng
 là bản ghi trong file `LATEST`.
 
-## 1.13 Tính khoảng cách đủ 11 cột (ví dụ thật: Acer Predator Helios 0051 và láng giềng gần nhất)
+## 1.13 Tính khoảng cách đủ 11 cột (ví dụ thật, từng bước)
 
-Máy cần đoán: `Acer Predator Helios 0051` (nhãn thật CREATOR, thuộc tập kiểm tra nên không nằm trong 800 máy).
-Láng giềng #1: `Gigabyte G5 0276` (CREATOR). Trung bình/độ lệch chuẩn lấy từ `model.joblib` (xem 1.11).
+**Máy A** = `Acer Predator Helios 0051` (máy cần đoán, nhãn thật CREATOR, thuộc tập kiểm tra nên không nằm
+trong 800 máy mô hình ghi nhớ). **Máy B** = `Gigabyte G5 0276` (láng giềng #1, nhãn CREATOR).
+Trung bình/độ lệch chuẩn lấy từ `model.joblib` (lệnh ở `17_...`, nguồn ở mục 1.11). Công thức: `z = (giá trị − trung bình) ÷ độ lệch chuẩn`
+(RAM, SSD lấy log₂ trước). Làm tròn 4 chữ số.
 
-Ví dụ đổi 2 cột sang z-score (RAM có thêm bước log2):
-- RAM máy cần đoán: log2(32) = 5; z = (5 − 3,7938) ÷ 0,7913 = **1,52**. Láng giềng: log2(16) = 4; z = (4 − 3,7938) ÷ 0,7913 = **0,26**.
-- GPU máy cần đoán: z = (16,67 − 30,9521) ÷ 28,9868 = **−0,49**. Láng giềng: z = (27,08 − 30,9521) ÷ 28,9868 = **−0,13**.
+**Bước 1: đổi sang z-score cho từng máy**
 
-| Cột | Máy cần đoán | Láng giềng | z cần đoán | z láng giềng | Hiệu | Hiệu² |
+| Cột | Giá trị gốc A / B | Sau log₂ A / B | Trung bình | Độ lệch chuẩn | z của A = (A − TB) ÷ ĐLC | z của B = (B − TB) ÷ ĐLC |
 |---|---|---|---|---|---|---|
-| ram_gb | 32 | 16 | 1,52 | 0,26 | 1,26 | 1,597 |
-| ssd_gb | 512 | 512 | 0,11 | 0,11 | 0,00 | 0,000 |
-| cpu_score | 42,43 | 40,00 | −0,32 | −0,44 | 0,12 | 0,014 |
-| gpu_score | 16,67 | 27,08 | −0,49 | −0,13 | −0,36 | 0,129 |
-| screen_inch | 13,60 | 13,30 | −1,84 | −2,16 | 0,31 | 0,097 |
-| ppi | 221,98 | 255,36 | 1,91 | 2,89 | −0,98 | 0,961 |
-| refresh_hz | 120 | 120 | 0,46 | 0,46 | 0,00 | 0,000 |
-| weight_kg | 1,74 | 2,09 | −0,16 | 0,46 | −0,62 | 0,384 |
-| battery_wh | 55 | 58 | −0,27 | −0,06 | −0,21 | 0,042 |
-| gpu_dedicated | 1 | 1 | 1,00 | 1,00 | 0,00 | 0,000 |
-| srgb_100 | 1 | 1 | 1,00 | 1,00 | 0,00 | 0,000 |
+| ram_gb | 32 / 16 | 5 / 4 | 3,7938 | 0,7913 | (5 − 3,7938) ÷ 0,7913 = **1,5243** | (4 − 3,7938) ÷ 0,7913 = **0,2606** |
+| ssd_gb | 512 / 512 | 9 / 9 | 8,9125 | 0,7809 | (9 − 8,9125) ÷ 0,7809 = **0,1120** | (9 − 8,9125) ÷ 0,7809 = **0,1120** |
+| cpu_score | 42,4324 / 40 | giữ nguyên | 48,9933 | 20,5806 | (42,4324 − 48,9933) ÷ 20,5806 = **−0,3188** | (40 − 48,9933) ÷ 20,5806 = **−0,4370** |
+| gpu_score | 16,6667 / 27,0833 | giữ nguyên | 30,9521 | 28,9868 | (16,6667 − 30,9521) ÷ 28,9868 = **−0,4928** | (27,0833 − 30,9521) ÷ 28,9868 = **−0,1335** |
+| screen_inch | 13,6 / 13,3 | giữ nguyên | 15,3732 | 0,9616 | (13,6 − 15,3732) ÷ 0,9616 = **−1,8442** | (13,3 − 15,3732) ÷ 0,9616 = **−2,1561** |
+| ppi | 221,976 / 255,356 | giữ nguyên | 156,7983 | 34,0465 | (221,976 − 156,7983) ÷ 34,0465 = **1,9144** | (255,356 − 156,7983) ÷ 34,0465 = **2,8948** |
+| refresh_hz | 120 / 120 | giữ nguyên | 98,7750 | 46,5490 | (120 − 98,775) ÷ 46,549 = **0,4560** | (120 − 98,775) ÷ 46,549 = **0,4560** |
+| weight_kg | 1,74 / 2,09 | giữ nguyên | 1,8325 | 0,5652 | (1,74 − 1,8325) ÷ 0,5652 = **−0,1636** | (2,09 − 1,8325) ÷ 0,5652 = **0,4556** |
+| battery_wh | 55 / 58 | giữ nguyên | 58,8963 | 14,5795 | (55 − 58,8963) ÷ 14,5795 = **−0,2672** | (58 − 58,8963) ÷ 14,5795 = **−0,0615** |
+| gpu_dedicated | 1 / 1 | không chuẩn hóa | không có | không có | giữ nguyên **1** | giữ nguyên **1** |
+| srgb_100 | 1 / 1 | không chuẩn hóa | không có | không có | giữ nguyên **1** | giữ nguyên **1** |
 
-Tổng Hiệu² = 3,2244 → khoảng cách = √3,2244 = **1,7957** (giao diện hiện `#1 · khoảng cách 1.80`).
-Cột đóng góp nhiều nhất: RAM 49,5%, ppi 29,8%, cân nặng 11,9%; 5 cột giống hệt (hiệu = 0) không đóng góp gì.
+**Bước 2: hiệu giữa hai máy rồi bình phương**
+
+| Cột | z của A | z của B | Hiệu = zA − zB | Hiệu² | Chiếm % của tổng |
+|---|---|---|---|---|---|
+| ram_gb | 1,5243 | 0,2606 | 1,5243 − 0,2606 = **1,2637** | 1,2637² = **1,5969** | 49,5% |
+| ssd_gb | 0,1120 | 0,1120 | 0,1120 − 0,1120 = 0,0000 | 0,0000 | 0% |
+| cpu_score | −0,3188 | −0,4370 | −0,3188 − (−0,4370) = **0,1182** | 0,1182² = **0,0140** | 0,4% |
+| gpu_score | −0,4928 | −0,1335 | −0,4928 − (−0,1335) = **−0,3594** | (−0,3594)² = **0,1291** | 4,0% |
+| screen_inch | −1,8442 | −2,1561 | −1,8442 − (−2,1561) = **0,3120** | 0,3120² = **0,0973** | 3,0% |
+| ppi | 1,9144 | 2,8948 | 1,9144 − 2,8948 = **−0,9804** | (−0,9804)² = **0,9612** | 29,8% |
+| refresh_hz | 0,4560 | 0,4560 | 0,4560 − 0,4560 = 0,0000 | 0,0000 | 0% |
+| weight_kg | −0,1636 | 0,4556 | −0,1636 − 0,4556 = **−0,6193** | (−0,6193)² = **0,3835** | 11,9% |
+| battery_wh | −0,2672 | −0,0615 | −0,2672 − (−0,0615) = **−0,2058** | (−0,2058)² = **0,0423** | 1,3% |
+| gpu_dedicated | 1 | 1 | 0 | 0,0000 | 0% |
+| srgb_100 | 1 | 1 | 0 | 0,0000 | 0% |
+
+**Bước 3: cộng và lấy căn**
+
+- Tổng Hiệu² = 1,5969 + 0 + 0,0140 + 0,1291 + 0,0973 + 0,9612 + 0 + 0,3835 + 0,0423 + 0 + 0 = **3,2244**
+- Khoảng cách = √3,2244 = **1,7957** (giao diện hiện `#1 · khoảng cách 1.80`)
+
+Nhận xét: A và B giống hệt nhau ở SSD, tần số quét, card rời, màn chuẩn màu (hiệu bằng 0). Khác nhau chủ yếu ở
+RAM (32GB so với 16GB), ppi và cân nặng. Số này chỉ là khoảng cách tới **một** máy; kNN làm như vậy với cả 800 máy
+rồi lấy 7 số nhỏ nhất.
 
 ## 1.12 Kịch bản DEMO trên ứng dụng (đã thử thật trên app)
 
