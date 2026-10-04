@@ -19,7 +19,22 @@ import {
 } from '@ant-design/icons';
 import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
-import { t } from '../../theme/tokens';
+import { segmentColors, t } from '../../theme/tokens';
+
+// Màu icon menu theo từng mục (lấy từ token, không hardcode)
+const ICON_COLOR = {
+  dashboard: t.primary500,
+  brands: t.warning,
+  cpu: t.chartNeed,
+  gpu: t.ai500,
+  laptops: segmentColors.OFFICE.color,
+  prices: t.success,
+  review: segmentColors.ULTRABOOK.color,
+  models: segmentColors.CREATOR.color,
+  knowledge: t.primary600,
+  feedback: t.error,
+  users: segmentColors.GAMING.color,
+};
 
 const { Sider, Content, Header } = Layout;
 
@@ -107,7 +122,7 @@ export function AdminLayout() {
             key: 'grp-overview',
             type: 'group' as const,
             label: 'Tổng quan',
-            children: [{ key: '/admin/dashboard', icon: <DashboardOutlined />, label: <Link to="/admin/dashboard">Dashboard</Link> }],
+            children: [{ key: '/admin/dashboard', icon: <DashboardOutlined style={{ color: ICON_COLOR.dashboard }} />, label: <Link to="/admin/dashboard">Dashboard</Link> }],
           },
         ]
       : []),
@@ -116,14 +131,14 @@ export function AdminLayout() {
       type: 'group' as const,
       label: 'Dữ liệu',
       children: [
-        { key: '/admin/brands', icon: <TagsOutlined />, label: <Link to="/admin/brands">Hãng máy</Link> },
-        { key: '/admin/benchmarks/cpu', icon: <ThunderboltOutlined />, label: <Link to="/admin/benchmarks/cpu">Benchmark CPU</Link> },
-        { key: '/admin/benchmarks/gpu', icon: <BarChartOutlined />, label: <Link to="/admin/benchmarks/gpu">Benchmark GPU</Link> },
-        { key: '/admin/laptops', icon: <LaptopOutlined />, label: <Link to="/admin/laptops">Laptop</Link> },
-        { key: '/admin/prices', icon: <DollarOutlined />, label: <Link to="/admin/prices">Quản lý giá</Link> },
+        { key: '/admin/brands', icon: <TagsOutlined style={{ color: ICON_COLOR.brands }} />, label: <Link to="/admin/brands">Hãng máy</Link> },
+        { key: '/admin/benchmarks/cpu', icon: <ThunderboltOutlined style={{ color: ICON_COLOR.cpu }} />, label: <Link to="/admin/benchmarks/cpu">Benchmark CPU</Link> },
+        { key: '/admin/benchmarks/gpu', icon: <BarChartOutlined style={{ color: ICON_COLOR.gpu }} />, label: <Link to="/admin/benchmarks/gpu">Benchmark GPU</Link> },
+        { key: '/admin/laptops', icon: <LaptopOutlined style={{ color: ICON_COLOR.laptops }} />, label: <Link to="/admin/laptops">Laptop</Link> },
+        { key: '/admin/prices', icon: <DollarOutlined style={{ color: ICON_COLOR.prices }} />, label: <Link to="/admin/prices">Quản lý giá</Link> },
         {
           key: '/admin/review-queue',
-          icon: <CheckCircleOutlined />,
+          icon: <CheckCircleOutlined style={{ color: ICON_COLOR.review }} />,
           label: (
             <Link to="/admin/review-queue">
               Duyệt nhãn{' '}
@@ -140,16 +155,16 @@ export function AdminLayout() {
             type: 'group' as const,
             label: '✨ Trí tuệ',
             children: [
-              { key: '/admin/models', icon: <ExperimentOutlined />, label: <Link to="/admin/models">Quản lý mô hình</Link> },
-              { key: '/admin/knowledge', icon: <SettingOutlined />, label: <Link to="/admin/knowledge">Cấu hình tri thức</Link> },
-              { key: '/admin/feedback', icon: <CommentOutlined />, label: <Link to="/admin/feedback">Phân tích phản hồi</Link> },
+              { key: '/admin/models', icon: <ExperimentOutlined style={{ color: ICON_COLOR.models }} />, label: <Link to="/admin/models">Quản lý mô hình</Link> },
+              { key: '/admin/knowledge', icon: <SettingOutlined style={{ color: ICON_COLOR.knowledge }} />, label: <Link to="/admin/knowledge">Cấu hình tri thức</Link> },
+              { key: '/admin/feedback', icon: <CommentOutlined style={{ color: ICON_COLOR.feedback }} />, label: <Link to="/admin/feedback">Phân tích phản hồi</Link> },
             ],
           },
           {
             key: 'grp-system',
             type: 'group' as const,
             label: 'Hệ thống',
-            children: [{ key: '/admin/users', icon: <TeamOutlined />, label: <Link to="/admin/users">Người dùng & nhật ký</Link> }],
+            children: [{ key: '/admin/users', icon: <TeamOutlined style={{ color: ICON_COLOR.users }} />, label: <Link to="/admin/users">Người dùng & nhật ký</Link> }],
           },
         ]
       : []),
