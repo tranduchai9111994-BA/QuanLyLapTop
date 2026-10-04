@@ -304,6 +304,9 @@ export function CrudTable({
         okText="Lưu"
         cancelText="Hủy"
         width={useGrid ? 720 : 480}
+        centered
+        // Form dài: thân popup tự cuộn, tiêu đề và nút Lưu/Hủy luôn hiện
+        styles={{ body: { maxHeight: 'calc(100vh - 200px)', overflowY: 'auto', paddingRight: 8 } }}
         // Không đóng khi bấm ra ngoài để tránh mất dữ liệu đang nhập
         maskClosable={false}
       >
