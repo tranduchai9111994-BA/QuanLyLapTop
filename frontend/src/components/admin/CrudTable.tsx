@@ -370,7 +370,13 @@ export function CrudTable({
                 ) : f.type === 'boolean' ? (
                   <Switch />
                 ) : f.type === 'select' ? (
-                  <Select options={f.options} showSearch optionFilterProp="label" placeholder="Chọn..." />
+                  <Select
+                    options={f.options}
+                    showSearch
+                    optionFilterProp="label"
+                    placeholder="Chọn..."
+                    allowClear={!f.required} // ô không bắt buộc (vd Phân khúc) phải xóa được để về "để trống"
+                  />
                 ) : (
                   <Input />
                 )}
