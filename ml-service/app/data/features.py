@@ -195,21 +195,21 @@ def build_model_a_preprocessor() -> ColumnTransformer:
     """
     return ColumnTransformer([
         (
-            "log",
+            "log",  # nhóm 1: RAM/SSD
             Pipeline([
-                ("impute", SimpleImputer(strategy="median")),
-                ("log", FunctionTransformer(np.log2, feature_names_out="one-to-one")),
-                ("sc", StandardScaler()),
+                ("impute", SimpleImputer(strategy="median")),  # ô trống -> điền trung vị
+                ("log", FunctionTransformer(np.log2, feature_names_out="one-to-one")),  # ★ log2: 8->3, 16->4, 32->5
+                ("sc", StandardScaler()),  # đưa về cùng thước đo (z-score)
             ]),
             NUMERIC_LOG,
         ),
         (
-            "num",
+            "num",  # nhóm 2: 7 cột số thường (không log)
             Pipeline([
                 ("impute", SimpleImputer(strategy="median")),
                 ("sc", StandardScaler()),
             ]),
             NUMERIC,
         ),
-        ("bin", "passthrough", BINARY),
+        ("bin", "passthrough", BINARY),  # nhóm 3: giữ nguyên 0/1
     ])
