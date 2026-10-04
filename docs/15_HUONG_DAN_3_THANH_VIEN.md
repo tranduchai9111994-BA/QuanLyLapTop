@@ -286,6 +286,29 @@ Nhận xét: A và B giống hệt nhau ở SSD, tần số quét, card rời, m
 RAM (32GB so với 16GB), ppi và cân nặng. Số này chỉ là khoảng cách tới **một** máy; kNN làm như vậy với cả 800 máy
 rồi lấy 7 số nhỏ nhất.
 
+## 1.14 Thêm dữ liệu huấn luyện bằng Excel (ví dụ thêm 2.000 máy)
+
+Code **không gắn cứng số 1.000 máy**, nên thêm bao nhiêu dòng cũng huấn luyện được (đã mô phỏng 2.000 dòng:
+chia 1.600 học / 400 kiểm tra, huấn luyện 27 giây). Điều cần giữ là **định dạng file**.
+
+1. **Sao lưu** `data/processed/catalog_vn.csv` (copy sang tên khác).
+2. Mở bằng Excel, thêm dòng bên dưới, **đủ các cột như dòng tiêu đề, không đổi tên/xóa tiêu đề**. Mỗi dòng cần:
+   `sku` không trùng; `cpu_model`, `gpu_model` trùng tên trong `cpu_benchmark.csv`, `gpu_benchmark.csv`;
+   `resolution` dạng `1920x1080`; `segment` là một trong `OFFICE`, `ULTRABOOK`, `GAMING`, `CREATOR` (viết HOA, không để trống).
+3. **Lưu bằng "CSV UTF-8 (Comma delimited)"**. Cảnh báo cho Windows tiếng Việt: Excel có thể lưu bằng dấu `;`
+   và số thập phân bằng dấu phẩy (`2,51`), làm file hỏng. Cách tránh: nhập số bằng dấu chấm, hoặc đổi cài đặt
+   Windows (Region, Additional settings): Decimal symbol là `.` và List separator là `,`.
+4. **Mở file vừa lưu bằng VS Code** kiểm tra: dòng 2 phải ngăn cách bằng dấu phẩy và số dạng `2.51`.
+5. Kiểm tra: `cd ml-service`, rồi `python -m app.data.data_check`. File sai định dạng sẽ được báo bằng tiếng Việt
+   (thiếu cột, số thập phân dùng dấu phẩy, nhãn `segment` lạ). Dòng "Cột thiếu quá 10%: original_price_vnd" là cảnh báo có sẵn.
+6. Huấn luyện: nút "Huấn luyện mô hình mới" (hoặc `python -m app.lifecycle.train`), mất khoảng nửa phút. Bản mới là **Ứng viên**.
+7. So điểm với bản đang dùng rồi "Đưa vào sử dụng".
+
+Lưu ý: (a) chạy lại `data/generate_catalog.py` sẽ **ghi đè** file CSV, mất dòng thêm tay; (b) mỗi lần huấn luyện chia
+tập kiểm tra khác nhau nên điểm macro-F1 giữa các bản chỉ so sánh tương đối; (c) thêm dòng **sao chép** không làm
+mô hình tốt hơn (chỉ dữ liệu thật mới có ích); (d) CSV chỉ phục vụ huấn luyện, muốn máy hiện trên web phải nhập
+vào SQL (trang Quản trị Laptop hoặc `npm run seed`); (e) Mô hình B không huấn luyện, nó tự cập nhật khi backend đồng bộ catalog.
+
 ## 1.12 Kịch bản DEMO trên ứng dụng (đã thử thật trên app)
 
 Điều kiện: 3 dịch vụ đang chạy (shortcut Desktop `SmartLap`), đăng nhập quản trị `admin@smartlap.vn` / `Demo@123`.

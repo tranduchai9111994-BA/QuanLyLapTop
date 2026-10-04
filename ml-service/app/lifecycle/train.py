@@ -18,6 +18,7 @@ from sklearn.metrics import ConfusionMatrixDisplay, classification_report, confu
 from sklearn.model_selection import train_test_split
 
 from app.models.classifier import RANDOM_STATE, dummy_baseline, grid_search, k_curve, rule_based_baseline
+from app.data.data_check import check_catalog_format
 from app.data.features import MODEL_A_FEATURES, enrich_catalog
 from app.models.text_classifier import NeedTextModel, build_text_pipeline, normalize_text
 
@@ -33,6 +34,9 @@ def dataset_hash(path: Path) -> str:
 def load_dataset() -> tuple[pd.DataFrame, Path]:
     catalog_path = DATA_DIR / "processed" / "catalog_vn.csv"
     catalog = pd.read_csv(catalog_path)
+    format_errors = check_catalog_format(catalog)
+    if format_errors:  # báo rõ nguyên nhân thay vì lỗi KeyError khó hiểu
+        raise ValueError("File catalog_vn.csv sai định dạng: " + " | ".join(format_errors))
     cpu_bench = pd.read_csv(DATA_DIR / "processed" / "cpu_benchmark.csv")
     gpu_bench = pd.read_csv(DATA_DIR / "processed" / "gpu_benchmark.csv")
     enriched = enrich_catalog(catalog, cpu_bench, gpu_bench)
