@@ -93,7 +93,7 @@ def predict_segment(req: PredictSegmentRequest) -> dict:  # hàm B: req.items = 
     for col in MODEL_A_FEATURES:
         if col not in X.columns:
             X[col] = 0
-    proba = registry.model.predict_proba(X[MODEL_A_FEATURES])  # ★ mô hình: chuẩn hóa -> 7 láng giềng -> tỷ lệ phiếu 4 nhãn
+    proba = registry.model.predict_proba(X[MODEL_A_FEATURES])  # mô hình: chuẩn hóa -> 7 láng giềng -> tỷ lệ phiếu 4 nhãn
     labels = registry.model.classes_  # tên 4 nhãn, cùng thứ tự các cột của proba
 
     # FR-09: lấy chính k láng giềng đã "bỏ phiếu" để nhân viên thấy lý do (vd "5/7 máy gần nhất là

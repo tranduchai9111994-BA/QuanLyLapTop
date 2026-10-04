@@ -70,7 +70,7 @@ export async function predictSegment(f: SegmentFeatures): Promise<SegmentPredict
       'Không tìm thấy CPU/GPU đã chọn. Dữ liệu có thể vừa được cập nhật — hãy tải lại trang rồi chọn lại.'
     );
   }
-  // ★ Gọi sang ML: đường dẫn này khớp @app.post("/predict-segment") bên main.py
+  // Gọi sang ML; đường dẫn này khớp @app.post("/predict-segment") bên main.py
   const r = await mlClient.post('/predict-segment', {
     items: [ // gói 11 đặc trưng của 1 máy
       {

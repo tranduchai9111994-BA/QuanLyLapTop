@@ -27,14 +27,14 @@ BINARY = ["gpu_dedicated", "srgb_100"]  # nhóm 3 (2 cột): giữ nguyên 0/1
 
 # Đặc trưng đầu vào của MÔ HÌNH A (phân lớp phân khúc). price_vnd cố ý KHÔNG có (quyết định D-04):
 # nếu có, mô hình sẽ học phân khúc theo GIÁ thay vì CẤU HÌNH THẬT.
-MODEL_A_FEATURES = NUMERIC_LOG + NUMERIC + BINARY  # ★ 11 cột = 2 + 7 + 2: đầu vào Mô hình A
+MODEL_A_FEATURES = NUMERIC_LOG + NUMERIC + BINARY  # 11 cột = 2 + 7 + 2; đầu vào Mô hình A
 
 # Đặc trưng đầu vào của MÔ HÌNH B (truy hồi/xếp hạng). Ngược với Mô hình A, giá và độ "đáng tiền"
 # (value_index) PHẢI có vì mục đích của Mô hình B là cân bằng hiệu năng và giá.
 #
 # `discount_percent` và `sales_score` mô phỏng hành vi mua sắm thực tế: máy giảm giá sâu và bán
 # chạy có thể được ưu tiên hơn máy rẻ hơn nhưng ít khuyến mãi/ít người mua.
-MODEL_B_FEATURES = MODEL_A_FEATURES + [  # ★ Mô hình B = 11 cột của A + 5 cột dưới = 16 cột
+MODEL_B_FEATURES = MODEL_A_FEATURES + [  # Mô hình B = 11 cột của A + 5 cột dưới = 16 cột
     "price_vnd", "brand_tier", "value_index", "discount_percent", "sales_score",
 ]
 
@@ -198,7 +198,7 @@ def build_model_a_preprocessor() -> ColumnTransformer:
             "log",  # nhóm 1: RAM/SSD
             Pipeline([
                 ("impute", SimpleImputer(strategy="median")),  # ô trống -> điền trung vị
-                ("log", FunctionTransformer(np.log2, feature_names_out="one-to-one")),  # ★ log2: 8->3, 16->4, 32->5
+                ("log", FunctionTransformer(np.log2, feature_names_out="one-to-one")),  # log2: 8->3, 16->4, 32->5
                 ("sc", StandardScaler()),  # đưa về cùng thước đo (z-score)
             ]),
             NUMERIC_LOG,

@@ -24,10 +24,10 @@ hình B** (xếp hạng top-5). Lộ trình giảng đi theo phân công này.
 2. **Rút gọn** comment dài; không viết comment giải thích lại điều code đã tự nói.
 3. **Thêm chú thích ngắn cạnh các dòng chính** (vai trò, ai gọi ai) — dạng người dùng đã khen:
    ```ts
-   // ★ Gọi sang ML: đường dẫn này khớp @app.post("/predict-segment") bên main.py
+   // Gọi sang ML; đường dẫn này khớp @app.post("/predict-segment") bên main.py
    ```
    ```python
-   proba = registry.model.predict_proba(X)  # ★ mô hình: chuẩn hóa -> 7 láng giềng -> tỷ lệ phiếu
+   proba = registry.model.predict_proba(X)  # mô hình: chuẩn hóa -> 7 láng giềng -> tỷ lệ phiếu
    ```
    Chú thích **ý nghĩa/vai trò** ở dòng chính, không chú thích dòng hiển nhiên.
 4. **Kiểm tra code không đổi** (so code đã bỏ comment giữa bản cũ và mới), chạy `tsc`/`pytest`/`lint`,
@@ -96,6 +96,8 @@ rồi mình góp ý. Câu hỏi hội đồng đã soạn cho từng mô hình n
 ## 3. Quy ước kỹ thuật khi sửa code trong lúc giảng
 
 - Comment tiếng Việt **có dấu, ngắn**; chuỗi hiển thị cho người dùng cuối cũng có dấu.
+- **Hạn chế ký hiệu lạ** như ★ (và emoji trong code/comment/tài liệu kỹ thuật): dùng chữ thường, dấu `;`
+  hoặc `x`. Nếu đã lỡ dùng thì sửa luôn.
 - Không đổi hành vi code khi chỉ "dọn comment" (chứng minh bằng so sánh code đã bỏ comment).
 - Dùng subagent song song để dọn nhiều file; **tự kiểm tra lại** kết quả trước khi commit.
 - Không tự push; không ghi dữ liệu thật qua giao diện khi chưa được phép (bị chặn từng lần) — dữ liệu
