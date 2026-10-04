@@ -60,7 +60,8 @@ export function AdminModels() {
   async function train() {
     setTraining(true);
     try {
-      await api.post('/models/train', { note: note || undefined });
+      // Huấn luyện mất ~30 giây (mặc định api chỉ chờ 10 giây nên báo thất bại giả); backend chờ tối đa 60 giây
+      await api.post('/models/train', { note: note || undefined }, { timeout: 70_000 });
       message.success('Huấn luyện xong — phiên bản mới ở trạng thái "Ứng viên", chưa tự động dùng cho khách.');
       setNote('');
       load();
