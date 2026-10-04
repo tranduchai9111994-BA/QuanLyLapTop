@@ -28,6 +28,7 @@ Người dùng khai báo nhu cầu (mục đích sử dụng, ngân sách, mức
 | 13 | `13_GIAI_THICH_THUAT_TOAN_KNN.md` | kNN trong đồ án đã triển khai: nguyên lý, ví dụ tính tay, 3 mô hình kèm trích dẫn code, cách tự kiểm tra, hỏi đáp | Bảo vệ, báo cáo C2 |
 | 14 | `14_KET_QUA_THUC_NGHIEM.md` | Số liệu thực nghiệm mới nhất (macro-F1, P@5/nDCG@5, so baseline) và danh sách hạn chế | Báo cáo, bảo vệ |
 | 15 | `15_HUONG_DAN_3_THANH_VIEN.md` | Hướng dẫn hiểu & trình bày từng mô hình theo phân công nhóm (A: phân loại phân khúc, C: câu tự do, B: top-5), kèm ví dụ chạy thật, câu hỏi hội đồng, khung slide | Học, làm slide/báo cáo |
+| 16 | `16_CACH_GIANG_BAI.md` | Quy trình giảng bài & hỏi đáp cho người mới (từng bước nhỏ, dọn comment trước khi mở file, mẫu câu "A gọi B", nhãn cấu trúc/dữ liệu) + tiến độ bài học | Học, ôn bảo vệ |
 
 `CLAUDE.md` giữ nguyên tên không đánh số vì Claude Code chỉ tự nạp file có đúng tên này.
 
