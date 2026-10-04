@@ -62,18 +62,13 @@ async function getConfidenceThreshold(): Promise<number> {
   return typeof value === 'number' ? value : DEFAULT_CONFIDENCE_THRESHOLD;
 }
 
-/**
- * Gọi Mô hình A (ML service) dự đoán phân khúc từ cấu hình máy: tra điểm CPU/GPU trong bảng
- * benchmark, tính ppi, rồi gửi đúng 11 đặc trưng ML cần. Ném AppError nếu CPU/GPU không tồn tại;
- * lỗi mạng tới ML thì ném nguyên lỗi để nơi gọi tự quyết (route báo lỗi, applySegmentLabel bỏ qua).
- */
+/** Gọi Mô hình A (ML service) dự đoán phân khúc: tra điểm CPU/GPU, tính ppi, gửi 11 đặc trưng. */
 export async function predictSegment(f: SegmentFeatures): Promise<SegmentPrediction> {
   const [cpu, gpu] = await Promise.all([
     prisma.cpuBenchmark.findUnique({ where: { id: f.cpuId } }),
     prisma.gpuBenchmark.findUnique({ where: { id: f.gpuId } }),
   ]);
-  // Báo lỗi rõ thay vì 500 chung chung: hay gặp khi trang mở từ trước lúc dữ liệu đổi (ID trong
-  // dropdown đã cũ) - người dùng chỉ cần tải lại trang.
+  // Báo lỗi rõ thay vì 500 (hay gặp khi dropdown đã cũ so với dữ liệu)
   if (!cpu || !gpu) {
     throw new AppError(
       404,

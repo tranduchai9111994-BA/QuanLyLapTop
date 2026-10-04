@@ -99,13 +99,11 @@ def _require_catalog() -> pd.DataFrame:
 
 @app.post("/predict-segment")
 def predict_segment(req: PredictSegmentRequest) -> dict:
-    """Mô hình A: nhận 1 hoặc nhiều cấu hình laptop, dự đoán PHÂN KHÚC kèm xác suất từng nhãn.
-    Dùng khi nhân viên thêm máy MỚI (chưa ai gán nhãn tay)."""
+    """Mô hình A: dự đoán PHÂN KHÚC (kèm xác suất từng nhãn) cho máy mới chưa có nhãn."""
     if registry.model is None:
         raise HTTPException(status_code=503, detail="Chưa có mô hình phân lớp được kích hoạt")
-    X = pd.DataFrame(req.items)  # danh sách dict -> bảng (1 máy = 1 hàng, 1 đặc trưng = 1 cột)
-    # Thiếu cột nào thì điền 0 để khỏi lỗi 500. Lưu ý 0 KHÔNG trung tính (vd cpu_score=0 = CPU cực
-    # yếu); chỉ là lưới an toàn vì backend luôn gửi đủ 11 đặc trưng.
+    X = pd.DataFrame(req.items)  # 1 máy = 1 hàng, 1 đặc trưng = 1 cột
+    # Thiếu cột thì điền 0 (lưới an toàn, backend luôn gửi đủ 11 đặc trưng)
     for col in MODEL_A_FEATURES:
         if col not in X.columns:
             X[col] = 0
