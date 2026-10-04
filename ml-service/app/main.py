@@ -219,9 +219,8 @@ def train_endpoint(req: TrainRequest) -> dict:
     Import `train` trong hàm để tránh vòng lặp import và vì thao tác này nặng, hiếm khi gọi."""
     from app.lifecycle import train as train_module
 
-    train_module.main()  # chạy cả pipeline: GridSearchCV, đánh giá, lưu artifact mới
-    registry.activate_latest()  # nạp ngay artifact vừa tạo, không cần restart
-    return {"version": registry.version, "metadata": registry.metadata}
+    metadata = train_module.run_training()  # GridSearchCV, đánh giá, lưu bản mới; KHÔNG đổi mô hình đang dùng
+    return {"version": metadata["version"], "metadata": metadata}
 
 
 @app.post("/models/{version}/activate")
@@ -229,7 +228,8 @@ def activate_model(version: str) -> dict:
     """Chuyển về một phiên bản mô hình cũ đã lưu (rollback). Mỗi artifact có thư mục riêng, không
     bao giờ bị ghi đè."""
     try:
-        registry.activate(version)
+        registry.activate(version)  # nạp vào RAM, dùng ngay
+        registry.save_latest(version)  # ghi LATEST để bật lại ML vẫn giữ bản này
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return {"version": registry.version}

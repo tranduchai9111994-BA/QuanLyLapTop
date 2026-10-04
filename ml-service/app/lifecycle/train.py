@@ -39,7 +39,8 @@ def load_dataset() -> tuple[pd.DataFrame, Path]:
     return enriched, catalog_path
 
 
-def main() -> int:
+def run_training() -> dict:
+    """Huấn luyện + lưu phiên bản mới, trả về metadata của bản vừa train (KHÔNG đổi mô hình đang dùng)."""
     df, catalog_path = load_dataset()  # Bước 1: đọc CSV 1.000 máy, tra điểm CPU/GPU để có các cột số
     X = df
     y = df["segment"]
@@ -130,8 +131,11 @@ def main() -> int:
     metadata["text_model"] = text_meta
     (out_dir / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
 
+    # Bước 11: chỉ khi CHƯA có bản nào đang dùng (lần huấn luyện đầu tiên) mới ghi LATEST; các lần sau
+    # LATEST chỉ đổi khi bấm "Đưa vào sử dụng" (registry.save_latest), để huấn luyện không tự thay mô hình
     latest_path = ARTIFACTS_DIR / "LATEST"
-    latest_path.write_text(version, encoding="utf-8")  # Bước 11: ghi tên bản vừa train vào LATEST (ML nạp bản này khi bật)
+    if not latest_path.exists():
+        latest_path.write_text(version, encoding="utf-8")
 
     print(f"Test macro-F1={test_f1_macro:.4f} (muc tieu >= 0.75)")
     print(f"Vuot dummy: +{test_f1_macro - dummy_f1:.4f} (muc tieu >= 0.30)")
@@ -139,6 +143,11 @@ def main() -> int:
     print(f"Mo hinh C (cau tu do): k={text_meta['best_k']}, CV macro-F1={text_meta['cv_f1_macro']:.4f}, "
           f"{text_meta['n_samples']} cau")
     print(f"Da luu artifact -> {out_dir}")
+    return metadata
+
+
+def main() -> int:
+    run_training()
     return 0
 
 

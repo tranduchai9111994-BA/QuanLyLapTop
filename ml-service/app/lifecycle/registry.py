@@ -35,6 +35,10 @@ class ModelRegistry:
         self.metadata = self.load_metadata(version)
         self.version = version
 
+    def save_latest(self, version: str) -> None:
+        """Ghi tên phiên bản đang dùng vào file LATEST để ML bật lại vẫn nạp đúng bản này."""
+        (ARTIFACTS_DIR / "LATEST").write_text(version, encoding="utf-8")
+
     def activate_latest(self) -> bool:
         latest_path = ARTIFACTS_DIR / "LATEST"
         if not latest_path.exists():
