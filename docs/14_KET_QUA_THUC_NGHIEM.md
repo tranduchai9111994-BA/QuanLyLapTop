@@ -11,7 +11,7 @@
 | Số máy | 1.000 |
 | Nguồn điểm CPU/GPU | PassMark CPU Mark / G3D Mark (tham chiếu cpubenchmark.net, videocardbenchmark.net) |
 | Số cặp CPU–GPU khác nhau | 195 |
-| Phân bố phân khúc | OFFICE 352 · GAMING 286 · ULTRABOOK 234 · CREATOR 128 |
+| Phân bố phân khúc | OFFICE 344 · GAMING 335 · ULTRABOOK 201 · CREATOR 120 |
 
 **Ràng buộc hợp lý đã áp dụng khi sinh dữ liệu** (`data/generate_catalog.py`):
 - Chỉ ghép CPU–GPU **khả dĩ trên thị trường**: Intel CPU không đi với iGPU AMD, Apple M-series chỉ
