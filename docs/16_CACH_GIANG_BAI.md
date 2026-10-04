@@ -136,8 +136,13 @@ rồi mình góp ý. Câu hỏi hội đồng đã soạn cho từng mô hình n
 | TV1 — vì sao RAM/SSD lấy log₂ | ✅ |
 | TV1 — chuẩn hóa z-score (`StandardScaler`) với số thật cột `weight_kg`, ví dụ 2 máy A/B (60% / 40%) | ✅ |
 | TV1 — nguồn của trung bình/độ lệch chuẩn (tính trên 800 máy huấn luyện, lưu trong `model.joblib`) + kịch bản demo trên app (mục 3 của `15_...`) | ✅ |
-| TV1 — **tìm 7 láng giềng + bỏ phiếu** (`predict_proba`, `kneighbors`; `models/classifier.py`, `main.py` dòng 96) | **Bước kế tiếp** |
+| TV1 — tính khoảng cách đủ 11 cột giữa 2 máy, từng bước (docs/15 mục 1.13) | ✅ |
+| Huấn luyện làm gì: 11 bước trong `lifecycle/train.py` (chia 80/20, thử 64 tổ hợp x 5 phần = 320 lần học, lưu phiên bản, `LATEST`) | ✅ tổng quan |
+| Dữ liệu: `data/processed/catalog_vn.csv` (huấn luyện đọc file này, KHÔNG đọc Excel), cách thêm dữ liệu bằng Excel (docs/15 mục 1.14) | ✅ |
+| TV1 — **Bước 3 huấn luyện: thử 64 tổ hợp** (`grid_search` ở `models/classifier.py`, tính tay 64 x 5 = 320) HOẶC làm **bản đồ 3 tầng** (docs/18) | **Bước kế tiếp (chờ người học chọn)** |
+| TV1 — tìm 7 láng giềng + bỏ phiếu (`predict_proba`, `kneighbors`; `models/classifier.py`, `main.py` dòng 96) | ⏳ |
 | TV1 — huấn luyện: `GridSearchCV`, `Pipeline` chống rò rỉ dữ liệu, macro-F1 | ⏳ |
+| Quản lý mô hình: huấn luyện chỉ lưu bản Ứng viên, `Đưa vào sử dụng` mới đổi `LATEST`; có nút Xóa bản dư (không xóa Champion) | ✅ đã làm trong code, chưa giảng |
 | TV1 — hàng đợi Duyệt nhãn / khóa nhãn (`applySegmentLabel`) | ⏳ |
 | **TV2 / Mô hình C** — TF-IDF + kNN cosine (`models/text_classifier.py`) | ⏳ |
 | **TV3 / Mô hình B** — kNN khoảng cách một phía (`models/retriever.py`, `explain.py`) | ⏳ |
