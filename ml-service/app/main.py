@@ -6,6 +6,8 @@ toán (retriever.py/classifier.py/text_classifier.py) rồi trả JSON. Trạng 
 """
 from __future__ import annotations
 
+import re
+import shutil
 from datetime import datetime, timezone
 
 import numpy as np
@@ -14,7 +16,7 @@ from fastapi import FastAPI, HTTPException
 
 from app.models.explain import build_explanation
 from app.data.features import MODEL_A_FEATURES, MODEL_B_FEATURES
-from app.lifecycle.registry import registry
+from app.lifecycle.registry import ARTIFACTS_DIR, registry
 from app.models.retriever import build_ideal_vector, build_weights, fit_scaler, match_pct, recommend, similar_items
 from app.schemas import CatalogSyncRequest, PredictSegmentRequest, RecommendRequest, SimilarRequest, TrainRequest
 from app.models.segment_inference import infer_segment
@@ -233,6 +235,21 @@ def activate_model(version: str) -> dict:
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return {"version": registry.version}
+
+
+@app.delete("/models/{version}")
+def delete_model(version: str) -> dict:
+    """Xóa thư mục một phiên bản đã lưu. Không cho xóa bản đang dùng (đang nạp trong RAM hoặc ghi ở LATEST)."""
+    if not re.fullmatch(r"clf-[0-9.\-]+", version):  # chặn tên lạ (vd '../') để không xóa nhầm thư mục khác
+        raise HTTPException(status_code=400, detail="Tên phiên bản không hợp lệ")
+    latest = ARTIFACTS_DIR / "LATEST"
+    if registry.version == version or (latest.exists() and latest.read_text(encoding="utf-8").strip() == version):
+        raise HTTPException(status_code=409, detail="Không xóa được bản đang dùng")
+    folder = ARTIFACTS_DIR / version
+    if not folder.is_dir():
+        raise HTTPException(status_code=404, detail="Không tìm thấy phiên bản")
+    shutil.rmtree(folder)
+    return {"deleted": version}
 
 
 @app.get("/models/{version}")

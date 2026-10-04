@@ -143,6 +143,7 @@ Tất cả route mount dưới tiền tố `/api` (khai báo trong `app.ts`), c�
 | POST | `/train` | ADMIN | Gọi ML `/train` (đồng bộ, timeout 60s), lưu `ModelVersion` mới với `status = CHALLENGER` |
 | POST | `/:version/promote` | ADMIN | Kiểm tra quy tắc an toàn rồi kích hoạt challenger thành CHAMPION (xem `docs/09`) |
 | POST | `/:version/rollback` | ADMIN | Kích hoạt lại một phiên bản cũ làm CHAMPION ngay, không kiểm tra chỉ số |
+| DELETE | `/:version` | ADMIN | Xóa một phiên bản dư (Ứng viên / đã lưu trữ): xóa thư mục artifacts bên ML rồi xóa dòng DB, ghi nhật ký `DELETE_MODEL`. Từ chối nếu là CHAMPION (409) |
 
 ### 3.10 `dashboard` + `feedback` (tổng hợp) — `/api/dashboard`, `/api/feedback`
 | Method | Path | Quyền | Mô tả |
@@ -177,7 +178,8 @@ Tất cả route mount dưới tiền tố `/api` (khai báo trong `app.ts`), c�
 | POST | `/recommend` | Mô hình B: xếp hạng top-N `candidateIds` theo hồ sơ nhu cầu, trả `ideal`, `weights`, danh sách item kèm giải thích |
 | POST | `/similar` | Item-item: k laptop gần nhất với 1 laptop cho trước (khoảng cách Euclid hai phía) |
 | POST | `/train` | Huấn luyện lại Mô hình A + Mô hình C, lưu artifact mới và **kích hoạt ngay** |
-| POST | `/models/{version}/activate` | Nạp lại một phiên bản artifact đã lưu trên đĩa làm phiên bản đang chạy (dùng cho cả promote và rollback) |
+| POST | `/models/{version}/activate` | Nạp một phiên bản artifact làm bản đang chạy và ghi file `LATEST` (dùng cho cả promote và rollback); huấn luyện `/train` chỉ lưu bản mới, không đổi bản đang chạy |
+| DELETE | `/models/{version}` | Xóa thư mục một phiên bản; 409 nếu là bản đang chạy hoặc ghi ở `LATEST`; 400 nếu tên không hợp lệ |
 | GET | `/models/{version}` | Metadata chi tiết của 1 phiên bản (tham số, macro-F1, confusion matrix...) |
 
 Khi khởi động, ML service tự nạp phiên bản phân loại mới nhất đã lưu trên đĩa (không train lại) và huấn luyện ngay Mô hình C (nhẹ, vài trăm câu mẫu) — toàn bộ trạng thái giữ trong RAM.

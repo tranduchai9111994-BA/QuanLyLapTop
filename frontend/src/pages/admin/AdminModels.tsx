@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Button, Card, Drawer, Input, Table, Tag, message } from 'antd';
-import { CheckCircleOutlined, HistoryOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { Alert, Button, Card, Drawer, Input, Popconfirm, Table, Tag, message } from 'antd';
+import { CheckCircleOutlined, DeleteOutlined, HistoryOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer } from 'recharts';
 import { api } from '../../lib/api';
 import { segmentColors, t } from '../../theme/tokens';
@@ -85,6 +85,17 @@ export function AdminModels() {
     }
   }
 
+  async function remove(version: string) {
+    try {
+      await api.delete(`/models/${version}`);
+      message.success(`Đã xóa phiên bản ${version}.`);
+      if (detail?.version === version) setDetail(null);
+      load();
+    } catch (err: any) {
+      message.error(err?.response?.data?.error?.message ?? 'Không xóa được phiên bản này.');
+    }
+  }
+
   async function rollback(version: string) {
     setBusyVersion(version);
     try {
@@ -153,9 +164,25 @@ export function AdminModels() {
           {
             title: '',
             render: (_: unknown, r: ModelVersionRow) => (
-              <Button size="small" icon={<HistoryOutlined />} onClick={() => setDetail(r)}>
-                Xem chi tiết
-              </Button>
+              <>
+                <Button size="small" icon={<HistoryOutlined />} onClick={() => setDetail(r)}>
+                  Xem chi tiết
+                </Button>
+                {r.status !== 'CHAMPION' && ( // bản đang dùng không được xóa
+                  <Popconfirm
+                    title="Xóa phiên bản này?"
+                    description="Xóa cả file mô hình trên đĩa, không khôi phục được."
+                    okText="Xóa"
+                    cancelText="Hủy"
+                    okButtonProps={{ danger: true }}
+                    onConfirm={() => remove(r.version)}
+                  >
+                    <Button size="small" danger icon={<DeleteOutlined />} style={{ marginLeft: 8 }}>
+                      Xóa
+                    </Button>
+                  </Popconfirm>
+                )}
+              </>
             ),
           },
         ]}

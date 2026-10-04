@@ -112,6 +112,30 @@ modelsRouter.post('/:version/promote', requireAuth, requireRole('ADMIN'), async 
   }
 });
 
+// Xóa 1 phiên bản dư (Ứng viên/đã lưu trữ): xóa thư mục artifacts bên ML rồi xóa dòng trong DB.
+// Không cho xóa bản đang dùng (CHAMPION).
+modelsRouter.delete('/:version', requireAuth, requireRole('ADMIN'), async (req, res, next) => {
+  try {
+    const target = await prisma.modelVersion.findUnique({ where: { version: req.params.version } });
+    if (!target) throw new AppError(404, 'NOT_FOUND', 'Không tìm thấy phiên bản mô hình');
+    if (target.status === 'CHAMPION') {
+      throw new AppError(409, 'CANNOT_DELETE_CHAMPION', 'Không xóa được bản đang dùng. Hãy đưa bản khác vào sử dụng trước.');
+    }
+    try {
+      await mlClient.delete(`/models/${target.version}`);
+    } catch (err: any) {
+      const status = err?.response?.status;
+      if (status === 409) throw new AppError(409, 'MODEL_IN_USE', 'Bản này đang được dịch vụ AI sử dụng, chưa xóa được.');
+      if (status !== 404) throw err; // 404 = thư mục đã mất từ trước, vẫn tiếp tục xóa dòng trong DB
+    }
+    await prisma.modelVersion.delete({ where: { id: target.id } });
+    await writeAudit({ userId: req.user!.id, action: 'DELETE_MODEL', entity: 'ModelVersion', entityId: target.version });
+    res.json({ success: true, data: { version: target.version } });
+  } catch (err) {
+    next(err);
+  }
+});
+
 modelsRouter.post('/:version/rollback', requireAuth, requireRole('ADMIN'), async (req, res, next) => {
   try {
     const target = await prisma.modelVersion.findUnique({ where: { version: req.params.version } });

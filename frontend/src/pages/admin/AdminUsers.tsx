@@ -30,6 +30,7 @@ const ACTION_LABELS: Record<string, string> = {
   UNPIN_LAPTOP: 'Gỡ ghim/cấm',
   PROMOTE_MODEL: 'Đưa mô hình vào sử dụng',
   ROLLBACK_MODEL: 'Quay lại phiên bản mô hình',
+  DELETE_MODEL: 'Xóa phiên bản mô hình',
   CREATE_USER: 'Tạo tài khoản',
   UPDATE_USER: 'Sửa tài khoản',
 };
