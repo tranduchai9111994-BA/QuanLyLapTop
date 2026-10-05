@@ -31,10 +31,10 @@ RANDOM_STATE = 42  # cố định để kết quả tái lập được giữa c
 #   n_neighbors: k = 1, 3, 5, ..., 31 (số LẺ để tránh hòa phiếu khi biểu quyết 50-50)
 #   weights: "uniform" = mỗi láng giềng 1 phiếu | "distance" = láng giềng gần hơn phiếu nặng hơn
 #   metric: cách đo khoảng cách - Euclidean (đường thẳng) hay Manhattan (tổng trị tuyệt đối)
-PARAM_GRID = {
-    "knn__n_neighbors": list(range(1, 32, 2)),
-    "knn__weights": ["uniform", "distance"],
-    "knn__metric": ["euclidean", "manhattan"],
+PARAM_GRID = {  # 16 x 2 x 2 = 64 tổ hợp cần thử
+    "knn__n_neighbors": list(range(1, 32, 2)),  # 16 giá trị k: 1, 3, 5, ..., 31
+    "knn__weights": ["uniform", "distance"],  # 2 cách tính phiếu
+    "knn__metric": ["euclidean", "manhattan"],  # 2 cách đo khoảng cách
 }
 
 
@@ -66,11 +66,13 @@ def grid_search(X: pd.DataFrame, y: pd.Series) -> GridSearchCV:
     qua lớp nhỏ sẽ bị phạt điểm rõ ràng.
     """
     pipe = build_pipeline()
-    cv = StratifiedKFold(5, shuffle=True, random_state=RANDOM_STATE)
+    cv = StratifiedKFold(5, shuffle=True, random_state=RANDOM_STATE)  # 800 máy -> 5 phần x 160 máy, giữ tỷ lệ 4 phân khúc
+    # Mỗi tổ hợp: học 5 lần (mỗi lần bỏ 1 phần, học trên 640 máy), chấm macro-F1 trên 160 máy bị bỏ,
+    # rồi lấy trung bình 5 điểm; tổ hợp có trung bình cao nhất sẽ thắng
     search = GridSearchCV(
         pipe, PARAM_GRID, cv=cv, scoring="f1_macro", n_jobs=-1, return_train_score=True
     )
-    search.fit(X[MODEL_A_FEATURES], y)
+    search.fit(X[MODEL_A_FEATURES], y)  # 64 x 5 = 320 lần học; xong học lại bộ thắng trên đủ 800 máy (best_estimator_)
     return search
 
 
