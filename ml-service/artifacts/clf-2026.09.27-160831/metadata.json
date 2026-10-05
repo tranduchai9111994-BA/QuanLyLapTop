@@ -1,0 +1,215 @@
+{
+  "version": "clf-2026.09.27-160831",
+  "type": "classifier",
+  "trained_at": "2026-09-27T16:08:31.543015+00:00",
+  "dataset_hash": "8f75c4cc7a44645bd6f563e0e99a10a595f6c68d6730a59fbb38d1eb2eb1281f",
+  "n_samples": 1000,
+  "class_counts": {
+    "OFFICE": 344,
+    "GAMING": 335,
+    "ULTRABOOK": 201,
+    "CREATOR": 120
+  },
+  "best_params": {
+    "knn__metric": "euclidean",
+    "knn__n_neighbors": 7,
+    "knn__weights": "uniform"
+  },
+  "cv_f1_macro_mean": 0.7937528681030832,
+  "cv_f1_macro_std": 0.04629840909549496,
+  "test_metrics": {
+    "f1_macro": 0.7866193697409669,
+    "report": {
+      "CREATOR": {
+        "precision": 0.75,
+        "recall": 0.375,
+        "f1-score": 0.5,
+        "support": 24.0
+      },
+      "GAMING": {
+        "precision": 0.8076923076923077,
+        "recall": 0.9402985074626866,
+        "f1-score": 0.8689655172413793,
+        "support": 67.0
+      },
+      "OFFICE": {
+        "precision": 0.8783783783783784,
+        "recall": 0.9420289855072463,
+        "f1-score": 0.9090909090909091,
+        "support": 69.0
+      },
+      "ULTRABOOK": {
+        "precision": 0.9166666666666666,
+        "recall": 0.825,
+        "f1-score": 0.868421052631579,
+        "support": 40.0
+      },
+      "accuracy": 0.85,
+      "macro avg": {
+        "precision": 0.8381843381843381,
+        "recall": 0.7705818732424832,
+        "f1-score": 0.7866193697409669,
+        "support": 200.0
+      },
+      "weighted avg": {
+        "precision": 0.8469507969507969,
+        "recall": 0.85,
+        "f1-score": 0.8384240224385414,
+        "support": 200.0
+      }
+    },
+    "confusion_matrix": [
+      [
+        9,
+        14,
+        1,
+        0
+      ],
+      [
+        3,
+        63,
+        1,
+        0
+      ],
+      [
+        0,
+        1,
+        65,
+        3
+      ],
+      [
+        0,
+        0,
+        7,
+        33
+      ]
+    ],
+    "labels": [
+      "CREATOR",
+      "GAMING",
+      "OFFICE",
+      "ULTRABOOK"
+    ]
+  },
+  "baseline": {
+    "dummy_f1_macro": 0.12825278810408922,
+    "rule_f1_macro": 0.6317130167916928
+  },
+  "k_curve": [
+    {
+      "k": 1,
+      "f1_macro_mean": 0.7565601214928313,
+      "f1_macro_std": 0.014986184424075687
+    },
+    {
+      "k": 3,
+      "f1_macro_mean": 0.7646719706335603,
+      "f1_macro_std": 0.02380816394211439
+    },
+    {
+      "k": 5,
+      "f1_macro_mean": 0.75758159041619,
+      "f1_macro_std": 0.038873317720604574
+    },
+    {
+      "k": 7,
+      "f1_macro_mean": 0.7937528681030832,
+      "f1_macro_std": 0.04629840909549496
+    },
+    {
+      "k": 9,
+      "f1_macro_mean": 0.7844029774135126,
+      "f1_macro_std": 0.02886646325538998
+    },
+    {
+      "k": 11,
+      "f1_macro_mean": 0.7767656351716619,
+      "f1_macro_std": 0.02808760684557179
+    },
+    {
+      "k": 13,
+      "f1_macro_mean": 0.7725878017995036,
+      "f1_macro_std": 0.031618639257721744
+    },
+    {
+      "k": 15,
+      "f1_macro_mean": 0.7723884512382122,
+      "f1_macro_std": 0.027736673787955864
+    },
+    {
+      "k": 17,
+      "f1_macro_mean": 0.7719124109422794,
+      "f1_macro_std": 0.040893046889067204
+    },
+    {
+      "k": 19,
+      "f1_macro_mean": 0.7625756534651934,
+      "f1_macro_std": 0.043291341332234834
+    },
+    {
+      "k": 21,
+      "f1_macro_mean": 0.7454421887635296,
+      "f1_macro_std": 0.051487134811693376
+    },
+    {
+      "k": 23,
+      "f1_macro_mean": 0.7450875678230847,
+      "f1_macro_std": 0.050593042468783496
+    },
+    {
+      "k": 25,
+      "f1_macro_mean": 0.731838744573892,
+      "f1_macro_std": 0.04680123457903257
+    },
+    {
+      "k": 27,
+      "f1_macro_mean": 0.7243257518950665,
+      "f1_macro_std": 0.05129406822149779
+    },
+    {
+      "k": 29,
+      "f1_macro_mean": 0.7204584942238956,
+      "f1_macro_std": 0.05656193098796671
+    },
+    {
+      "k": 31,
+      "f1_macro_mean": 0.6967786199113062,
+      "f1_macro_std": 0.04312331020635658
+    }
+  ],
+  "feature_list": [
+    "ram_gb",
+    "ssd_gb",
+    "cpu_score",
+    "gpu_score",
+    "screen_inch",
+    "ppi",
+    "refresh_hz",
+    "weight_kg",
+    "battery_wh",
+    "gpu_dedicated",
+    "srgb_100"
+  ],
+  "sklearn_version": "1.5.2",
+  "text_model": {
+    "type": "text_need_classifier",
+    "algorithm": "TF-IDF (word 1-2gram + char_wb 3-5gram) + kNN cosine",
+    "n_samples": 132,
+    "labels": [
+      "DI_DONG",
+      "DO_HOA",
+      "GAMING",
+      "HOC_TAP",
+      "LAP_TRINH",
+      "VAN_PHONG"
+    ],
+    "f1_macro_by_k": {
+      "1": 0.741,
+      "3": 0.7417,
+      "5": 0.7191,
+      "7": 0.7725
+    },
+    "best_k": 7,
+    "cv_f1_macro": 0.7725
+  }
+}
