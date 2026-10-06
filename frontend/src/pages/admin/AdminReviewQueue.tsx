@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Alert, Button, Card, Checkbox, Empty, Select, Space, message } from 'antd';
-import { CheckCircleOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, DownloadOutlined } from '@ant-design/icons';
 import { api } from '../../lib/api';
 import { segmentColors, t } from '../../theme/tokens';
 import { formatVnd } from '../../utils/format';
@@ -67,9 +67,28 @@ export function AdminReviewQueue() {
     }
   }
 
+  async function exportLabels() {
+    try {
+      const r = await api.get('/labels/export', { responseType: 'blob' });
+      const url = URL.createObjectURL(r.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `nhan_da_duyet_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      message.error(err?.response?.status === 403 ? 'Chỉ quản trị viên được xuất nhãn.' : 'Không xuất được nhãn, vui lòng thử lại.');
+    }
+  }
+
   return (
     <div>
-      <h2>Duyệt nhãn phân khúc</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <h2 style={{ margin: 0 }}>Duyệt nhãn phân khúc</h2>
+        <Button icon={<DownloadOutlined />} onClick={exportLabels}>
+          Xuất nhãn đã duyệt (CSV)
+        </Button>
+      </div>
       <p style={{ color: t.textSecondary }}>
         Các máy Mô hình A tự gán nhãn nhưng độ tin cậy thấp — vẫn đang được gợi ý tạm cho khách
         bằng nhãn này, duyệt sớm giúp tránh gợi ý sai phân khúc.

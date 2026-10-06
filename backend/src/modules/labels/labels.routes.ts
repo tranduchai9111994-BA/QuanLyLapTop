@@ -6,6 +6,7 @@ import { AppError } from '../../middlewares/error';
 import { fromJson } from '../../lib/json';
 import { snapshotSync } from '../jobs/snapshotSync';
 import { SEGMENTS } from '../laptops/segment.service';
+import { buildLabelCsv } from './labelExport';
 
 /**
  * UC-10: hàng đợi nhãn "Cần xác minh" (human-in-the-loop, docs/09_VONG_DOI_TRI_TUE.md).
@@ -35,6 +36,24 @@ labelsRouter.get('/review-queue', requireAuth, requireRole('STAFF', 'ADMIN'), as
       locked: r.locked,
     }));
     res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Xuất nhãn đã duyệt ra CSV để chép vào dữ liệu huấn luyện Mô hình A. Mặc định chỉ lấy nhãn do người
+// quyết định (ADMIN/RETAILER); `?all=1` lấy thêm nhãn do mô hình tự gán đủ tin cậy (dễ tự củng cố sai).
+labelsRouter.get('/export', requireAuth, requireRole('ADMIN'), async (req, res, next) => {
+  try {
+    const rows = await prisma.segmentLabel.findMany({
+      where: { status: 'VERIFIED', ...(req.query.all === '1' ? {} : { source: { in: ['ADMIN', 'RETAILER'] } }) },
+      orderBy: { laptopId: 'asc' },
+      include: { laptop: { include: { brand: true, cpu: true, gpu: true } } },
+    });
+    const day = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="nhan_da_duyet_${day}.csv"`);
+    res.send(buildLabelCsv(rows));
   } catch (err) {
     next(err);
   }
