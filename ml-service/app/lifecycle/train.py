@@ -58,7 +58,7 @@ def run_training() -> dict:
     if not golden_path.exists():
         ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
         X_test.to_csv(golden_path, index=False)
-        print(f"Da dong bang golden_test.csv ({len(X_test)} mau)")
+        print(f"Đã đóng băng golden_test.csv ({len(X_test)} mẫu)")
 
     search = grid_search(X_train, y_train)  # Bước 3: thử mọi tổ hợp (k, cách đo, trọng số phiếu), chấm bằng kiểm thử chéo 5 phần
     best_pipe = search.best_estimator_
@@ -121,10 +121,10 @@ def run_training() -> dict:
     stds = [c["f1_macro_std"] for c in curve]
     plt.figure(figsize=(7, 4))
     plt.errorbar(ks, means, yerr=stds, marker="o", capsize=3)
-    plt.axvline(best_params["knn__n_neighbors"], color="red", linestyle="--", label="k tot nhat")
-    plt.xlabel("k (so lang gieng)")
-    plt.ylabel("Macro-F1 (CV trung binh)")
-    plt.title(f"Duong cong k - {version}")
+    plt.axvline(best_params["knn__n_neighbors"], color="red", linestyle="--", label="k tốt nhất")
+    plt.xlabel("k (số láng giềng)")
+    plt.ylabel("Macro-F1 (CV trung bình)")
+    plt.title(f"Đường cong k - {version}")
     plt.legend()
     plt.tight_layout()
     plt.savefig(out_dir / "k_curve.png", dpi=150)
@@ -141,12 +141,12 @@ def run_training() -> dict:
     if not latest_path.exists():
         latest_path.write_text(version, encoding="utf-8")
 
-    print(f"Test macro-F1={test_f1_macro:.4f} (muc tieu >= 0.75)")
-    print(f"Vuot dummy: +{test_f1_macro - dummy_f1:.4f} (muc tieu >= 0.30)")
-    print(f"Vuot luat: +{test_f1_macro - rule_f1:.4f} (muc tieu >= 0.05)")
-    print(f"Mo hinh C (cau tu do): k={text_meta['best_k']}, CV macro-F1={text_meta['cv_f1_macro']:.4f}, "
-          f"{text_meta['n_samples']} cau")
-    print(f"Da luu artifact -> {out_dir}")
+    print(f"Test macro-F1={test_f1_macro:.4f} (mục tiêu >= 0.75)")
+    print(f"Vượt dummy: +{test_f1_macro - dummy_f1:.4f} (mục tiêu >= 0.30)")
+    print(f"Vượt luật: +{test_f1_macro - rule_f1:.4f} (mục tiêu >= 0.05)")
+    print(f"Mô hình C (câu tự do): k={text_meta['best_k']}, CV macro-F1={text_meta['cv_f1_macro']:.4f}, "
+          f"{text_meta['n_samples']} câu")
+    print(f"Đã lưu artifact -> {out_dir}")
     return metadata
 
 
