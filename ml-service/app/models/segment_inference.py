@@ -1,18 +1,18 @@
-"""Suy phan khuc tu hoat dong khi nguoi dung chon 'Chua ro' (docs/04 SS3.5)."""
+"""Suy phân khúc từ hoạt động khi người dùng chọn 'Chưa rõ' (docs/04 SS3.5)."""
 from __future__ import annotations
 
 import pandas as pd
 
 from app.data.features import MODEL_A_FEATURES
 
+# Giá trị là phân vị mục tiêu đã tính hướng (weight_kg: 25 = muốn nhẹ).
 ACTIVITY_TARGETS = {
     "choi_game": {"gpu_score": 75, "refresh_hz": 75, "gpu_dedicated": 1, "cpu_score": 60},
     "do_hoa": {"srgb_100": 1, "cpu_score": 75, "ram_gb": 75, "gpu_score": 60},
     "dung_video": {"srgb_100": 1, "cpu_score": 75, "ram_gb": 75, "gpu_score": 60},
     "di_chuyen_nhieu": {"weight_kg": 25, "battery_wh": 75, "gpu_score": 25},
-    # docs/04 §3.5 goi y "trung vi" cho van_phong/hoc_tap; nhung trung vi TOAN catalog
-    # (gom ca Gaming/Creator manh hon) keo vector lech ve phan khuc cao hon. Dung P25
-    # (nhu cau thap) de phan anh dung dac diem thuc te cua nhom Van phong/Hoc tap.
+    # docs/04 gợi ý "trung vị" cho văn phòng/học tập, nhưng trung vị toàn catalog (gồm cả
+    # Gaming/Creator) kéo vector lệch lên cao, nên dùng P25.
     "van_phong": {"cpu_score": 25, "ram_gb": 25, "gpu_score": 25},
     "hoc_tap": {"cpu_score": 25, "ram_gb": 25, "gpu_score": 25},
     "lap_trinh": {"cpu_score": 60, "ram_gb": 60, "gpu_score": 25},
@@ -21,9 +21,8 @@ ACTIVITY_TARGETS = {
 }
 
 def build_activity_vector(catalog: pd.DataFrame, activities: list[str]) -> dict:
-    """Moi gia tri trong ACTIVITY_TARGETS la phan vi muc tieu da tinh huong (vd. weight_kg: 25
-    nghia la muon nhe, tuc phan vi thap). Khi nhieu hoat dong cung tac dong len mot dac trung,
-    lay phan vi lech xa trung vi (50) nhat - do la yeu cau ro rang hon la "trung binh cong"."""
+    """Nhiều hoạt động cùng tác động một đặc trưng thì lấy phân vị lệch xa trung vị (50) nhất,
+    vì đó là yêu cầu rõ ràng hơn trung bình cộng."""
     demands: dict[str, list[float]] = {f: [] for f in MODEL_A_FEATURES}
     for act in activities:
         targets = ACTIVITY_TARGETS.get(act, {})
@@ -49,9 +48,8 @@ def infer_segment(model, catalog: pd.DataFrame, activities: list[str]) -> dict:
     labels = model.classes_
     order = proba.argsort()[::-1]
 
-    # docs/07_UIUX.md muc 7.5 "Phan khuc duoc chon vi..." can chinh k lang gieng da BO PHIEU,
-    # khong chi con so xac suat kho hieu - cung cach lay nhu /predict-segment (main.py), ap dung
-    # cho "may trong mo" duoc dung tu cac hoat dong da chon thay vi 1 cau hinh may that.
+    # Lấy k láng giềng đã bỏ phiếu để UI giải thích "phân khúc được chọn vì...",
+    # cùng cách với /predict-segment (main.py).
     prep = model.named_steps["prep"]
     knn = model.named_steps["knn"]
     neigh_dist, neigh_idx = knn.kneighbors(prep.transform(X))

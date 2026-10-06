@@ -12,6 +12,7 @@ DATA_DIR = ROOT / "data"
 
 @pytest.fixture(scope="session")
 def enriched_catalog() -> pd.DataFrame:
+    """Catalog đã thêm đặc trưng dẫn xuất và cột id, dùng chung cả phiên test."""
     catalog = pd.read_csv(DATA_DIR / "processed" / "catalog_vn.csv")
     cpu_bench = pd.read_csv(DATA_DIR / "processed" / "cpu_benchmark.csv")
     gpu_bench = pd.read_csv(DATA_DIR / "processed" / "gpu_benchmark.csv")
@@ -22,4 +23,5 @@ def enriched_catalog() -> pd.DataFrame:
 
 @pytest.fixture(scope="session")
 def personas() -> list[dict]:
+    """Bộ persona mẫu đọc từ data/personas/personas.json."""
     return json.loads((DATA_DIR / "personas" / "personas.json").read_text(encoding="utf-8"))

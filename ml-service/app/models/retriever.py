@@ -1,13 +1,9 @@
-"""Mo hinh B: kNN truy hoi co trong so, dung KHOANG CACH MOT PHIA (one-sided).
+"""Mô hình B: kNN truy hồi có trọng số, dùng khoảng cách MỘT PHÍA (one-sided).
 
-Thay doi quan trong so voi ban dau (theo gop y cua giang vien):
- - Khoang cach MOT PHIA: khong phat may MANH HON hoac RE HON muc mong muon. Truoc day dung
-   Euclidean hai phia nen may cau hinh cao hon ho so ly tuong bi coi la "xa" => bi tru diem oan.
- - Ham khoang cach nay duoc dua THANG vao metric cua kNN (NearestNeighbors(metric=callable)),
-   khong phai xep hang lai o ngoai => kNN van la loi thuat toan.
- - GIA nam trong metric xep hang (truoc day chi la huy hieu hien thi "dang tien").
- - brand_tier (uy tin thuong hieu) la mot dac trung, quy doi hang 1..5.
- - match% dung MOC CO DINH, khong chuan hoa theo top-N (truoc day hang 1 luon ~cao nhat).
+Máy mạnh hơn hoặc rẻ hơn mức mong muốn không bị phạt (Euclidean hai phía từng phạt oan máy
+cấu hình cao hơn hồ sơ lý tưởng). Hàm khoảng cách được đưa thẳng vào metric của
+NearestNeighbors chứ không xếp hạng lại bên ngoài. Giá và brand_tier nằm trong metric.
+match% dùng mốc cố định, không chuẩn hóa theo top-N.
 """
 from __future__ import annotations
 
@@ -24,14 +20,11 @@ GROUPS = {
     "performance": ["cpu_score", "gpu_score", "ram_gb", "ssd_gb"],
     "mobility": ["weight_kg", "battery_wh"],
     "display": ["ppi", "refresh_hz", "srgb_100"],
-    # Nhom "gia" gom ca gia tuyet doi lan value_index (hieu nang/trieu dong): nguoi uu tien
-    # tiet kiem vua muon re, vua muon dang tien - hai mat cua cung mot nhu cau.
+    # Nhóm giá gồm cả giá tuyệt đối lẫn value_index: người ưu tiên tiết kiệm muốn vừa rẻ vừa đáng tiền.
     "price": ["price_vnd", "value_index"],
     "brand": ["brand_tier"],
-    # "Do pho bien": may giam gia sau + ban chay se duoc nang len trong xep hang, giong hanh
-    # vi mua sam that (nguoi mua co xu huong tin tuong san pham nhieu nguoi da mua + dang sale).
-    # Trong so CO DINH (khong gan voi thanh truot nao nguoi dung tu chinh), luon co mat o muc
-    # vua phai de KHONG lan at cac tieu chi chinh (hieu nang/gia/di dong/man hinh).
+    # Độ phổ biến: máy giảm sâu, bán chạy được nâng lên một chút. Trọng số cố định, không có thanh
+    # trượt, và giữ ở mức vừa phải để không lấn át các tiêu chí chính.
     "popularity": ["discount_percent", "sales_score"],
 }
 POPULARITY_WEIGHT = 0.12
@@ -44,10 +37,10 @@ BASE_WEIGHT_BY_SEGMENT = {
 }
 SCREEN_INCH_WEIGHT = 0.05
 
-# Huong "tot" cua tung dac trung:
-#  +1 = cang CAO cang tot  -> chi phat khi may THAP hon nhu cau (thua thi khong phat)
-#  -1 = cang THAP cang tot -> chi phat khi may CAO hon nhu cau (re/nhe hon thi khong phat)
-#   0 = hai phia (lech huong nao cung tinh la khac biet)
+# Hướng "tốt" của từng đặc trưng:
+#  +1 = càng cao càng tốt  -> chỉ phạt khi máy thấp hơn nhu cầu
+#  -1 = càng thấp càng tốt -> chỉ phạt khi máy cao hơn nhu cầu
+#   0 = hai phía (lệch hướng nào cũng là khác biệt)
 FEATURE_DIRECTION: dict[str, int] = {
     "cpu_score": +1,
     "gpu_score": +1,
@@ -59,27 +52,23 @@ FEATURE_DIRECTION: dict[str, int] = {
     "battery_wh": +1,
     "brand_tier": +1,
     "gpu_dedicated": +1,
-    "value_index": +1,  # cang dang tien cang tot; dang tien hon muc mong muon khong bi phat
-    "discount_percent": +1,  # giam gia cang sau cang tot, khong bi phat neu giam nhieu hon can
-    "sales_score": +1,       # ban cang chay cang duoc tin tuong, khong bi phat neu ban rat chay
+    "value_index": +1,
+    "discount_percent": +1,
+    "sales_score": +1,
     "weight_kg": -1,
     "price_vnd": -1,
     "screen_inch": 0,
 }
 
-# He so phat khi may VUOT nhu cau theo huong tot (manh hon / re hon / nhe hon).
-# Dat = 0 dung theo yeu cau "khong phat may manh hon hoac re hon muc mong muon".
-#
-# Luu y quan trong (da kiem chung bang thuc nghiem): viec "khong phat" phai di doi voi cach dat
-# vector ly tuong q. Neu q_gia nam giua khoang ngan sach thi MOI may re hon deu co phat = 0,
-# gia mat kha nang phan biet => nguoi uu tien tiet kiem lai bi goi y may dat hon. Vi vay q cua
-# cac dac trung mot phia duoc dat o BIEN mong muon (xem build_ideal_vector): uu tien gia toi da
-# => q = ngan sach toi thieu, uu tien hieu nang toi da => q = phan vi 90.
+# Hệ số phạt khi máy vượt nhu cầu theo hướng tốt. Đặt 0 = không phạt máy mạnh/rẻ/nhẹ hơn.
+# Đã kiểm chứng: "không phạt" chỉ có tác dụng nếu q của đặc trưng một phía nằm ở BIÊN mong muốn
+# (xem build_ideal_vector). Nếu q giá nằm giữa khoảng ngân sách thì mọi máy rẻ hơn đều phạt 0,
+# mất khả năng phân biệt và người ưu tiên tiết kiệm lại bị gợi ý máy đắt.
 OVERSHOOT_PENALTY = 0.0
 
 
 def fit_scaler(catalog: pd.DataFrame) -> StandardScaler:
-    """z-score fit tren toan catalog de moi dac trung cung thang do truoc khi tinh khoang cach."""
+    """z-score trên toàn catalog để các đặc trưng cùng thang đo."""
     scaler = StandardScaler()
     scaler.fit(catalog[MODEL_B_FEATURES])
     return scaler
@@ -88,56 +77,41 @@ def fit_scaler(catalog: pd.DataFrame) -> StandardScaler:
 def build_ideal_vector(
     candidates: pd.DataFrame, priorities: dict, must: dict, budget: dict, segment: str
 ) -> dict:
-    """Dung VECTOR NHU CAU LY TUONG q - "chiec may trong mo" ma nguoi dung dang tim.
+    """Dựng vector nhu cầu lý tưởng q, "chiếc máy trong mơ" chứ không phải máy có thật.
 
-    q KHONG PHAI la mot laptop co that trong catalog. No la mot diem duoc "may do" tu chinh
-    tap ung vien: voi moi dac trung, ta tra loi cau hoi "nguoi dung muon gia tri nay o MUC NAO
-    so voi cac may khac dang co san?" bang cach lay PHAN VI (percentile) trong `candidates`.
-
-    Vi du de hieu: nguoi dung chon "hieu nang" = 5/5 (rat quan trong). Tra bang
-    PERCENTILE_BY_PRIORITY, muc 5 tuong ung phan vi 90. Nghia la q["cpu_score"] = gia tri CPU
-    o VI TRI 90% (chi 10% may trong tap ung vien co CPU manh hon) - the hien "toi muon mot
-    trong nhung may manh nhat". Nguoc lai muc 1/5 chi can phan vi 25 (trung binh yeu cung duoc).
-
-    Sau khi co q, Mo hinh B (ham `recommend` ben duoi) se tim CAC MAY GAN q NHAT trong khong
-    gian da chieu - do la ban chat cua "kNN truy hoi": khong tim may giong q nhat theo TUNG dac
-    trung rieng le, ma tim may co TONG khoang cach (co trong so) toi q la nho nhat.
+    Mỗi đặc trưng lấy phân vị trong `candidates` theo mức ưu tiên (PERCENTILE_BY_PRIORITY).
+    Ví dụ hiệu năng 5/5 -> phân vị 90: chỉ 10% ứng viên có CPU mạnh hơn. `recommend` sau đó
+    tìm các máy có tổng khoảng cách có trọng số tới q nhỏ nhất.
     """
     q: dict[str, float] = {}
 
-    # Nhom HIEU NANG: cpu/gpu/ram/ssd deu dung CHUNG mot muc uu tien "performance"
+    # Hiệu năng: cpu/gpu/ram/ssd dùng chung một mức ưu tiên
     for feat in ["cpu_score", "gpu_score", "ram_gb", "ssd_gb"]:
         p = priorities.get("performance", 3)
         q[feat] = float(candidates[feat].quantile(PERCENTILE_BY_PRIORITY[p] / 100))
 
-    # Nhom DI DONG: can nang la "cang THAP cang tot" nen phai LAT nguoc phan vi
-    # (uu tien di dong cao -> muon may o phan vi THAP cua can nang, tuc la NHE)
+    # Di động: cân nặng càng thấp càng tốt nên lật ngược phân vị
     p_mob = priorities.get("mobility", 3)
     q["weight_kg"] = float(candidates["weight_kg"].quantile((100 - PERCENTILE_BY_PRIORITY[p_mob]) / 100))
     q["battery_wh"] = float(candidates["battery_wh"].quantile(PERCENTILE_BY_PRIORITY[p_mob] / 100))
 
-    # Nhom MAN HINH: do phan giai (ppi) va tan so quet cang cao cang tot; sRGB 100% chi "bat"
-    # (=1) khi nguoi dung thuc su quan tam man hinh (muc >= 4/5), con lai khong doi hoi
+    # Màn hình: sRGB 100% chỉ bật khi người dùng thật sự quan tâm (>= 4/5)
     p_disp = priorities.get("display", 3)
     for feat in ["ppi", "refresh_hz"]:
         q[feat] = float(candidates[feat].quantile(PERCENTILE_BY_PRIORITY[p_disp] / 100))
     q["srgb_100"] = 1 if p_disp >= 4 else 0
 
-    # Gia: voi khoang cach MOT PHIA, may re hon q khong bi phat => q phai dat o BIEN mong muon
-    # thi gia moi phan biet duoc. p=5 (rat quan trong tiet kiem) -> q = ngan sach toi thieu
-    # (moi dong dat them deu bi phat); p=1 (khong quan tam gia) -> q = ngan sach toi da.
+    # Giá: với khoảng cách một phía, q phải đặt ở biên mong muốn. p=5 -> ngân sách tối thiểu,
+    # p=1 -> ngân sách tối đa.
     p_price = priorities.get("price", 3)
     b_min, b_max = budget["min"], budget["max"]
     q["price_vnd"] = b_min + (1 - (p_price - 1) / 4) * (b_max - b_min)
-    # Cang uu tien tiet kiem -> cang doi hoi may "dang tien" (value_index cao)
     q["value_index"] = float(candidates["value_index"].quantile(PERCENTILE_BY_PRIORITY[p_price] / 100))
 
     q["screen_inch"] = float(candidates["screen_inch"].median())
     q["gpu_dedicated"] = 1 if segment == "GAMING" else int(candidates["gpu_dedicated"].median())
     q["brand_tier"] = float(candidates["brand_tier"].quantile(0.5))
-    # "Do pho bien" luon huong toi muc CAO (khong co thanh truot rieng cho nguoi dung chinh) -
-    # dat q o phan vi 80: mong muon may giam gia sau + ban chay, nhung khong doi hoi PHAI la
-    # may giam gia/ban chay NHAT catalog (qua khat khe se lam mat nhieu may tot khac).
+    # Độ phổ biến luôn hướng tới mức cao nhưng chỉ ở phân vị 80, đòi nhất catalog thì quá khắt khe.
     q["discount_percent"] = float(candidates["discount_percent"].quantile(0.80))
     q["sales_score"] = float(candidates["sales_score"].quantile(0.80))
 
@@ -153,62 +127,48 @@ def build_weights(
     brand_weight: float = 1.0,
     base_weights_override: dict[str, dict[str, float]] | None = None,
 ) -> dict:
-    """Tinh trong so w_j cho tung dac trung, dung trong cong thuc khoang cach co trong so.
+    """Tính trọng số w_j cho từng đặc trưng, tổng bằng 1.
 
-    Cach tinh (vi du de hieu): neu nguoi dung dat "hieu nang" = 5/5, va phan khuc GAMING co
-    trong so nen mac dinh cho nhom hieu nang la 1.3, thi trong so tho cua nhom nay = 5 * 1.3 = 6.5.
-    Nhom "hieu nang" gom 4 dac trung (cpu_score, gpu_score, ram_gb, ssd_gb) nen moi dac trung
-    nhan 6.5/4 = 1.625. Cuoi cung TAT CA trong so (moi nhom cong lai) duoc CHIA cho tong, de
-    tong luon bang 1 (dieu kien bat buoc cua cong thuc Euclidean co trong so).
+    Trọng số nhóm = mức ưu tiên x trọng số nền của phân khúc, chia đều cho các đặc trưng trong
+    nhóm, rồi chuẩn hóa. Ví dụ GAMING, hiệu năng 5/5: 5 * 1.3 = 6.5, chia 4 đặc trưng = 1.625 mỗi cái.
 
-    => Ket qua: nguoi dung keo thanh truot cang cao, nhom dac trung do cang "nang ky" trong
-    viec xep hang, dong thoi van giu duoc dac thu tung phan khuc (vd GAMING luon coi trong
-    hieu nang hon OFFICE ngay ca khi ca hai nguoi dung deu chon muc 3/5).
-
-    `base_weights_override` (FR-13, Cau hinh tri thuc): quan tri vien co the sua trong so NEN
-    tung phan khuc qua man quan tri, thay vi phai sua code va deploy lai. Chi ghi de PHAN KHUC
-    nao thuc su co trong dict truyen vao (merge nong voi mac dinh), phan khuc khac van dung
-    BASE_WEIGHT_BY_SEGMENT nhu cu - tranh 1 cau hinh thieu du lieu lam sap toan bo he thong.
+    `base_weights_override` (FR-13): admin ghi đè trọng số nền theo phân khúc. Chỉ phân khúc có
+    trong dict mới bị ghi đè (merge nông), phân khúc khác vẫn dùng BASE_WEIGHT_BY_SEGMENT.
     """
-    # base: trong so "nen" mac dinh cua tung phan khuc (vd GAMING coi trong hieu nang hon OFFICE)
     base = dict(BASE_WEIGHT_BY_SEGMENT.get(segment, BASE_WEIGHT_BY_SEGMENT["OFFICE"]))
     if base_weights_override and segment in base_weights_override:
         base.update(base_weights_override[segment])
 
-    # man hinh (screen_inch) va gpu_dedicated luon co mot chut trong so co dinh, khong phu
-    # thuoc muc uu tien nguoi dung chon (vd kich thuoc man hinh it lien quan den 4 nhom chinh)
+    # screen_inch và gpu_dedicated có trọng số cố định, không phụ thuộc mức ưu tiên
     raw: dict[str, float] = {"screen_inch": SCREEN_INCH_WEIGHT, "gpu_dedicated": 0.06}
 
     for group, feats in GROUPS.items():
         if group == "popularity":
             w_group = POPULARITY_WEIGHT
         elif group == "brand":
-            # Nhom thuong hieu KHONG co thanh truot rieng cho nguoi dung keo - no chi tang len
-            # khi cau noi tu do co tu khoa "ben", "uy tin" (xem text_classifier.py PRIORITY_HINTS)
+            # Không có thanh trượt riêng, chỉ tăng khi câu nói tự do có từ khóa "bền", "uy tín"
+            # (xem PRIORITY_HINTS trong text_classifier.py)
             w_group = base[group] * brand_weight
         else:
-            p = priorities.get(group, 3)  # muc uu tien 1..5 nguoi dung chon (mac dinh 3 = vua)
+            p = priorities.get(group, 3)  # mặc định 3 = vừa
             w_group = p * base[group]
-        per_feat = w_group / len(feats)  # chia deu cho cac dac trung trong cung nhom
+        per_feat = w_group / len(feats)
         for f in feats:
             raw[f] = per_feat
 
-    # Chuan hoa de tong trong so = 1 (bat buoc cho cong thuc khoang cach Euclidean co trong so)
     total = sum(raw.values())
     return {k: v / total for k, v in raw.items()}
 
 
 def one_sided_distance(x: np.ndarray, q: np.ndarray, weights_vec: np.ndarray, directions: np.ndarray) -> float:
-    """Khoang cach MOT PHIA giua may `x` va ho so nhu cau `q`.
+    """Khoảng cách một phía giữa máy `x` và hồ sơ nhu cầu `q`.
 
         d(x, q) = sqrt( sum_j w_j * pen_j^2 )
-        huong +1 (cang cao cang tot):  pen = max(0, q_j - x_j) + OVERSHOOT * max(0, x_j - q_j)
-        huong -1 (cang thap cang tot): pen = max(0, x_j - q_j) + OVERSHOOT * max(0, q_j - x_j)
-        huong  0 (hai phia):           pen = |x_j - q_j|
-
-    Voi OVERSHOOT = 0, may MANH HON / RE HON / NHE HON muc mong muon khong bi phat chut nao.
+        hướng +1: pen = max(0, q_j - x_j) + OVERSHOOT * max(0, x_j - q_j)
+        hướng -1: pen = max(0, x_j - q_j) + OVERSHOOT * max(0, q_j - x_j)
+        hướng  0: pen = |x_j - q_j|
     """
-    diff = np.asarray(x, dtype=float) - np.asarray(q, dtype=float)  # duong = may "nhieu hon" q
+    diff = np.asarray(x, dtype=float) - np.asarray(q, dtype=float)  # dương = máy "nhiều hơn" q
     pen = np.empty_like(diff)
 
     up = directions > 0
@@ -224,26 +184,22 @@ def one_sided_distance(x: np.ndarray, q: np.ndarray, weights_vec: np.ndarray, di
 
 
 def make_one_sided_metric(weights_vec: np.ndarray, directions: np.ndarray):
-    """Boc `one_sided_distance` thanh `metric` cho NearestNeighbors.
+    """Bọc `one_sided_distance` thành metric cho NearestNeighbors.
 
-    CHU Y QUAN TRONG: khi goi `nn.fit(X_may).kneighbors(q)`, scikit-learn tinh
-    pairwise_distances(q, X_may) nen ham metric duoc goi theo thu tu (q, x) - NGUOC voi
-    thu tu (x, q) ma cong thuc mot phia can. Ham nay KHONG DOI XUNG nen dao thu tu se lam
-    lat dau: he thong se phat may MANH HON thay vi may YEU HON (loi that da tung gap).
-    Vi vay o day phai doi lai cho dung: sklearn truyen (q, x) -> goi distance(x=b, q=a).
-    Test `test_one_sided_metric_argument_order` chan loi nay tai phat.
+    Lưu ý: sklearn gọi metric theo thứ tự (q, x), ngược với (x, q) mà công thức cần. Hàm này
+    không đối xứng nên đảo thứ tự sẽ phạt nhầm máy mạnh thay vì máy yếu. Test
+    `test_one_sided_metric_argument_order` chặn lỗi này.
     """
 
     def metric(a: np.ndarray, b: np.ndarray) -> float:
-        # a = diem truy van (q), b = may trong catalog (x)
+        # a = điểm truy vấn (q), b = máy trong catalog (x)
         return one_sided_distance(b, a, weights_vec, directions)
 
     return metric
 
 
-# Trong so cho "do khop phan khuc" khi dung LOC MEM. Gia tri vua phai: may khac phan khuc
-# bi tru diem nhung VAN CO CO HOI lot top neu thuc su phu hop (vd may Creator rat hop nguoi
-# can do hoa du duoc gan nhan Gaming). Loc cung truoc day loai thang => mat may tot.
+# Trọng số "độ khớp phân khúc" khi lọc mềm: máy khác phân khúc bị trừ điểm nhưng vẫn có cơ hội
+# vào top nếu thật sự phù hợp (lọc cứng trước đây loại thẳng nên mất máy tốt).
 SEGMENT_SOFT_WEIGHT = 0.18
 
 
@@ -255,11 +211,8 @@ def recommend(
     top_n: int,
     preferred_segment: str | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """kNN truy hoi voi metric mot phia (metric nam TRONG NearestNeighbors).
-
-    `preferred_segment`: neu co, do khop phan khuc duoc dua vao METRIC duoi dang mot dac trung
-    (LOC MEM) thay vi loc bo ung vien khac phan khuc (loc cung).
-    """
+    """kNN truy hồi với metric một phía. Nếu có `preferred_segment` thì độ khớp phân khúc
+    được thêm vào metric như một đặc trưng (lọc mềm) thay vì loại ứng viên khác phân khúc."""
     feats = MODEL_B_FEATURES
     Xs = scaler.transform(candidates[feats])
     q_df = pd.DataFrame([{f: ideal.get(f, 0) for f in feats}])
@@ -271,9 +224,9 @@ def recommend(
     if preferred_segment is not None and "segment" in candidates.columns:
         seg_match = (candidates["segment"] == preferred_segment).astype(float).to_numpy().reshape(-1, 1)
         Xs = np.hstack([Xs, seg_match])
-        qs = np.hstack([qs, np.array([[1.0]])])  # mong muon: khop phan khuc
+        qs = np.hstack([qs, np.array([[1.0]])])  # mong muốn: khớp phân khúc
         w.append(SEGMENT_SOFT_WEIGHT)
-        directions.append(+1)  # khop cang cao cang tot; khong khop chi bi phat, khong bi loai
+        directions.append(+1)  # không khớp chỉ bị phạt, không bị loại
 
     w_arr = np.array(w, dtype=float)
     w_arr = w_arr / w_arr.sum() if w_arr.sum() > 0 else w_arr
@@ -290,22 +243,22 @@ def recommend(
     return dist[0], idx[0]
 
 
-# Moc co dinh doi khoang cach -> % phu hop. Khong chuan hoa theo top-N nua, nen hai lan
-# truy van khac nhau co the deu cho diem thap (khi catalog khong co may nao hop nhu cau).
+# Mốc cố định đổi khoảng cách -> % phù hợp. Không chuẩn hóa theo top-N nên catalog không có
+# máy nào hợp nhu cầu thì điểm vẫn thấp.
 MATCH_TAU = 0.9
 
 
 def match_pct(distances: np.ndarray, tau: float = MATCH_TAU) -> np.ndarray:
-    """100 * exp(-d / tau) voi tau CO DINH => diem so so sanh duoc giua cac lan truy van."""
+    """100 * exp(-d / tau), tau cố định nên điểm so sánh được giữa các lần truy vấn."""
     return 100 * np.exp(-np.asarray(distances, dtype=float) / tau)
 
 
 def similar_items(candidates: pd.DataFrame, scaler: StandardScaler, laptop_idx: int, k: int = 7) -> tuple[np.ndarray, np.ndarray]:
-    """May tuong tu (item-item): dung Euclidean HAI PHIA vi o day ta tim may GIONG NHAU,
-    khong phai may 'thoa man nhu cau' - manh hon hay yeu hon deu la khac biet."""
+    """Máy tương tự (item-item): dùng Euclidean hai phía vì cần tìm máy giống nhau,
+    mạnh hơn hay yếu hơn đều là khác biệt."""
     feats = MODEL_B_FEATURES
     Xs = scaler.transform(candidates[feats])
     nn = NearestNeighbors(n_neighbors=min(k, len(candidates)), metric="euclidean")
     nn.fit(Xs)
     dist, idx = nn.kneighbors(Xs[laptop_idx : laptop_idx + 1])
-    return dist[0][1:], idx[0][1:]  # bo phan tu dau (chinh no)
+    return dist[0][1:], idx[0][1:]  # bỏ phần tử đầu (chính nó)

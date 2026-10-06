@@ -1,11 +1,10 @@
-"""Kiem thu 30 persona qua DUNG luong nghiep vu moi:
+"""Chạy 30 persona qua đúng luồng nghiệp vụ:
 
-    cau tu do -> Mo hinh C (TF-IDF + kNN) -> ho so nhu cau
-              -> loc cung (ngan sach/must)  [KHONG loc cung theo phan khuc nua]
-              -> Mo hinh B (kNN one-sided, loc mem phan khuc) -> top-N
+    câu tự do -> Mô hình C (TF-IDF + kNN) -> hồ sơ nhu cầu
+              -> lọc cứng (ngân sách, must; không lọc cứng theo phân khúc)
+              -> Mô hình B (kNN một phía, lọc mềm phân khúc) -> top-N
 
-Khac ban cu: khong con ep "phan khuc suy ra phai dung", vi he thong da chuyen sang LOC MEM -
-phan khuc chi la mot dac trung trong metric, khong phai dieu kien loai bo.
+Phân khúc chỉ là một đặc trưng trong metric nên không ép phân khúc suy ra phải đúng.
 """
 from app.models.classifier import build_pipeline
 from app.data.features import MODEL_A_FEATURES
@@ -21,7 +20,7 @@ def _run_persona(catalog, model, scaler, persona):
     budget = {"min": inp["budget"][0], "max": inp["budget"][1]}
     must = inp.get("must", {})
 
-    # LOC CUNG chi gom: ngan sach toi da + rang buoc nguoi dung noi ro (KHONG loc theo phan khuc)
+    # lọc cứng chỉ gồm ngân sách tối đa và ràng buộc người dùng nói rõ
     cand = catalog[catalog["price_vnd"] <= budget["max"]]
     if must.get("ram_min"):
         cand = cand[cand["ram_gb"] >= must["ram_min"]]
@@ -62,11 +61,11 @@ def test_personas(enriched_catalog, personas):
 
     rate = passed / len(personas)
     print(f"Ty le persona dat: {rate:.0%} ({passed}/{len(personas)}). That bai: {failures}")
-    assert rate >= 0.9, f"Ty le persona dat {rate:.0%} < 90%. That bai: {failures}"
+    assert rate >= 0.9, f"Tỷ lệ persona đạt {rate:.0%} < 90%. Thất bại: {failures}"
 
 
 def test_need_text_model_on_personas(personas):
-    """Mo hinh C phai doan dung nhan nhu cau tu CAU TU DO cua persona (>= 80%)."""
+    """Mô hình C đoán đúng nhãn nhu cầu từ câu tự do của persona (>= 80%)."""
     model = NeedTextModel(n_neighbors=7).fit()
     correct, wrong = 0, []
     for p in personas:
@@ -83,11 +82,11 @@ def test_need_text_model_on_personas(personas):
     print(f"Mo hinh C doan dung nhan nhu cau: {rate:.0%} ({correct}/{total})")
     for w in wrong:
         print("   sai:", w)
-    assert rate >= 0.8, f"Chi dat {rate:.0%} < 80%"
+    assert rate >= 0.8, f"Chỉ đạt {rate:.0%} < 80%"
 
 
 def test_need_text_produces_valid_query(personas):
-    """Cau tu do phai sinh ra ho so truy van HOP LE (du truong, gia tri trong mien cho phep)."""
+    """Câu tự do phải sinh ra hồ sơ truy vấn hợp lệ (đủ trường, giá trị trong miền cho phép)."""
     model = NeedTextModel(n_neighbors=7).fit()
     for p in personas:
         if not p.get("text"):
@@ -96,5 +95,5 @@ def test_need_text_produces_valid_query(personas):
         assert need["budget"]["min"] < need["budget"]["max"], p["id"]
         assert set(need["priorities"]) >= {"performance", "mobility", "display", "price"}, p["id"]
         for key, val in need["priorities"].items():
-            assert 1 <= val <= 5, f"{p['id']}: {key}={val} ngoai thang 1-5"
+            assert 1 <= val <= 5, f"{p['id']}: {key}={val} ngoài thang 1-5"
         assert need["activities"], p["id"]

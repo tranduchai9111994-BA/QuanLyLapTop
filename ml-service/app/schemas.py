@@ -7,8 +7,8 @@ from pydantic import BaseModel, Field
 
 
 class CatalogSyncRequest(BaseModel):
-    """Backend đẩy snapshot đã tính sẵn đặc trưng (cpu_score, gpu_score, ppi, gpu_dedicated,...).
-    Dùng dict linh hoạt vì ML service không sở hữu schema catalog (Backend là nguồn sự thật)."""
+    """Snapshot catalog đã tính sẵn đặc trưng do Backend đẩy sang. Dùng dict linh hoạt vì
+    schema catalog thuộc về Backend."""
     items: list[dict[str, Any]]
 
 
@@ -35,11 +35,10 @@ class RecommendRequest(BaseModel):
     priorities: Priorities
     must: dict[str, Any] = Field(default_factory=dict)
     topN: int = 5
-    # Trọng số uy tín thương hiệu (tăng khi người dùng nhắc "bền", "bảo hành tốt")
+    # Tăng khi người dùng nhắc "bền", "bảo hành tốt"
     brandWeight: float = 1.0
-    # FR-13: admin sửa trọng số NỀN theo phân khúc (KnowledgeConfig "default_weights"). None = dùng
-    # BASE_WEIGHT_BY_SEGMENT trong retriever.py; dạng {"GAMING": {"performance": 1.3, ...}}, chỉ ghi
-    # đè phân khúc có mặt trong dict.
+    # FR-13: admin ghi đè trọng số nền theo phân khúc (KnowledgeConfig "default_weights"); None = dùng
+    # BASE_WEIGHT_BY_SEGMENT trong retriever.py. Chỉ phân khúc có mặt trong dict mới bị ghi đè.
     baseWeightsOverride: Optional[dict[str, dict[str, float]]] = None
 
 

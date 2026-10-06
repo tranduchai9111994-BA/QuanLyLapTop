@@ -1,4 +1,4 @@
-"""Test chan cac loi de tai phat cua khoang cach MOT PHIA (Mo hinh B)."""
+"""Chặn các lỗi dễ tái phát của khoảng cách một phía (Mô hình B)."""
 import numpy as np
 import pandas as pd
 
@@ -13,22 +13,21 @@ from app.models.retriever import (
 
 
 def test_stronger_and_cheaper_not_penalized():
-    """May MANH HON va RE HON muc mong muon phai co khoang cach = 0 (khong bi phat)."""
+    """Máy mạnh hơn và rẻ hơn mức mong muốn thì khoảng cách bằng 0, không bị phạt."""
     w = np.array([0.5, 0.5])
-    d = np.array([+1.0, -1.0])  # dac trung 1: cao tot hon; dac trung 2: thap tot hon
+    d = np.array([+1.0, -1.0])  # đặc trưng 1 càng cao càng tốt, đặc trưng 2 càng thấp càng tốt
     q = np.array([0.0, 0.0])
 
-    assert one_sided_distance(np.array([2.0, -2.0]), q, w, d) == 0.0  # manh hon + re hon
-    assert one_sided_distance(np.array([-2.0, 0.0]), q, w, d) > 0     # yeu hon -> bi phat
-    assert one_sided_distance(np.array([0.0, 2.0]), q, w, d) > 0      # dat hon -> bi phat
+    assert one_sided_distance(np.array([2.0, -2.0]), q, w, d) == 0.0  # mạnh hơn và rẻ hơn
+    assert one_sided_distance(np.array([-2.0, 0.0]), q, w, d) > 0     # yếu hơn thì bị phạt
+    assert one_sided_distance(np.array([0.0, 2.0]), q, w, d) > 0      # đắt hơn thì bị phạt
 
 
 def test_one_sided_metric_argument_order(enriched_catalog):
-    """Chan loi da tung gap: scikit-learn goi metric(query, train), nguoc voi thu tu (x, q)
-    cua cong thuc mot phia. Neu dao nham, he thong se uu tien may YEU HON - sai hoan toan.
+    """Chặn lỗi đảo thứ tự đối số: scikit-learn gọi metric(query, train), ngược với (x, q) của công thức.
 
-    Kiem tra bang cach: truy van voi ho so uu tien hieu nang toi da, thi cpu_score trung binh
-    cua top-5 phai CAO HON dang ke trung binh toan tap ung vien.
+    Nếu đảo nhầm, hệ thống sẽ ưu tiên máy yếu hơn. Nên khi ưu tiên hiệu năng tối đa,
+    cpu_score trung bình của top-5 phải cao hơn trung bình toàn tập.
     """
     catalog = enriched_catalog
     scaler = fit_scaler(catalog)
@@ -41,13 +40,13 @@ def test_one_sided_metric_argument_order(enriched_catalog):
     top = catalog.iloc[idx]
 
     assert top["cpu_score"].mean() > catalog["cpu_score"].mean(), (
-        f"Top-5 khi uu tien hieu nang co cpu_score trung binh {top['cpu_score'].mean():.1f} "
-        f"THAP hon trung binh catalog {catalog['cpu_score'].mean():.1f} -> metric bi lat dau"
+        f"Top-5 khi ưu tiên hiệu năng có cpu_score trung bình {top['cpu_score'].mean():.1f} "
+        f"thấp hơn trung bình catalog {catalog['cpu_score'].mean():.1f} -> metric bị lật dấu"
     )
 
 
 def test_cheap_priority_returns_cheaper_machines(enriched_catalog):
-    """Uu tien tiet kiem toi da -> gia trung binh top-5 phai thap hon han uu tien tiet kiem thap."""
+    """Ưu tiên tiết kiệm tối đa thì giá trung bình top-5 phải thấp hơn khi ưu tiên tiết kiệm thấp."""
     catalog = enriched_catalog
     scaler = fit_scaler(catalog)
     budget = {"min": 10_000_000, "max": 40_000_000}
@@ -63,11 +62,11 @@ def test_cheap_priority_returns_cheaper_machines(enriched_catalog):
 
     avg_cheap = cand.iloc[idx_cheap]["price_vnd"].mean()
     avg_rich = cand.iloc[idx_rich]["price_vnd"].mean()
-    assert avg_cheap < avg_rich, f"uu tien re: {avg_cheap/1e6:.1f}tr khong thap hon {avg_rich/1e6:.1f}tr"
+    assert avg_cheap < avg_rich, f"ưu tiên rẻ: {avg_cheap/1e6:.1f}tr không thấp hơn {avg_rich/1e6:.1f}tr"
 
 
 def test_soft_segment_filter_keeps_other_segments(enriched_catalog):
-    """Loc MEM: may khac phan khuc van duoc phep lot top neu that su phu hop (khong bi loai thang)."""
+    """Lọc mềm: máy khác phân khúc vẫn được lọt top nếu thật sự phù hợp, không bị loại thẳng."""
     catalog = enriched_catalog
     scaler = fit_scaler(catalog)
     priorities = {"performance": 5, "mobility": 2, "display": 5, "price": 2}
@@ -78,4 +77,4 @@ def test_soft_segment_filter_keeps_other_segments(enriched_catalog):
     weights = build_weights(priorities, "CREATOR")
     _, idx = recommend(cand, scaler, ideal, weights, top_n=20, preferred_segment="CREATOR")
     segments = set(cand.iloc[idx]["segment"])
-    assert len(segments) > 1, "Loc mem nhung top-20 chi co dung mot phan khuc -> hoa ra van la loc cung"
+    assert len(segments) > 1, "Lọc mềm nhưng top-20 chỉ có đúng một phân khúc -> hóa ra vẫn là lọc cứng"

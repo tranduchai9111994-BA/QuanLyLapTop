@@ -1,4 +1,4 @@
-"""build_explanation() - sinh diem manh/canh bao tieng Viet (docs/04 SS7.2)."""
+"""build_explanation() - sinh điểm mạnh/cảnh báo tiếng Việt (docs/04 SS7.2)."""
 from __future__ import annotations
 
 def format_vnd(amount: float) -> str:
@@ -8,9 +8,7 @@ def format_vnd(amount: float) -> str:
 def build_explanation(
     row: dict, ideal: dict, weights: dict, budget_max: float
 ) -> dict:
-    """row: dac trung cua may (don vi goc). ideal: vector ly tuong q (don vi goc).
-    weights: trong so dac trung (Sigma w = 1). Tra ve {strengths, warnings}.
-    """
+    """row và ideal ở đơn vị gốc; weights có tổng bằng 1. Trả về {strengths, warnings}."""
     contributions: list[tuple[str, float, float]] = []  # (feature, signed_diff, weighted_sq)
     for feat, w in weights.items():
         if feat not in row or feat not in ideal:
@@ -69,7 +67,7 @@ def build_explanation(
         })
 
     if not strengths:
-        # dam bao moi ket qua co it nhat 1 diem manh (docs/04 test_explanation_schema)
+        # đảm bảo mỗi kết quả có ít nhất 1 điểm mạnh (test_explanation_schema)
         cheapest_diff = min(contributions, key=lambda t: t[2]) if contributions else None
         if cheapest_diff:
             strengths.append({

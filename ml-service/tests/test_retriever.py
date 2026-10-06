@@ -5,7 +5,7 @@ from app.models.retriever import build_ideal_vector, build_weights, fit_scaler, 
 
 
 def test_identity_top1(enriched_catalog):
-    """Truy van bang chinh vector mot may X phai ra X hang 1 (dist ~ 0)."""
+    """Truy vấn bằng chính vector của máy X thì X phải đứng hạng 1 (dist ~ 0)."""
     catalog = enriched_catalog
     scaler = fit_scaler(catalog)
     row = catalog.iloc[10]
@@ -18,7 +18,7 @@ def test_identity_top1(enriched_catalog):
 
 
 def test_weight_changes_ranking(enriched_catalog):
-    """Tang uu tien di dong -> trong luong trung binh top-5 phai giam."""
+    """Tăng ưu tiên di động thì trọng lượng trung bình top-5 phải giảm."""
     catalog = enriched_catalog
     scaler = fit_scaler(catalog)
     candidates = catalog[catalog["segment"] == "GAMING"]
@@ -41,7 +41,7 @@ def test_weight_changes_ranking(enriched_catalog):
 
 
 def test_budget_hard_constraint(enriched_catalog):
-    """Khong ket qua nao vuot Bmax khi loc cung da ap dung truoc."""
+    """Đã lọc cứng ngân sách trước thì không kết quả nào vượt Bmax."""
     catalog = enriched_catalog
     budget_max = 25_000_000
     candidates = catalog[(catalog["segment"] == "OFFICE") & (catalog["price_vnd"] <= budget_max)]
@@ -55,7 +55,7 @@ def test_budget_hard_constraint(enriched_catalog):
 
 
 def test_explanation_schema(enriched_catalog):
-    """Moi ket qua phai co >= 1 diem manh, ma cau hop le."""
+    """Mỗi kết quả phải có ít nhất 1 điểm mạnh và không quá 2 cảnh báo."""
     catalog = enriched_catalog
     row = catalog.iloc[0].to_dict()
     ideal = row.copy()

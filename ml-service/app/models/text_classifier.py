@@ -1,15 +1,13 @@
-"""Mo hinh C: phan loai NHU CAU tu CAU NOI TU DO bang TF-IDF + kNN.
+"""Mô hình C: phân loại NHU CẦU từ câu nói tự do bằng TF-IDF + kNN.
 
-Vi sao can mo hinh nay (gop y cua giang vien): chon tieu chi bang dropdown/thanh keo chi la
-nhap lieu, khong phai "thong minh". Voi mo hinh nay, nguoi dung go mot cau tu nhien nhu
-"con hoc ke toan, can may ben, re" va HE THONG tu suy ra nhom nhu cau + ho so uu tien.
+Người dùng gõ một câu như "con học kế toán, cần máy bền, rẻ" và hệ thống tự suy ra nhóm
+nhu cầu + hồ sơ ưu tiên, thay vì bắt chọn dropdown/thanh kéo.
 
-Kien truc:
-  cau van -> TF-IDF (word 1-2gram + char_wb 3-5gram) -> KNeighborsClassifier(cosine) -> nhan nhu cau
-  nhan nhu cau -> bang tri thuc NEED_PROFILES -> vector uu tien / activities / rang buoc
-  + trich xuat ngan sach & rang buoc cu the bang regex (chi la TRI THUC HO TRO, khong phan loai)
+  câu văn -> TF-IDF (word 1-2gram + char_wb 3-5gram) -> kNN(cosine) -> nhãn nhu cầu
+  nhãn nhu cầu -> NEED_PROFILES -> priorities / activities / ràng buộc
+  ngân sách và ràng buộc cụ thể được bắt thêm bằng regex (chỉ hỗ trợ, không phân loại)
 
-Dung char_wb n-gram de chiu duoc tieng Viet khong dau va loi go ("ke toan" ~ "kế toán").
+char_wb n-gram giúp chịu được tiếng Việt không dấu và lỗi gõ ("ke toan" ~ "kế toán").
 """
 from __future__ import annotations
 
@@ -27,10 +25,8 @@ RANDOM_STATE = 42
 DATA_DIR = Path(__file__).resolve().parents[3] / "data"
 PHRASES_PATH = DATA_DIR / "need_phrases.json"
 
-# ---------------------------------------------------------------------------
-# Bang tri thuc: nhan nhu cau -> ho so uu tien (admin chinh duoc qua KnowledgeConfig)
-# priorities theo thang 1..5 giong wizard; activities dung cho Mo hinh A (suy phan khuc)
-# ---------------------------------------------------------------------------
+# Nhãn nhu cầu -> hồ sơ ưu tiên (admin chỉnh được qua KnowledgeConfig).
+# priorities thang 1..5 như wizard; activities dùng cho Mô hình A.
 NEED_PROFILES: dict[str, dict] = {
     "VAN_PHONG": {
         "ten_hien_thi": "Văn phòng – Kế toán",
@@ -82,40 +78,24 @@ def strip_accents(text: str) -> str:
 
 
 def normalize_text(text: str) -> str:
-    """Chuan hoa cau: chu thuong + bo dau + gon khoang trang. Bo dau giup cau go khong dau
-    ("can may cho con hoc ke toan") van khop voi cau co dau trong tap huan luyen."""
+    """Chữ thường, bỏ dấu, gọn khoảng trắng. Bỏ dấu để câu gõ không dấu vẫn khớp tập huấn luyện."""
     text = strip_accents(str(text).lower())
-    # Giu dau thap phan nam GIUA hai chu so ("1.4kg", "12,5 trieu"), xoa moi dau cau khac
+    # Giữ dấu thập phân nằm giữa hai chữ số ("1.4kg", "12,5 trieu"), xóa các dấu câu khác
     text = re.sub(r"(?<!\d)[.,](?!\d)", " ", text)
     text = re.sub(r"[^\w\s.,]", " ", text)
     return re.sub(r"\s+", " ", text).strip()
 
 
 def build_text_pipeline(n_neighbors: int = 5) -> Pipeline:
-    """Xay "day chuyen" bien mot CAU VAN thanh MOT NHAN NHU CAU, gom 2 buoc:
+    """Pipeline TF-IDF -> kNN: biến một câu văn thành một nhãn nhu cầu.
 
-    BUOC 1 - TF-IDF: doi cau van (chuoi ky tu) thanh MOT VECTOR SO, vi may tinh khong the so
-    sanh truc tiep 2 cau van ban. TF-IDF (Term Frequency - Inverse Document Frequency) cho
-    diem cao cho cac TU/KY TU xuat hien NHIEU trong cau nay nhung HIEM trong toan bo tap du
-    lieu (vd "ke toan" dac trung hon "may tinh" vi tu "may tinh" xuat hien o hau het moi cau).
+    TF-IDF gộp hai loại bằng FeatureUnion:
+      - word 1-2gram: bắt cụm từ có nghĩa như "ke toan", "choi game".
+      - char_wb 3-5gram: bắt từ gần giống nhau dù sai chính tả hoặc không dấu
+        ("kê toán" và "ke toan" chung nhiều chùm ký tự).
 
-    O day dung DONG THOI 2 loai TF-IDF (ket hop bang FeatureUnion):
-      - "word" (tu, 1-2 tu lien tiep): bat cum tu co nghia nhu "ke toan", "choi game"
-      - "char_wb" (chum 3-5 KY TU, khong xuyen qua khoang trang): bat duoc TU GAN GIONG nhau
-        du go sai chinh ta hoac KHONG DAU, vi du "kê toán" va "ke toan" co chung nhieu chum
-        ky tu con nhu "e to", " to", "toan" -> vector TF-IDF cua 2 cau se gan nhau ngay ca khi
-        khong co tu nao khop CHINH XAC 100%. Day la ly do he thong hieu duoc ca cau khong dau.
-
-    BUOC 2 - kNN (K-Nearest Neighbors) voi metric COSINE: sau khi co vector, tim k CAU DA HOC
-    (trong data/need_phrases.json) co vector GAN NHAT voi cau nguoi dung vua nhap, roi lay
-    NHAN xuat hien nhieu nhat trong k cau do lam ket qua du doan (giong het co che cua Mo hinh
-    A trong classifier.py, chi khac dau vao la vector TF-IDF thay vi cau hinh may).
-
-    Dung "cosine" (do goc giua 2 vector) thay vi Euclidean (khoang cach thang) vi voi du lieu
-    van ban, DO DAI cau khong quan trong bang HUONG noi dung - hai cau mot ngan mot dai nhung
-    cung chu de van nen duoc coi la "gan nhau".
-
-    `weights="distance"`: cau hoc gan giong hon co "phieu bau" nang hon khi quyet dinh nhan.
+    kNN dùng cosine vì với văn bản, hướng nội dung quan trọng hơn độ dài câu.
+    weights="distance": câu học càng gần thì phiếu bầu càng nặng.
     """
     return Pipeline([
         (
@@ -130,45 +110,45 @@ def build_text_pipeline(n_neighbors: int = 5) -> Pipeline:
 
 
 # ---------------------------------------------------------------------------
-# Trich xuat ngan sach & rang buoc cu the (TRI THUC HO TRO - khong phai phan loai)
+# Trích xuất ngân sách và ràng buộc cụ thể (tri thức hỗ trợ, không phải phân loại)
 # ---------------------------------------------------------------------------
 _NUM = r"(\d+(?:[.,]\d+)?)"
 _UNIT = r"(?:trieu|tr|cu|m)\b"
 
 
 def extract_budget(text: str) -> tuple[int, int] | None:
-    """Bat cac dang: '15 trieu', 'duoi 20tr', 'tam 12-15 trieu', 'khoang 20 cu', 'tu 10 den 15 trieu'."""
+    """Bắt các dạng: '15 trieu', 'duoi 20tr', 'tam 12-15 trieu', 'khoang 20 cu', 'tu 10 den 15 trieu'."""
     t = normalize_text(text)
 
-    # khoang: "12-15 trieu", "tu 10 den 15 trieu"
+    # khoảng: "12-15 trieu", "tu 10 den 15 trieu"
     m = re.search(rf"{_NUM}\s*(?:-|den|toi|~)\s*{_NUM}\s*{_UNIT}", t)
     if m:
         lo, hi = (float(x.replace(",", ".")) for x in m.groups())
         return int(lo * 1_000_000), int(hi * 1_000_000)
 
-    # gioi han tren: "duoi 20 trieu", "khong qua 20tr", "toi da 20 trieu"
+    # giới hạn trên: "duoi 20 trieu", "khong qua 20tr", "toi da 20 trieu"
     m = re.search(rf"(?:duoi|khong qua|toi da|it hon|tam duoi)\s*{_NUM}\s*{_UNIT}", t)
     if m:
         hi = float(m.group(1).replace(",", "."))
         return int(hi * 0.6 * 1_000_000), int(hi * 1_000_000)
 
-    # gioi han duoi: "tren 20 trieu", "tu 20 trieu"
+    # giới hạn dưới: "tren 20 trieu", "tu 20 trieu"
     m = re.search(rf"(?:tren|tu)\s*{_NUM}\s*{_UNIT}", t)
     if m:
         lo = float(m.group(1).replace(",", "."))
         return int(lo * 1_000_000), int(lo * 1.5 * 1_000_000)
 
-    # mot con so: "tam 15 trieu", "khoang 15tr", "15 trieu"
+    # một con số: "tam 15 trieu", "khoang 15tr", "15 trieu"
     m = re.search(rf"(?:tam|khoang|gia|gan|co)?\s*{_NUM}\s*{_UNIT}", t)
     if m:
         v = float(m.group(1).replace(",", "."))
-        if 4 <= v <= 150:  # loc nhieu (vd "ram 16", "man 15 inch" khong co don vi trieu)
+        if 4 <= v <= 150:  # lọc nhiễu, ví dụ "ram 16" hay "man 15 inch" không có đơn vị triệu
             return int(v * 0.85 * 1_000_000), int(v * 1.15 * 1_000_000)
     return None
 
 
 def extract_constraints(text: str) -> dict:
-    """Bat rang buoc cung ma nguoi dung noi ro: RAM toi thieu, trong luong toi da, SSD."""
+    """Bắt ràng buộc cứng người dùng nói rõ: RAM tối thiểu, trọng lượng tối đa, SSD."""
     t = normalize_text(text)
     must: dict[str, float] = {}
 
@@ -188,8 +168,8 @@ def extract_constraints(text: str) -> dict:
     return must
 
 
-# Tu khoa dieu chinh muc uu tien (tri thuc ho tro, cong vao ho so tu mo hinh kNN)
-# (regex, nhom uu tien, muc thay doi, mo ta hien thi cho nguoi dung)
+# Từ khóa chỉnh mức ưu tiên, cộng vào hồ sơ do kNN suy ra.
+# (regex, nhóm ưu tiên, mức thay đổi, mô tả hiển thị cho người dùng)
 PRIORITY_HINTS = [
     (r"\b(re|gia re|tiet kiem|it tien|binh dan|sinh vien ngheo|ngan sach thap)\b", "price", +2, "muốn tiết kiệm chi phí"),
     (r"\b(cao cap|sang|khong quan trong gia|bao nhieu cung duoc)\b", "price", -2, "không đặt nặng giá"),
@@ -201,8 +181,7 @@ PRIORITY_HINTS = [
 
 
 def apply_hints(priorities: dict, text: str) -> tuple[dict, list[str]]:
-    """Dieu chinh ho so uu tien theo tu khoa xuat hien trong cau.
-    Tra ve (priorities, danh sach MO TA de hien thi cho nguoi dung - khong phai tu tho da bo dau)."""
+    """Chỉnh hồ sơ ưu tiên theo từ khóa trong câu; trả (priorities, danh sách mô tả để hiển thị)."""
     t = normalize_text(text)
     out = dict(priorities)
     matched: list[str] = []
@@ -211,14 +190,14 @@ def apply_hints(priorities: dict, text: str) -> tuple[dict, list[str]]:
             continue
         matched.append(description)
         if key == "brand":
-            out["brand_weight"] = out.get("brand_weight", 1.0) + 0.6  # uu tien hang uy tin
+            out["brand_weight"] = out.get("brand_weight", 1.0) + 0.6  # ưu tiên hãng uy tín
         else:
             out[key] = int(np.clip(out.get(key, 3) + delta, 1, 5))
     return out, matched
 
 
 class NeedTextModel:
-    """Boc pipeline + logic suy ho so nhu cau tu cau van."""
+    """Bọc pipeline và logic suy hồ sơ nhu cầu từ câu văn."""
 
     def __init__(self, n_neighbors: int = 5) -> None:
         self.pipeline = build_text_pipeline(n_neighbors)
@@ -239,13 +218,13 @@ class NeedTextModel:
         return self
 
     def predict(self, text: str) -> dict:
-        """Tra ve nhan + do tin cay + cac cau lang gieng (de GIAI THICH cho nguoi dung thay)."""
+        """Trả nhãn, độ tin cậy và các câu láng giềng để giải thích cho người dùng."""
         x = normalize_text(text)
         proba = self.pipeline.predict_proba([x])[0]
         classes = self.pipeline.named_steps["knn"].classes_
         order = np.argsort(proba)[::-1]
 
-        # Lay cac cau lang gieng gan nhat de minh bach (giai thich "vi sao doan nhu vay")
+        # Láng giềng gần nhất, để giải thích "vì sao đoán vậy"
         features = self.pipeline.named_steps["tfidf"].transform([x])
         knn = self.pipeline.named_steps["knn"]
         k = min(self.n_neighbors, len(self.samples))
@@ -263,7 +242,7 @@ class NeedTextModel:
         }
 
     def parse_need(self, text: str) -> dict:
-        """Cau van -> ho so nhu cau day du de dua vao Mo hinh B (vector truy van)."""
+        """Câu văn -> hồ sơ nhu cầu đầy đủ, làm vector truy vấn cho Mô hình B."""
         pred = self.predict(text)
         profile = NEED_PROFILES[pred["label"]]
 
