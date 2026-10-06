@@ -72,9 +72,9 @@
 - Xem (GET) không cần đăng nhập hoặc chỉ cần Staff/Admin tùy màn; thêm/sửa/xóa chỉ `ADMIN`.
 
 ### FR-12 Quản lý mô hình — vòng đời champion/challenger (UC-12)
-- Danh sách phiên bản Mô hình A: trạng thái (Đang dùng / Ứng viên / Lưu trữ), tham số huấn luyện, macro-F1, accuracy, ngày huấn luyện.
+- Danh sách phiên bản Mô hình A: trạng thái (Đang sử dụng / Dự phòng / Đã lưu trữ), tham số huấn luyện, macro-F1, accuracy, ngày huấn luyện.
 - Chi tiết: confusion matrix, đường cong F1 theo k, bảng so sánh baseline, precision/recall từng lớp.
-- Nút "Huấn luyện lại" (tạo phiên bản "Ứng viên" mới, không thay thế mô hình đang chạy), "Duyệt đưa vào sử dụng" (chỉ chấp nhận nếu macro-F1 trên tập test không thấp hơn phiên bản đang dùng quá 0,02 **và** F1 từng lớp ≥ 0,5 — không đạt thì bị từ chối kèm lý do), "Quay lại phiên bản trước" (rollback về bất kỳ phiên bản nào từng là "Đang dùng").
+- Nút "Huấn luyện lại" (tạo phiên bản "Dự phòng" mới, không thay thế mô hình đang chạy), "Duyệt đưa vào sử dụng" (chỉ chấp nhận nếu macro-F1 trên tập test không thấp hơn phiên bản đang dùng quá 0,02 **và** F1 từng lớp ≥ 0,5 — không đạt thì bị từ chối kèm lý do), "Quay lại phiên bản trước" (rollback về bất kỳ phiên bản nào từng là "Đang dùng").
 
 ### FR-13 Cấu hình tri thức (UC-13)
 Sửa được ngay qua UI, không cần deploy lại, gồm 4 tab:

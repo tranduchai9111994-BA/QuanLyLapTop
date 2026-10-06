@@ -244,7 +244,7 @@ sánh, nhãn chênh lệch giá ở Chi tiết), không phát sinh lỗi.
 ### 5.5 Bốn màn quản trị "thông minh" — FR-12, FR-13, FR-14, UC-15
 
 - **`AdminModels.tsx` (FR-12 Quản lý mô hình)**: danh sách các lần huấn luyện Mô hình A kèm
-  macro-F1, nút "Huấn luyện mô hình mới" (tạo "ứng viên", không tự thay mô hình đang chạy), Drawer
+  macro-F1, nút "Huấn luyện mô hình mới" (tạo bản "dự phòng", không tự thay mô hình đang chạy), Drawer
   chi tiết hiện bảng so với 2 đường cơ sở (đoán ngẫu nhiên, luật đơn giản), bảng Precision/Recall/
   F1-score theo từng phân khúc, biểu đồ đường cong chọn k (Recharts, có đường tham chiếu đánh dấu k
   đã chọn), và ma trận nhầm lẫn (đường chéo in đậm). Nút "Đưa vào sử dụng" gọi API promote có sẵn

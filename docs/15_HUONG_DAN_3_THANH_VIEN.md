@@ -342,7 +342,7 @@ chia 1.600 học / 400 kiểm tra, huấn luyện 27 giây). Điều cần giữ
 4. **Mở file vừa lưu bằng VS Code** kiểm tra: dòng 2 phải ngăn cách bằng dấu phẩy và số dạng `2.51`.
 5. Kiểm tra: `cd ml-service`, rồi `python -m app.data.data_check`. File sai định dạng sẽ được báo bằng tiếng Việt
    (thiếu cột, số thập phân dùng dấu phẩy, nhãn `segment` lạ). Dòng "Cột thiếu quá 10%: original_price_vnd" là cảnh báo có sẵn.
-6. Huấn luyện: nút "Huấn luyện mô hình mới" (hoặc `python -m app.lifecycle.train`), mất khoảng nửa phút. Bản mới là **Ứng viên**.
+6. Huấn luyện: nút "Huấn luyện mô hình mới" (hoặc `python -m app.lifecycle.train`), mất khoảng nửa phút. Bản mới là **Dự phòng**.
 7. So điểm với bản đang dùng rồi "Đưa vào sử dụng".
 
 Lưu ý: (a) chạy lại `data/generate_catalog.py` sẽ **ghi đè** file CSV, mất dòng thêm tay; (b) mỗi lần huấn luyện chia

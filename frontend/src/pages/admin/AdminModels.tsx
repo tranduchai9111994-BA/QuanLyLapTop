@@ -32,7 +32,7 @@ interface ModelVersionRow {
 }
 
 const STATUS_COLOR: Record<string, string> = { CHAMPION: 'green', CHALLENGER: 'blue', ARCHIVED: 'default' };
-const STATUS_LABEL: Record<string, string> = { CHAMPION: 'Đang dùng (Champion)', CHALLENGER: 'Ứng viên', ARCHIVED: 'Đã lưu trữ' };
+const STATUS_LABEL: Record<string, string> = { CHAMPION: 'Đang sử dụng', CHALLENGER: 'Dự phòng', ARCHIVED: 'Đã lưu trữ' };
 
 /** FR-12 Quản lý mô hình: xem lịch sử các lần huấn luyện Mô hình A (kNN phân lớp phân khúc),
  * so sánh macro-F1 với baseline, xem confusion matrix + đường cong chọn k, và điều khiển vòng
@@ -62,7 +62,7 @@ export function AdminModels() {
     try {
       // Huấn luyện mất ~30 giây (mặc định api chỉ chờ 10 giây nên báo thất bại giả); backend chờ tối đa 60 giây
       await api.post('/models/train', { note: note || undefined }, { timeout: 70_000 });
-      message.success('Huấn luyện xong — phiên bản mới ở trạng thái "Ứng viên", chưa tự động dùng cho khách.');
+      message.success('Huấn luyện xong — phiên bản mới ở trạng thái "Dự phòng", chưa tự động dùng cho khách.');
       setNote('');
       load();
     } catch (err: any) {
@@ -116,7 +116,7 @@ export function AdminModels() {
     <div>
       <h2>Quản lý mô hình (Mô hình A — phân loại phân khúc)</h2>
       <p style={{ color: t.textSecondary }}>
-        Mỗi lần huấn luyện tạo ra một "ứng viên" mới — không tự động thay mô hình đang phục vụ
+        Mỗi lần huấn luyện tạo ra một bản "dự phòng" mới — không tự động thay mô hình đang phục vụ
         khách hàng. Chỉ khi bấm "Đưa vào sử dụng" hệ thống mới kiểm tra đủ an toàn (không tệ hơn
         bản đang dùng quá 2% macro-F1, mọi lớp đạt tối thiểu 0,5) rồi mới chuyển đổi.
       </p>

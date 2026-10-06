@@ -143,7 +143,7 @@ Tất cả route mount dưới tiền tố `/api` (khai báo trong `app.ts`), c�
 | POST | `/train` | ADMIN | Gọi ML `/train` (đồng bộ, timeout 60s), lưu `ModelVersion` mới với `status = CHALLENGER` |
 | POST | `/:version/promote` | ADMIN | Kiểm tra quy tắc an toàn rồi kích hoạt challenger thành CHAMPION (xem `docs/09`) |
 | POST | `/:version/rollback` | ADMIN | Kích hoạt lại một phiên bản cũ làm CHAMPION ngay, không kiểm tra chỉ số |
-| DELETE | `/:version` | ADMIN | Xóa một phiên bản dư (Ứng viên / đã lưu trữ): xóa thư mục artifacts bên ML rồi xóa dòng DB, ghi nhật ký `DELETE_MODEL`. Từ chối nếu là CHAMPION (409) |
+| DELETE | `/:version` | ADMIN | Xóa một phiên bản dư (Dự phòng / đã lưu trữ): xóa thư mục artifacts bên ML rồi xóa dòng DB, ghi nhật ký `DELETE_MODEL`. Từ chối nếu là CHAMPION (409) |
 
 ### 3.10 `dashboard` + `feedback` (tổng hợp) — `/api/dashboard`, `/api/feedback`
 | Method | Path | Quyền | Mô tả |

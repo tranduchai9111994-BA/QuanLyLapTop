@@ -136,8 +136,8 @@ Bố cục ≥ 992 px (lg): cột trái danh sách thẻ, cột phải panel dí
 - Mỗi thẻ: thông tin máy, `ConfidenceIndicator` theo phân bố xác suất, `Select` đổi phân khúc (hiện `Alert warning` nếu chọn khác nhãn AI), checkbox **"Khóa nhãn, không cho mô hình thay đổi"**, nút Duyệt (`PATCH /labels/review-queue/:laptopId`) — phát sự kiện `smartlap:review-queue-changed` để badge trên Sider cập nhật ngay.
 
 ## 18. ✨ Quản lý mô hình `/admin/models`
-- Form huấn luyện nhanh (ghi chú tuỳ chọn) + nút "Huấn luyện mô hình mới" (`POST /models/train`) — luôn tạo "Ứng viên" (`CHALLENGER`), không tự thay mô hình đang phục vụ khách.
-- `Table` phiên bản: trạng thái (Tag: Đang dùng/Champion xanh lá, Ứng viên xanh dương, Đã lưu trữ xám), macro-F1 (test), số mẫu, thời điểm huấn luyện, ghi chú, nút "Xem chi tiết".
+- Form huấn luyện nhanh (ghi chú tuỳ chọn) + nút "Huấn luyện mô hình mới" (`POST /models/train`) — luôn tạo bản "Dự phòng" (`CHALLENGER`), không tự thay mô hình đang phục vụ khách.
+- `Table` phiên bản: trạng thái (Tag: Đang sử dụng xanh lá, Dự phòng xanh dương, Đã lưu trữ xám), macro-F1 (test), số mẫu, thời điểm huấn luyện, ghi chú, nút "Xem chi tiết".
 - Drawer chi tiết (không phải Tabs, các khối xếp dọc theo thứ tự):
   1. So với baseline: bảng so sánh macro-F1 của kNN đã tối ưu, đoán ngẫu nhiên có trọng số, luật đơn giản.
   2. Đường cong chọn k (5-fold CV): `LineChart` macro-F1 theo k, `ReferenceLine` đánh dấu k đã chọn.

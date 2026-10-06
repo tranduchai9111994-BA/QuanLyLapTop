@@ -149,7 +149,7 @@ rồi mình góp ý. Câu hỏi hội đồng đã soạn cho từng mô hình n
 | TV1 — precision / recall / macro-F1 (từ ma trận nhầm lẫn); baseline; ablation; vòng đời mô hình + huấn luyện lại từ phản hồi; câu hỏi hội đồng | ⏳ bước kế tiếp: precision/recall/macro-F1 |
 | (cũ) TV1 — tìm 7 láng giềng + bỏ phiếu (`predict_proba`, `kneighbors`; `models/classifier.py`, `main.py` dòng 96) | ⏳ |
 | TV1 — huấn luyện: `GridSearchCV`, `Pipeline` chống rò rỉ dữ liệu, macro-F1 | ⏳ |
-| Quản lý mô hình: huấn luyện chỉ lưu bản Ứng viên, `Đưa vào sử dụng` mới đổi `LATEST`; có nút Xóa bản dư (không xóa Champion) | ✅ đã làm trong code, chưa giảng |
+| Quản lý mô hình: huấn luyện chỉ lưu bản Dự phòng, `Đưa vào sử dụng` mới đổi `LATEST`; có nút Xóa bản dư (không xóa Champion) | ✅ đã làm trong code, chưa giảng |
 | TV1 — hàng đợi Duyệt nhãn / khóa nhãn (`applySegmentLabel`) | ⏳ |
 | **TV2 / Mô hình C** — TF-IDF + kNN cosine (`models/text_classifier.py`) | ⏳ |
 | **TV3 / Mô hình B** — kNN khoảng cách một phía (`models/retriever.py`, `explain.py`) | ⏳ |
