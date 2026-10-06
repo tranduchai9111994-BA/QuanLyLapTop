@@ -1,12 +1,6 @@
-"""Kiem thu CRUD THAT tren tung man quan tri (Hang may, Benchmark CPU/GPU, Laptop, Quan ly gia)
-va LUU LAI anh man hinh cua tung thao tac chinh - de co bang chung cu the (khong chi tin loi noi)
-rang he thong dang chay dung sau tat ca thay doi trong phien.
-
-Chay khi frontend (5180) va backend (4000) dang chay:
-    python scripts/capture_crud_test.py
-
-Anh duoc luu vao thu muc crud_test_screenshots/, danh so theo dung thu tu thao tac.
-Moi thao tac TAO du lieu test deu duoc XOA lai o cuoi (khong de rac trong catalog that).
+"""Kiểm thử CRUD thật trên các màn quản trị (Hãng máy, Benchmark CPU, Laptop, Quản lý giá) và chụp ảnh từng thao tác.
+Chạy khi frontend (5180) và backend (4000) đang chạy: python scripts/capture_crud_test.py
+Ảnh lưu vào crud_test_screenshots/, đánh số theo thứ tự thao tác; dữ liệu test tạo ra đều được xóa lại cuối script.
 """
 from datetime import datetime
 from pathlib import Path
@@ -15,10 +9,8 @@ from playwright.sync_api import sync_playwright
 OUT = Path(__file__).resolve().parent.parent / "crud_test_screenshots"
 OUT.mkdir(exist_ok=True)
 
-# QUAN TRONG: nut "Xoa" tren giao dien la XOA MEM (chi dat isActive=false, khong xoa that ban ghi
-# khoi DB - de giu duoc lich su gia/khong pha vo khoa ngoai). Vi vay SKU cua ban ghi da "xoa" VAN
-# CON TON TAI va se lam that bai rang buoc unique neu chay lai script voi CUNG 1 ma SKU co dinh.
-# Dung SKU co hau to thoi gian de moi lan chay la mot ma MOI, khong bao gio dung ma cu.
+# Nút "Xóa" trên giao diện là xóa mềm (chỉ đặt isActive=false), nên SKU đã "xóa" vẫn còn trong DB
+# và sẽ vi phạm ràng buộc unique nếu chạy lại với SKU cố định. Vì vậy SKU có hậu tố thời gian.
 TEST_SKU = f"TEST-CRUD-{datetime.now().strftime('%Y%m%d%H%M%S')}"
 BASE = "http://localhost:5180"
 
@@ -35,18 +27,18 @@ def main():
                     print(f"[DEBUG] request body: {response.request.post_data}")
                     print(f"[DEBUG] response body: {response.text()}")
                 except Exception as e:
-                    print("loi doc response:", e)
+                    print("lỗi đọc response:", e)
 
         page.on("response", log_failed_api)
 
-        # ================= Dang nhap quan tri =================
+        # Đăng nhập quản trị
         page.goto(f"{BASE}/admin/login")
         page.wait_for_timeout(500)
         page.get_by_role("button", name="Đăng nhập").click()
         page.wait_for_url(lambda url: "/admin/login" not in url and "/admin" in url, timeout=10000)
         page.wait_for_timeout(800)
 
-        # ================= 1) HANG MAY: sua Muc uy tin (CRUD - Update) =================
+        # 1) Hãng máy: sửa Mức uy tín (Update)
         page.goto(f"{BASE}/admin/brands")
         page.wait_for_timeout(1000)
         page.screenshot(path=OUT / "01_brands_truoc_khi_sua.png")
@@ -60,7 +52,7 @@ def main():
         page.wait_for_timeout(600)
         page.screenshot(path=OUT / "03_brands_sau_khi_sua_thanh_cong.png")
 
-        # Tra lai gia tri goc (3) de khong lam lech du lieu that
+        # Trả lại giá trị gốc (3) để không lệch dữ liệu thật
         page.get_by_role("row", name="61 Acer").get_by_role("button", name="Sửa").click()
         page.wait_for_timeout(400)
         page.get_by_label("Mức uy tín").click()
@@ -69,7 +61,7 @@ def main():
         page.wait_for_timeout(600)
         page.screenshot(path=OUT / "04_brands_da_khoi_phuc_gia_tri_goc.png")
 
-        # ================= 2) BENCHMARK CPU: Create + Search + Delete =================
+        # 2) Benchmark CPU: thêm, tìm, xóa
         page.goto(f"{BASE}/admin/benchmarks/cpu")
         page.wait_for_timeout(1000)
         page.get_by_text("+ Thêm mới").click()
@@ -94,7 +86,7 @@ def main():
         page.wait_for_timeout(600)
         page.screenshot(path=OUT / "08_benchmark_cpu_da_xoa_thanh_cong.png")
 
-        # ================= 3) LAPTOP: Create (kem AI goi y phan khuc) + Edit + Delete =================
+        # 3) Laptop: thêm (kèm AI gợi ý phân khúc), sửa, xóa
         page.goto(f"{BASE}/admin/laptops")
         page.wait_for_timeout(1200)
         page.get_by_text("+ Thêm mới").click()
@@ -121,7 +113,7 @@ def main():
         page.get_by_label("Giá (VND)").fill("35000000")
         page.screenshot(path=OUT / "09_laptop_form_them_moi_da_dien_du.png")
 
-        # Tieu chi 3: he thong TU GOI Y phan khuc tu cau hinh vua nhap (khong ai gan nhan tay)
+        # Tiêu chí 3: hệ thống tự gợi ý phân khúc từ cấu hình vừa nhập
         page.get_by_text("AI gợi ý phân khúc từ cấu hình").click()
         page.wait_for_timeout(1200)
         page.screenshot(path=OUT / "10_laptop_ai_goi_y_phan_khuc.png")
@@ -130,7 +122,7 @@ def main():
         page.wait_for_timeout(800)
         page.screenshot(path=OUT / "11_laptop_da_them_thanh_cong.png")
 
-        # Sua lai: doi ten + gia (Update, khong phai Create)
+        # Sửa lại tên máy (Update)
         page.get_by_placeholder("Tìm kiếm...").fill(TEST_SKU)
         page.wait_for_timeout(500)
         page.screenshot(path=OUT / "12_laptop_tim_thay_dung_may_vua_tao.png")
@@ -141,7 +133,7 @@ def main():
         page.wait_for_timeout(700)
         page.screenshot(path=OUT / "13_laptop_da_sua_ten_thanh_cong.png")
 
-        # Xoa may test (don dep, khong de rac trong catalog)
+        # Xóa máy test cho sạch catalog
         page.get_by_role("button", name="Xóa").click()
         page.wait_for_timeout(300)
         page.get_by_role("button", name="Xóa", exact=True).last.click()
@@ -150,7 +142,7 @@ def main():
         page.wait_for_timeout(400)
         page.screenshot(path=OUT / "14_laptop_da_xoa_thanh_cong.png")
 
-        # ================= 4) QUAN LY GIA: sua khuyen mai + luot ban (Update) =================
+        # 4) Quản lý giá: sửa lượt bán (Update)
         page.goto(f"{BASE}/admin/prices")
         page.wait_for_timeout(1200)
         page.screenshot(path=OUT / "15_quan_ly_gia_truoc_khi_sua.png")
@@ -158,14 +150,14 @@ def main():
         page.get_by_placeholder("Tìm theo tên máy / hãng...").fill("LG-00325")
         page.wait_for_timeout(500)
         row = page.locator("tr", has_text="LG-00325")
-        sales_input = row.get_by_role("spinbutton").nth(1)  # 0=Gia goc, 1=Da ban, 2=Gia moi
+        sales_input = row.get_by_role("spinbutton").nth(1)  # 0=Giá gốc, 1=Đã bán, 2=Giá mới
         sales_input.fill("999")
         page.keyboard.press("Tab")
         page.wait_for_timeout(700)
         page.screenshot(path=OUT / "16_quan_ly_gia_da_sua_luot_ban_thanh_cong.png")
 
         browser.close()
-        print(f"Da luu {len(list(OUT.glob('*.png')))} anh vao {OUT}")
+        print(f"Đã lưu {len(list(OUT.glob('*.png')))} ảnh vào {OUT}")
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
-"""Chup anh man hinh chuc nang phuc vu bao cao do an. Chay khi frontend (5180) va backend (4000)
-dang chay: python scripts/capture_screenshots.py
+"""Chụp ảnh màn hình chức năng cho báo cáo đồ án, lưu vào screenshots/.
+Chạy khi frontend (5180) và backend (4000) đang chạy: python scripts/capture_screenshots.py
 """
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -23,7 +23,7 @@ def main():
         page.wait_for_timeout(400)
         page.screenshot(path=OUT / "02_wizard_nhu_cau.png")
 
-        # Mo hinh C: nhap nhu cau bang CAU TU DO (diem moi quan trong nhat - tieu chi 2)
+        # Mô hình C: nhập nhu cầu bằng câu tự do (tiêu chí 2)
         page.get_by_placeholder('Ví dụ: "con học kế toán, cần máy bền, rẻ"').fill(
             "con học kế toán, cần máy bền, rẻ"
         )
@@ -66,7 +66,7 @@ def main():
         page.wait_for_timeout(500)
         page.screenshot(path=OUT / "07_so_sanh.png", full_page=True)
 
-        # --- 08: Danh muc voi tab phan khuc + anh dai dien ---
+        # 08: Danh mục với tab phân khúc và ảnh đại diện
         page.goto(f"{BASE}/laptops")
         page.wait_for_timeout(1200)
         page.screenshot(path=OUT / "08_danh_muc.png")
@@ -75,20 +75,19 @@ def main():
         page.wait_for_timeout(1000)
         page.screenshot(path=OUT / "09_danh_muc_loc_gaming.png")
 
-        # --- 09b: TRANG THAI RONG - Danh muc khi bo loc chan het ket qua (yeu cau C0.1: khong
-        # duoc de trang rong cut lun, phai neu ro dieu kien dang chan + nut thoat) ---
+        # 09b: trạng thái rỗng của Danh mục khi bộ lọc chặn hết kết quả (yêu cầu C0.1: phải nêu rõ điều kiện đang chặn và có nút thoát)
         page.goto(f"{BASE}/laptops")
         page.wait_for_timeout(800)
         page.get_by_placeholder("Ví dụ: Legion, ThinkPad...").fill("khong-co-may-nao-ten-nay-xyz123")
         page.wait_for_timeout(600)
         page.screenshot(path=OUT / "09b_danh_muc_rong.png")
 
-        # --- 09c: TRANG THAI RONG - So sanh khi chua chon may nao ---
+        # 09c: trạng thái rỗng của So sánh khi chưa chọn máy nào
         page.goto(f"{BASE}/compare")
         page.wait_for_timeout(500)
         page.screenshot(path=OUT / "09c_so_sanh_rong.png")
 
-        # --- 10+: Khu quan tri ---
+        # 10 trở đi: khu quản trị
         page.goto(f"{BASE}/admin/login")
         page.wait_for_timeout(600)
         page.screenshot(path=OUT / "10_dang_nhap_quan_tri.png")
@@ -96,7 +95,7 @@ def main():
         page.wait_for_url(lambda url: "/admin/login" not in url and "/admin" in url, timeout=10000)
         page.wait_for_timeout(1500)
 
-        # --- 10b: Hang may (co cot "Muc uy tin" - dac trung that cua Mo hinh B, moi bo sung) ---
+        # 10b: Hãng máy (có cột "Mức uy tín", đặc trưng của Mô hình B)
         page.goto(f"{BASE}/admin/brands")
         page.wait_for_timeout(1000)
         page.screenshot(path=OUT / "10b_quan_tri_hang_may.png")
@@ -105,30 +104,29 @@ def main():
         page.wait_for_timeout(2500)
         page.screenshot(path=OUT / "11_quan_tri_crud_laptop.png")
 
-        # Tim kiem trong CRUD
+        # Tìm kiếm trong CRUD
         page.get_by_placeholder("Tìm kiếm...").fill("RTX 4070")
         page.wait_for_timeout(800)
         page.screenshot(path=OUT / "12_quan_tri_tim_kiem.png")
         page.get_by_placeholder("Tìm kiếm...").fill("")
 
-        # --- Man Quan ly gia: khuyen mai (gia goc gach ngang) + luot ban - tinh nang MOI ---
+        # Màn Quản lý giá: khuyến mãi (giá gốc gạch ngang) và lượt bán
         page.goto(f"{BASE}/admin/prices")
         page.wait_for_timeout(1500)
         page.screenshot(path=OUT / "12b_quan_ly_gia_khuyen_mai.png", full_page=True)
 
-        # Quay lai man CRUD laptop cho cac buoc tiep theo (tao may moi)
+        # Quay lại màn CRUD laptop để tạo máy mới
         page.goto(f"{BASE}/admin/laptops")
         page.wait_for_timeout(1500)
         page.wait_for_timeout(500)
 
-        # --- TIEU CHI 3: AI goi y phan khuc cho may moi ---
+        # Tiêu chí 3: AI gợi ý phân khúc cho máy mới
         page.get_by_text("+ Thêm mới").click()
         page.wait_for_timeout(800)
         page.screenshot(path=OUT / "13_them_laptop_form.png")
 
-        # RAM/SSD/Man hinh/Do phan giai/Tan so quet la du lieu CHUAN nen la dropdown (Select),
-        # khong con o nhap tu do - phai click mo dropdown roi chon dung option (xem
-        # constants/laptopSpecs.ts va checklist muc C0.6: chan nhap sai kieu RAM=-2).
+        # RAM, SSD, màn hình, độ phân giải, tần số quét là dropdown (không còn ô nhập tự do):
+        # phải mở dropdown rồi chọn option (xem constants/laptopSpecs.ts, checklist C0.6).
         def choose(label: str, option_text: str):
             page.get_by_label(label).click()
             page.get_by_title(option_text).click()
@@ -154,7 +152,7 @@ def main():
         page.screenshot(path=OUT / "14_ai_goi_y_phan_khuc.png")
 
         browser.close()
-        print(f"Da luu anh vao {OUT}")
+        print(f"Đã lưu ảnh vào {OUT}")
         for f in sorted(OUT.glob("*.png")):
             print(f"  {f.name}")
 

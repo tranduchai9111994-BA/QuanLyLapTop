@@ -1,5 +1,5 @@
-"""Kiem chung tuong phan mau WCAG AA cho cac cap chu/nen chinh trong theme/tokens.ts (NFR-05,
-Giai doan 7). Nguong AA: van ban thuong >= 4.5:1, van ban lon/UI component >= 3:1."""
+"""Kiểm tra tương phản màu WCAG AA cho các cặp chữ/nền chính trong theme/tokens.ts (NFR-05).
+Ngưỡng AA: văn bản thường >= 4.5:1, văn bản lớn hoặc thành phần UI >= 3:1. Chạy: python scripts/check_contrast.py"""
 
 
 def hex_to_rgb(h):
@@ -46,4 +46,4 @@ for name, fg, bg in pairs:
     c = contrast(fg, bg)
     aa_normal = "PASS" if c >= 4.5 else "FAIL"
     aa_large = "PASS" if c >= 3.0 else "FAIL"
-    print(f"{name}: {c:.2f}  (AA van ban thuong {aa_normal}, AA lon/UI {aa_large})")
+    print(f"{name}: {c:.2f}  (AA văn bản thường {aa_normal}, AA lớn/UI {aa_large})")

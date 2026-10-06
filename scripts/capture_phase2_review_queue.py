@@ -1,13 +1,7 @@
-"""Kiem thu Giai doan 2 tren browser that: UC-10 hang doi 'Can xac minh'.
-
-Tam ha nguong tin cay xuong 1.01 (luon > moi xac suat thuc, ep MOI may moi tao roi vao trang
-thai NEEDS_REVIEW), tao 1 may test qua API (nhanh hon dien form), roi dung browser THAT de:
-  1. Xem menu "Duyet nhan" hien so dang cho (huy hieu)
-  2. Vao man Duyet nhan, thay may vua tao kem phan bo xac suat
-  3. Duyet (giu nguyen nhan AI) -> may bien khoi hang doi
-
-Tra nguong ve 0.6 va xoa may test o cuoi. Chay khi 3 dich vu dang chay:
-    python scripts/capture_phase2_review_queue.py
+"""Kiểm thử Giai đoạn 2 trên browser thật: UC-10 hàng đợi "Cần xác minh".
+Tạm đặt ngưỡng tin cậy 1.01 (lớn hơn mọi xác suất) để máy mới tạo qua API luôn vào NEEDS_REVIEW, rồi dùng browser để:
+  1. xem huy hiệu số máy chờ ở menu "Duyệt nhãn"; 2. vào màn Duyệt nhãn xem máy vừa tạo; 3. duyệt (giữ nhãn AI).
+Cuối script trả ngưỡng về giá trị cũ và xóa máy test. Chạy khi 3 dịch vụ đang chạy: python scripts/capture_phase2_review_queue.py
 """
 from datetime import datetime
 
@@ -39,7 +33,7 @@ def main():
             "refreshHz": 240, "weightKg": 2.6, "priceVnd": 35000000,
         },
     ).json()["data"]
-    print("May test:", laptop["id"], sku, "| trang thai nhan:", laptop["segmentLabel"]["status"])
+    print("Máy test:", laptop["id"], sku, "| trạng thái nhãn:", laptop["segmentLabel"]["status"])
     assert laptop["segmentLabel"]["status"] == "NEEDS_REVIEW", "Nguong chua duoc ha, may khong vao hang doi"
 
     requests.put(f"{API}/knowledge/config/confidence_threshold", json={"value": old_threshold}, headers=headers)
@@ -64,7 +58,7 @@ def main():
 
             browser.close()
     finally:
-        # Don dep: xoa may test that (kem cac bang phu thuoc) du script co loi giua chung hay khong
+        # Dọn dẹp: xóa máy test và các bảng phụ thuộc, kể cả khi script lỗi giữa chừng
         import subprocess
         subprocess.run(
             ["node", "-e", f"""
@@ -89,7 +83,7 @@ const prisma = new PrismaClient();
             check=True,
         )
 
-    print(f"Da luu anh phase2_* vao {OUT}")
+    print(f"Đã lưu ảnh phase2_* vào {OUT}")
 
 
 if __name__ == "__main__":

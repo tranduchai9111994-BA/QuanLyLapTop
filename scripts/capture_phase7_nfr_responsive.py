@@ -1,19 +1,8 @@
-"""Kiem thu Giai doan 7 tren browser that: kiem chung NFR-04 (responsive 375px-1920px) va
-chup lai bang chung p95 do tre (NFR-01) tren Dashboard.
-
-Kiem tra KHONG CO TRAN NGANG (document.documentElement.scrollWidth <= clientWidth) tren:
-  - 375px: Home, Wizard, Catalog, Detail, Results (co du lieu that), Compare, Login
-  - 375px (quan tri, dang nhap ADMIN): Dashboard, Quan ly mo hinh, Cau hinh tri thuc (4 tab),
-    Nguoi dung & nhat ky (2 tab), Phan tich phan hoi, Duyet nhan, Laptop, Quan ly gia
-  - 1920px: Home, Catalog, Dashboard (kiem tra khong bi keo dan xau, chi can khong tran)
-
-Day la kich ban da dung de PHAT HIEN 6 loi tran ngang thuc su trong qua trinh lam Giai doan 7
-(TopNav, Segmented, Pagination, Card grid quan tri, Space inline-flex trong 2 form, va grid-item
-min-width mac dinh trong RecommendationCard) - script nay dung lai KHANG DINH toan bo da duoc
-sua, khong phai kiem thu tham do nua.
-
-Chay khi 3 dich vu dang chay (backend :4000, frontend :5180, ml-service :8001):
-    python scripts/capture_phase7_nfr_responsive.py
+"""Kiểm thử Giai đoạn 7 trên browser thật: kiểm chứng NFR-04 (responsive 375px đến 1920px).
+Kiểm tra không tràn ngang (scrollWidth <= clientWidth) ở 375px (các trang khách hàng và quản trị, đăng nhập ADMIN)
+và 1920px (Home, Catalog, Dashboard). Kịch bản này từng phát hiện 6 lỗi tràn ngang (TopNav, Segmented, Pagination,
+Card grid quản trị, Space inline-flex trong 2 form, min-width mặc định của grid-item trong RecommendationCard).
+Chạy khi backend :4000, frontend :5180, ml-service :8001 đang chạy: python scripts/capture_phase7_nfr_responsive.py
 """
 from pathlib import Path
 
@@ -37,7 +26,7 @@ def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
 
-        # ---- 375px: khach hang ----
+        # 375px: khách hàng
         page = browser.new_page(viewport={"width": 375, "height": 812})
         page.goto(f"{BASE}/")
         check_no_overflow(page, "375px /")
@@ -67,7 +56,7 @@ def main():
         page.goto(f"{BASE}/compare")
         check_no_overflow(page, "375px /compare")
 
-        # ---- 375px: quan tri (dang nhap ADMIN) ----
+        # 375px: quản trị (đăng nhập ADMIN)
         page.goto(f"{BASE}/admin/login")
         page.get_by_role("button", name="Đăng nhập").click()
         page.wait_for_url(lambda url: "/admin/login" not in url and "/admin" in url, timeout=10000)
@@ -95,7 +84,7 @@ def main():
 
         page.close()
 
-        # ---- 1920px ----
+        # 1920px
         page2 = browser.new_page(viewport={"width": 1920, "height": 1080})
         page2.goto(f"{BASE}/")
         check_no_overflow(page2, "1920px /")
@@ -111,7 +100,7 @@ def main():
 
         page2.close()
         browser.close()
-        print("\nHoan tat kiem thu Giai doan 7 - NFR-04 (responsive 375px-1920px).")
+        print("\nHoàn tất kiểm thử Giai đoạn 7 - NFR-04 (responsive 375px-1920px).")
 
 
 if __name__ == "__main__":
