@@ -1,4 +1,4 @@
-"""Nạp / kích hoạt phiên bản mô hình (docs/06 SS2)."""
+"""Nạp và kích hoạt phiên bản mô hình (docs/06 mục 2)."""
 from __future__ import annotations
 
 import json
@@ -30,7 +30,7 @@ class ModelRegistry:
     def activate(self, version: str) -> None:
         model_path = ARTIFACTS_DIR / version / "model.joblib"
         if not model_path.exists():
-            raise FileNotFoundError(f"Khong tim thay artifact cho version {version}")
+            raise FileNotFoundError(f"Không tìm thấy artifact cho phiên bản {version}")
         self.model = joblib.load(model_path)
         self.metadata = self.load_metadata(version)
         self.version = version
