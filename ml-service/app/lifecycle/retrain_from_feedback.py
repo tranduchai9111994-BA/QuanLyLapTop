@@ -1,17 +1,9 @@
-"""TIEU CHI 3 - "he thong thong minh len theo thoi gian": hoc them tu CAU NOI THAT cua nguoi dung.
+"""Mô hình C học thêm từ câu thật của người dùng (tiêu chí 3: hệ thống tốt lên theo thời gian).
 
-Luong:
-  1. Doc cac cau nhu cau THAT nguoi dung da go (luu trong RecommendationSession.needJson qua
-     truong `needText` + `needLabel`), kem phan hoi 👍/👎 cua ho.
-  2. Cau nao duoc 👍 (nguoi dung hai long voi ket qua) => nhan ma Mo hinh C doan la DUNG
-     => bo sung vao tap huan luyen.
-  3. Huan luyen lai Mo hinh C va so sanh chi so TRUOC / SAU.
-
-Chay: python -m app.lifecycle.retrain_from_feedback            (che do that: goi API backend)
-      python -m app.lifecycle.retrain_from_feedback --demo     (che do demo: mo phong cau moi, khong can backend)
-
-Ghi chu trung thuc: day la vong lap hoc BAN GIAM SAT don gian (human-in-the-loop). Cau chi duoc
-nhan vao khi co tin hieu 👍 - khong tu dong tin moi du doan cua chinh minh (tranh "echo chamber").
+Chỉ nhận câu có phản hồi tích cực (thích), không tự tin vào dự đoán của chính mình.
+Chạy: python -m app.lifecycle.retrain_from_feedback          (lấy câu thật từ backend)
+      python -m app.lifecycle.retrain_from_feedback --demo   (câu mô phỏng, không cần backend)
+      thêm --apply để ghi câu mới vào need_phrases.json
 """
 from __future__ import annotations
 
@@ -29,11 +21,7 @@ DATA_DIR = Path(__file__).resolve().parents[3] / "data"
 PHRASES_PATH = DATA_DIR / "need_phrases.json"
 BACKEND_URL = "http://localhost:4000/api"
 
-# Che do --demo mo phong DONG THOI GIAN thuc te: nguoi dung go nhung cau voi tu ngu MA TAP GOC
-# CHUA CO ("tiem tap hoa", "quay thuoc", "khai bao thue"...). Cac cau nay den theo 2 dot:
-#   DOT 1 (den truoc, duoc 👍) -> he thong HOC them
-#   DOT 2 (den sau, cung chu de nhung cau chu khac) -> dung de KIEM TRA xem co tot len that khong
-# Cach do nay phan anh dung thuc te hon leave-one-out: he thong hoc tu qua khu de phuc vu tuong lai.
+# Dữ liệu mô phỏng cho --demo: đợt 1 để học thêm, đợt 2 (cùng chủ đề, khác chữ) để kiểm tra
 DEMO_BATCH_1 = [
     ("chị cần máy tính làm sổ sách cho tiệm tạp hóa, tiền ít thôi", "VAN_PHONG"),
     ("máy tính cho quầy thuốc nhập đơn hàng ngày", "VAN_PHONG"),
@@ -76,7 +64,7 @@ def cv_macro_f1(samples: list[dict], k: int = 7) -> tuple[float, float]:
 
 
 def fetch_feedback_samples() -> list[tuple[str, str]]:
-    """Lay cac cau THAT co phan hoi tich cuc tu backend (can dang nhap ADMIN)."""
+    """Lấy câu thật có phản hồi tích cực từ backend (cần đăng nhập ADMIN)."""
     login = requests.post(
         f"{BACKEND_URL}/auth/login",
         json={"email": "admin@smartlap.vn", "password": "Demo@123"},
@@ -96,8 +84,8 @@ def fetch_feedback_samples() -> list[tuple[str, str]]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--demo", action="store_true", help="Dung cau mo phong thay vi goi backend")
-    parser.add_argument("--apply", action="store_true", help="Ghi cau moi vao need_phrases.json")
+    parser.add_argument("--demo", action="store_true", help="Dùng câu mô phỏng thay vì gọi backend")
+    parser.add_argument("--apply", action="store_true", help="Ghi câu mới vào need_phrases.json")
     args = parser.parse_args()
 
     model = NeedTextModel()
@@ -106,13 +94,13 @@ def main() -> int:
 
     if args.demo:
         new_pairs = DEMO_NEW_SAMPLES
-        print("Che do DEMO: dung cau mo phong (khong goi backend)")
+        print("Chế độ DEMO: dùng câu mô phỏng (không gọi backend)")
     else:
         try:
             new_pairs = fetch_feedback_samples()
-        except Exception as exc:  # backend chua chay / chua co du lieu
-            print(f"Khong lay duoc phan hoi that tu backend ({exc}).")
-            print("Chay lai voi --demo de xem quy trinh hoat dong the nao.")
+        except Exception as exc:  # backend chưa chạy hoặc chưa có dữ liệu
+            print(f"Không lấy được phản hồi thật từ backend ({exc}).")
+            print("Chạy lại với --demo để xem quy trình hoạt động.")
             return 1
 
     new_samples = [
@@ -121,17 +109,17 @@ def main() -> int:
         if normalize_text(txt) not in known
     ]
     if not new_samples:
-        print("Khong co cau moi nao de hoc them.")
+        print("Không có câu mới nào để học thêm.")
         return 0
 
     print()
     print("=" * 70)
-    print("TIEU CHI 3: HOC THEM TU PHAN HOI NGUOI DUNG")
+    print("TIÊU CHÍ 3: HỌC THÊM TỪ PHẢN HỒI NGƯỜI DÙNG")
     print("=" * 70)
-    print(f"  Tap huan luyen cu : {len(base_samples)} cau")
-    print(f"  Cau moi hoc them  : {len(new_samples)} cau (tu nguoi dung that / mo phong)")
+    print(f"  Tập huấn luyện cũ : {len(base_samples)} câu")
+    print(f"  Câu mới học thêm  : {len(new_samples)} câu (từ người dùng thật hoặc mô phỏng)")
 
-    # --- Do 1 (DUNG): hoc tu DOT 1, danh gia tren DOT 2 (cac cau den sau, chua tung thay) ---
+    # Phép đo đúng: học từ đợt 1, kiểm tra trên đợt 2 (câu đến sau, chưa từng thấy)
     if args.demo:
         learn_set = [{"text": t_, "label": l_} for t_, l_ in DEMO_BATCH_1 if normalize_text(t_) not in known]
         test_set = [{"text": t_, "label": l_} for t_, l_ in DEMO_BATCH_2 if normalize_text(t_) not in known]
@@ -156,36 +144,36 @@ def main() -> int:
 
     n = len(test_set)
     print()
-    print(f"  [Do dung] Hoc tu {len(learn_set)} cau DOT 1, kiem tra tren {n} cau DOT 2 (chua tung thay):")
-    print(f"     Truoc khi hoc : {correct_before}/{n} = {correct_before / n:.1%}")
-    print(f"     Sau khi hoc   : {correct_after}/{n} = {correct_after / n:.1%}")
-    print(f"     => Thay doi   : {(correct_after - correct_before) / n:+.1%}")
+    print(f"  [Phép đo đúng] Học từ {len(learn_set)} câu ĐỢT 1, kiểm tra trên {n} câu ĐỢT 2 (chưa từng thấy):")
+    print(f"     Trước khi học : {correct_before}/{n} = {correct_before / n:.1%}")
+    print(f"     Sau khi học   : {correct_after}/{n} = {correct_after / n:.1%}")
+    print(f"     => Thay đổi   : {(correct_after - correct_before) / n:+.1%}")
 
     if changed:
-        print(f"\n  Cac cau doi ket qua sau khi hoc ({len(changed)}):")
+        print(f"\n  Các câu đổi kết quả sau khi học ({len(changed)}):")
         for s, pb, pa in changed[:6]:
-            mark = "SUA DUNG" if pa == s["label"] else ("hong di" if pb == s["label"] else "van sai")
-            print(f'     "{s["text"][:46]}" {pb} -> {pa} (dung: {s["label"]}) [{mark}]')
+            mark = "SỬA ĐÚNG" if pa == s["label"] else ("hỏng đi" if pb == s["label"] else "vẫn sai")
+            print(f'     "{s["text"][:46]}" {pb} -> {pa} (đúng: {s["label"]}) [{mark}]')
 
-    # --- Do 2 (tham khao): CV tren hai tap KHAC NHAU - khong so sanh truc tiep duoc ---
+    # Chỉ để tham khảo: hai tập khác nhau nên hai con số không so trực tiếp được
     before_mean, before_std = cv_macro_f1(base_samples)
     after_mean, after_std = cv_macro_f1(base_samples + new_samples)
     print()
-    print("  [Tham khao] macro-F1 cross-validation tren tung tap:")
-    print(f"     Tap cu  ({len(base_samples)} cau): {before_mean:.4f} (+/- {before_std:.4f})")
-    print(f"     Tap moi ({len(base_samples) + len(new_samples)} cau): {after_mean:.4f} (+/- {after_std:.4f})")
-    print("     Luu y: hai con so nay do tren HAI TAP KHAC NHAU nen KHONG so sanh truc tiep duoc.")
-    print("     Tap moi chua nhieu cach dien dat la hon nen bai toan kho hon, chi so co the giam")
-    print("     trong khi he thong thuc te phuc vu duoc nhieu kieu cau hon (xem [Do dung] o tren).")
+    print("  [Tham khảo] macro-F1 kiểm thử chéo trên từng tập:")
+    print(f"     Tập cũ  ({len(base_samples)} câu): {before_mean:.4f} (+/- {before_std:.4f})")
+    print(f"     Tập mới ({len(base_samples) + len(new_samples)} câu): {after_mean:.4f} (+/- {after_std:.4f})")
+    print("     Lưu ý: hai con số đo trên HAI TẬP KHÁC NHAU nên KHÔNG so sánh trực tiếp được.")
+    print("     Tập mới có nhiều cách diễn đạt lạ hơn nên bài toán khó hơn, chỉ số có thể giảm")
+    print("     dù hệ thống phục vụ được nhiều kiểu câu hơn (xem [Phép đo đúng] ở trên).")
 
     if args.apply:
         data = json.loads(PHRASES_PATH.read_text(encoding="utf-8"))
         data["samples"].extend(new_samples)
         PHRASES_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-        print(f"\n  Da ghi {len(new_samples)} cau moi vao {PHRASES_PATH.name}.")
-        print("  Chay lai `python -m app.lifecycle.train` de kich hoat mo hinh moi.")
+        print(f"\n  Đã ghi {len(new_samples)} câu mới vào {PHRASES_PATH.name}.")
+        print("  Chạy lại `python -m app.lifecycle.train` để kích hoạt mô hình mới.")
     else:
-        print("\n  (Chay lai voi --apply de thuc su ghi cau moi vao tap huan luyen)")
+        print("\n  (Chạy lại với --apply để thực sự ghi câu mới vào tập huấn luyện)")
     return 0
 
 
