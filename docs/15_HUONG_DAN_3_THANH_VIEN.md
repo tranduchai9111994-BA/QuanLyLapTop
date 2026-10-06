@@ -18,6 +18,33 @@ A so sánh **máy với máy** để *bỏ phiếu ra nhãn*; C so sánh **câu 
 
 # PHẦN 1 — Thành viên 1: Mô hình A (phân loại phân khúc máy mới)
 
+## 1.0 Toàn bộ luồng Mô hình A trong một trang (để trình bày)
+
+**Nói trong 30 giây:** Máy mới vào hệ thống chưa có phân khúc. Mô hình A chuẩn hóa 11 thông số của máy, tìm 7 máy
+đã biết nhãn giống nhất, cho 7 máy đó bỏ phiếu để ra phân khúc kèm xác suất. Xác suất dưới 0,6 thì máy vào hàng đợi
+cho nhân viên xác minh. Mô hình được chọn tham số bằng cách thử 64 tổ hợp, chấm trên 200 máy giấu, đạt macro-F1 0,787
+so với mốc luật tay 0,632 và đoán bừa 0,128.
+
+**Hai giai đoạn, cùng một mô hình:**
+
+| Giai đoạn | Việc | Ý chính | Chỗ trong code |
+|---|---|---|---|
+| Huấn luyện (chạy một lần, ngoại tuyến) | Chia dữ liệu | 800 máy học, 200 máy giấu; giữ tỷ lệ 4 phân khúc; seed 42 | `lifecycle/train.py:53` |
+| | Chọn tham số | thử 16 k x 2 cách phiếu x 2 cách đo = 64 tổ hợp, kiểm thử chéo 5 phần = 320 lần học; chuẩn hóa nằm trong Pipeline | `models/classifier.py:21`, `:40` |
+| | Chấm điểm | đoán 200 máy giấu, ra ma trận nhầm lẫn, precision, recall, macro-F1 0,787 | `lifecycle/train.py:69-72` |
+| | So mốc | dummy 0,128; luật tay 0,632; kNN hơn rõ | `models/classifier.py:48`, `:64` |
+| | Lưu | thư mục phiên bản: `model.joblib`, `metadata.json`, 2 ảnh | `lifecycle/train.py:86-130` |
+| Phục vụ (mỗi lần có máy mới) | Backend gửi 11 thông số | `predictSegment` | `backend/.../laptops/segment.service.ts` |
+| | ML chuẩn hóa, tìm 7 láng giềng, đếm phiếu | xác suất = số phiếu ÷ 7 | `app/main.py:98` |
+| | Backend so với ngưỡng 0,6 | từ 5/7 phiếu: VERIFIED; thấp hơn: NEEDS_REVIEW | `segment.service.ts:138` |
+
+**Năm con số cần nhớ:** 7 (số láng giềng), 64 tổ hợp, 0,787 (macro-F1), 0,6 (ngưỡng tin cậy), 0,375 (recall CREATOR, điểm yếu).
+
+**Ba câu dễ bị hỏi:**
+1. Vì sao k = 7? Hệ thống tự thử k lẻ từ 1 đến 31, k = 7 có điểm cao nhất (0,794); k = 9 chỉ kém 0,009, trong phạm vi dao động.
+2. Vì sao dùng macro-F1 thay vì accuracy? Dữ liệu lệch lớp (CREATOR 12%); accuracy 0,85 che mất việc CREATOR chỉ nhận ra 37,5%.
+3. Điểm yếu? CREATOR hay bị nhầm thành GAMING (14 trên 24 máy), nên có hàng đợi Duyệt nhãn để người sửa.
+
 ## 1.1 Bài toán và vị trí trong hệ thống
 
 **Vấn đề:** cửa hàng nhập máy mới, không ai gán nhãn phân khúc bằng tay 1.000 lần. Nếu máy không có
