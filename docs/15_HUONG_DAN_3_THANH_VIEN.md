@@ -350,6 +350,15 @@ tập kiểm tra khác nhau nên điểm macro-F1 giữa các bản chỉ so sá
 mô hình tốt hơn (chỉ dữ liệu thật mới có ích); (d) CSV chỉ phục vụ huấn luyện, muốn máy hiện trên web phải nhập
 vào SQL (trang Quản trị Laptop hoặc `npm run seed`); (e) Mô hình B không huấn luyện, nó tự cập nhật khi backend đồng bộ catalog.
 
+**Đưa nhãn người đã duyệt vào huấn luyện (khép vòng phản hồi).** Nhãn sửa ở trang Duyệt nhãn nằm trong SQL
+Server, còn huấn luyện chỉ đọc CSV, nên cần một bước tay có kiểm soát:
+1. Trang **Duyệt nhãn phân khúc**, bấm **Xuất nhãn đã duyệt (CSV)** (chỉ ADMIN). File có đủ 23 cột như `catalog_vn.csv`.
+   Mặc định chỉ gồm nhãn do **người** quyết định; nhãn do mô hình tự gán không đưa vào để tránh mô hình tự học lại dự đoán của chính nó.
+2. Với mỗi dòng: nếu `sku` **đã có** trong `catalog_vn.csv` thì chỉ **sửa cột `segment`** tại dòng đó (không thêm dòng, tránh trùng
+   `sku`); nếu `sku` **chưa có** thì thêm cuối file.
+3. Làm tiếp các bước 4 đến 7 ở trên (kiểm tra định dạng, huấn luyện, so điểm, "Đưa vào sử dụng", cổng 2 quy tắc ở bài 7).
+Tác động lên mô hình chỉ xảy ra ở bước 3; bản thân nút xuất không đổi gì.
+
 ## 1.12 Kịch bản DEMO trên ứng dụng (đã thử thật trên app)
 
 Điều kiện: 3 dịch vụ đang chạy (shortcut Desktop `SmartLap`), đăng nhập quản trị `admin@smartlap.vn` / `Demo@123`.
