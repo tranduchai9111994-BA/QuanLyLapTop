@@ -77,6 +77,10 @@ Khi giải thích đoạn code, ghi rõ chỗ nào:
   chiếu" (trước/sau) để thấy chỗ khác nhau, rồi mời người học tự tính lại một ví dụ khác.
 
 ### 1.7 Cuối mỗi bước
+00. **Khối "Tổng kết 30 giây"** (người học còn phải nói lại cho thầy, thầy không đủ thời gian nghe ví dụ
+   và tính toán): (a) 1 câu tổng quát; (b) luồng 1 dòng dạng `A -> B -> C` kèm `file:dòng`; (c) 2-3 điểm
+   "cách đọc code" (chỗ nào tự chọn được, chỗ nào là cấu trúc, chỗ nào xem kết quả); (d) lưu ý khi trả
+   lời. Ví dụ và phép tính để xuống dưới cùng, chỉ dùng khi cần. Mẫu: docs/15 mục 1.6.
 0. **CHẠY THỬ TRÊN ỨNG DỤNG để demo** (bước bắt buộc, từng bị thiếu): sau khi giải thích xong, chỉ người học
    **bấm gì, ở màn hình nào, kết quả mong đợi là gì**, và **tự thử trước trên app thật** (trình duyệt) để
    chắc từng nhãn nút/kết quả khớp. Nếu thao tác sẽ ghi dữ liệu thì dùng cách chỉ-xem (vd mở form Sửa rồi
@@ -139,8 +143,11 @@ rồi mình góp ý. Câu hỏi hội đồng đã soạn cho từng mô hình n
 | TV1 — tính khoảng cách đủ 11 cột giữa 2 máy, từng bước (docs/15 mục 1.13) | ✅ |
 | Huấn luyện làm gì: 11 bước trong `lifecycle/train.py` (chia 80/20, thử 64 tổ hợp x 5 phần = 320 lần học, lưu phiên bản, `LATEST`) | ✅ tổng quan |
 | Dữ liệu: `data/processed/catalog_vn.csv` (huấn luyện đọc file này, KHÔNG đọc Excel), cách thêm dữ liệu bằng Excel (docs/15 mục 1.14) | ✅ |
-| TV1 — **Bước 3 huấn luyện: thử 64 tổ hợp** (`grid_search` ở `models/classifier.py`, tính tay 64 x 5 = 320) HOẶC làm **bản đồ 3 tầng** (docs/18) | **Bước kế tiếp (chờ người học chọn)** |
-| TV1 — tìm 7 láng giềng + bỏ phiếu (`predict_proba`, `kneighbors`; `models/classifier.py`, `main.py` dòng 96) | ⏳ |
+| TV1 — **Bước 3 huấn luyện: thử 64 tổ hợp** (`grid_search` ở `models/classifier.py`, tính tay 64 x 5 = 320), `uniform` vs `distance` (có khối tổng kết 30 giây, docs/15 mục 1.6) | ✅ (câu kiểm tra k = 4 còn treo) |
+| Bản đồ tìm file: công thức 4 câu hỏi (docs/18) | ✅ (người học đã thử đoán 3 việc, 1 đúng, 2 sai, đã giải thích) |
+| TV1 — `predict_proba` = số phiếu ÷ 7; ngưỡng tin cậy 0,6 (`segment.service.ts:138`) và hàng đợi Duyệt nhãn; chia 80/20; rò rỉ dữ liệu (đã đo: 0,7938 so với 0,7923, ảnh hưởng nhỏ); đọc ma trận nhầm lẫn | ✅ |
+| TV1 — precision / recall / macro-F1 (từ ma trận nhầm lẫn); baseline; ablation; vòng đời mô hình + huấn luyện lại từ phản hồi; câu hỏi hội đồng | ⏳ bước kế tiếp: precision/recall/macro-F1 |
+| (cũ) TV1 — tìm 7 láng giềng + bỏ phiếu (`predict_proba`, `kneighbors`; `models/classifier.py`, `main.py` dòng 96) | ⏳ |
 | TV1 — huấn luyện: `GridSearchCV`, `Pipeline` chống rò rỉ dữ liệu, macro-F1 | ⏳ |
 | Quản lý mô hình: huấn luyện chỉ lưu bản Ứng viên, `Đưa vào sử dụng` mới đổi `LATEST`; có nút Xóa bản dư (không xóa Champion) | ✅ đã làm trong code, chưa giảng |
 | TV1 — hàng đợi Duyệt nhãn / khóa nhãn (`applySegmentLabel`) | ⏳ |

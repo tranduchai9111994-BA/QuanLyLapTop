@@ -113,7 +113,7 @@ thuật. (Giá chỉ được dùng ở Mô hình B.)
 
 ## 1.6 Chọn tham số — "ta không biết trước, nên thử rồi đo"
 
-Code: `ml-service/app/models/classifier.py` — `PARAM_GRID` (dòng 34–38), `grid_search()` (dòng 56).
+Code: `ml-service/app/models/classifier.py` — `PARAM_GRID` (dòng 21–25), `grid_search()` (dòng 40).
 
 `GridSearchCV` thử **mọi tổ hợp** rồi chọn bộ có macro-F1 cao nhất bằng kiểm thử chéo 5 phần:
 
@@ -122,6 +122,20 @@ Code: `ml-service/app/models/classifier.py` — `PARAM_GRID` (dòng 34–38), `g
 | `k` (số láng giềng) | 1, 3, 5, …, 31 (số lẻ để tránh hòa phiếu) | **7** |
 | Cách đo khoảng cách | Euclidean (đường thẳng) / Manhattan (đi theo ô phố) | **Euclidean** |
 | Trọng số phiếu | `uniform` (mỗi người 1 phiếu) / `distance` (gần thì phiếu nặng) | **uniform** |
+
+**Tổng kết 30 giây (cách đếm phiếu `uniform` / `distance`)**
+
+- **Một câu:** mô hình đếm phiếu của k máy giống nhất để chọn phân khúc; `uniform` = mỗi máy 1 phiếu,
+  `distance` = máy càng giống thì phiếu càng nặng; hệ thống thử cả hai lúc huấn luyện và giữ cách điểm
+  cao hơn (hiện là `uniform`, k = 7).
+- **Luồng:** danh sách cách đếm (`classifier.py:23`) -> huấn luyện thử cả hai, chọn cách điểm cao nhất
+  -> lưu vào `model.joblib` -> khi dự đoán, `predict_proba` (`main.py:98`) tự đếm theo cách đã lưu.
+- **Cách đọc code:** chỉ 1 dòng do mình chọn (`classifier.py:23`); cách thắng nằm trong `model.joblib`
+  (xem bằng `python -m app.lifecycle.inspect_model`); không có hàm đếm phiếu nào tự viết, scikit-learn làm.
+- **Lưu ý:** không cần nhớ phép tính; hỏi "sao chọn uniform" thì trả lời "hệ thống tự thử rồi chọn theo
+  điểm kiểm thử chéo 0,7938". Model C (TV2) khác: cố định `distance` (`text_classifier.py:128`).
+- **Ví dụ khi cần giải thích kỹ:** 7 láng giềng của Predator Helios 0051 (GAMING x4, CREATOR x3):
+  `uniform` thắng 4 - 3; `distance` cộng 1/khoảng cách: GAMING 1,945 so với CREATOR 1,400.
 
 **k nhỏ quá** (1–3) → nhạy với mẫu lạ (overfit). **k lớn quá** → mờ ranh giới, thiên về lớp đông.
 Có sẵn biểu đồ "đường cong chọn k" trong `artifacts/<phiên bản>/k_curve.png` để đưa lên slide.

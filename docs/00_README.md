@@ -30,6 +30,7 @@ Người dùng khai báo nhu cầu (mục đích sử dụng, ngân sách, mức
 | 15 | `15_HUONG_DAN_3_THANH_VIEN.md` | Hướng dẫn hiểu & trình bày từng mô hình theo phân công nhóm (A: phân loại phân khúc, C: câu tự do, B: top-5), kèm ví dụ chạy thật, câu hỏi hội đồng, khung slide | Học, làm slide/báo cáo |
 | 16 | `16_CACH_GIANG_BAI.md` | Quy trình giảng bài & hỏi đáp cho người mới (từng bước nhỏ, dọn comment trước khi mở file, mẫu câu "A gọi B", nhãn cấu trúc/dữ liệu) + tiến độ bài học | Học, ôn bảo vệ |
 | 17 | `17_LENH_XEM_TRUNG_BINH_DO_LECH_CHUAN.md` | Lệnh `inspect_model` xem trung bình/độ lệch chuẩn (z-score), k, số máy ghi nhớ trong `model.joblib`; cách đọc, tự kiểm tra bằng Excel, lỗi thường gặp | Học, tra cứu, slide |
+| 18 | `18_BAN_DO_TIM_FILE.md` | Công thức 4 câu hỏi để đoán ra file/thư mục cần mở (giao diện / nghiệp vụ / AI; nguyên liệu / công thức / nhà máy / thành phẩm), ví dụ đối chiếu với source | Học, tra cứu, slide cấu trúc dự án |
 
 `CLAUDE.md` giữ nguyên tên không đánh số vì Claude Code chỉ tự nạp file có đúng tên này.
 
