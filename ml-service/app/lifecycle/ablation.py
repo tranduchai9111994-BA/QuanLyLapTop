@@ -1,5 +1,5 @@
-"""Thi nghiem cat bo (docs/04 SS6.3) + xu ly mat can bang lop (SS5.3).
-Chay: python -m app.lifecycle.ablation
+"""Thí nghiệm cắt bỏ (ablation, docs/04 mục 6.3) và xử lý mất cân bằng lớp (mục 5.3).
+Chạy: python -m app.lifecycle.ablation
 """
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ def cv_f1(pipe, X, y) -> tuple[float, float]:
 
 
 def no_scaler_preprocessor() -> ColumnTransformer:
-    """Bien the KHONG StandardScaler - minh chung 03 SS5.2."""
+    """Biến thể KHÔNG chuẩn hóa (bỏ StandardScaler), để chứng minh chuẩn hóa có ích (docs/03 mục 5.2)."""
     return ColumnTransformer([
         ("log", Pipeline([("impute", SimpleImputer(strategy="median")),
                             ("log", FunctionTransformer(np.log2, feature_names_out="one-to-one"))]), NUMERIC_LOG),
@@ -55,17 +55,17 @@ def run_ablation(df: pd.DataFrame, best_k: int, best_weights: str, best_metric: 
     base_pipe = build_pipeline()
     base_pipe.set_params(knn__n_neighbors=best_k, knn__weights=best_weights, knn__metric=best_metric)
     mean, std = cv_f1(base_pipe, X[MODEL_A_FEATURES], y)
-    results.append({"variant": "day_du (baseline)", "f1_macro_mean": mean, "f1_macro_std": std})
+    results.append({"variant": "đầy đủ (baseline)", "f1_macro_mean": mean, "f1_macro_std": std})
 
     no_scale_pipe = Pipeline([("prep", no_scaler_preprocessor()), ("knn", KNeighborsClassifier(
         n_neighbors=best_k, weights=best_weights, metric=best_metric))])
     mean, std = cv_f1(no_scale_pipe, X[MODEL_A_FEATURES], y)
-    results.append({"variant": "khong StandardScaler", "f1_macro_mean": mean, "f1_macro_std": std})
+    results.append({"variant": "không chuẩn hóa (bỏ StandardScaler)", "f1_macro_mean": mean, "f1_macro_std": std})
 
     for drop_feat in ["refresh_hz", "srgb_100"]:
         feats = [f for f in MODEL_A_FEATURES if f != drop_feat]
         pipe = build_pipeline()
-        # xay lai preprocessor thieu 1 cot
+        # dựng lại bộ tiền xử lý thiếu 1 cột
         num = [f for f in NUMERIC if f != drop_feat]
         binf = [f for f in BINARY if f != drop_feat]
         pipe.named_steps["prep"].transformers = [
@@ -75,12 +75,12 @@ def run_ablation(df: pd.DataFrame, best_k: int, best_weights: str, best_metric: 
         ]
         pipe.set_params(knn__n_neighbors=best_k, knn__weights=best_weights, knn__metric=best_metric)
         mean, std = cv_f1(pipe, X[feats], y)
-        results.append({"variant": f"bo {drop_feat}", "f1_macro_mean": mean, "f1_macro_std": std})
+        results.append({"variant": f"bỏ {drop_feat}", "f1_macro_mean": mean, "f1_macro_std": std})
 
     manhattan_pipe = build_pipeline()
     manhattan_pipe.set_params(knn__n_neighbors=best_k, knn__weights=best_weights, knn__metric="manhattan")
     mean, std = cv_f1(manhattan_pipe, X[MODEL_A_FEATURES], y)
-    results.append({"variant": "Manhattan thay Euclidean", "f1_macro_mean": mean, "f1_macro_std": std})
+    results.append({"variant": "Manhattan thay cho Euclidean", "f1_macro_mean": mean, "f1_macro_std": std})
 
     return results
 
@@ -109,7 +109,7 @@ def run_imbalance_configs(df: pd.DataFrame, best_k: int, best_metric: str) -> li
         mean, std = cv_f1(imb_pipe, X[MODEL_A_FEATURES], y)
         results.append({"config": "RandomOverSampler (trong pipeline)", "f1_macro_mean": mean, "f1_macro_std": std})
     except ImportError:
-        results.append({"config": "RandomOverSampler", "error": "imbalanced-learn chua cai dat"})
+        results.append({"config": "RandomOverSampler", "error": "chưa cài imbalanced-learn"})
 
     return results
 
@@ -121,16 +121,16 @@ def main() -> int:
     )
     search = grid_search(X_train, y_train)
     best = search.best_params_
-    print("Dung tham so tot nhat tu grid search:", best)
+    print("Dùng tham số tốt nhất từ grid search:", best)
 
     ablation = run_ablation(df, best["knn__n_neighbors"], best["knn__weights"], best["knn__metric"])
     imbalance = run_imbalance_configs(df, best["knn__n_neighbors"], best["knn__metric"])
 
-    print("\n=== Thi nghiem cat bo (ablation) ===")
+    print("\n=== Thí nghiệm cắt bỏ (ablation) ===")
     for r in ablation:
         print(f"  {r['variant']:<30} f1_macro={r['f1_macro_mean']:.4f} (+/-{r['f1_macro_std']:.4f})")
 
-    print("\n=== Cau hinh mat can bang lop ===")
+    print("\n=== Cấu hình xử lý mất cân bằng lớp ===")
     for r in imbalance:
         if "error" in r:
             print(f"  {r['config']:<30} {r['error']}")
@@ -142,7 +142,7 @@ def main() -> int:
     if latest.exists():
         out_path = ARTIFACTS_DIR / latest.read_text().strip() / "experiments.json"
         out_path.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
-        print(f"\nDa luu -> {out_path}")
+        print(f"\nĐã lưu -> {out_path}")
     return 0
 
 
