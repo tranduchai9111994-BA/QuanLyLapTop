@@ -1,9 +1,9 @@
-"""Sinh 30 persona kiem thu tu CATALOG THAT (khong hard-code khoang gia).
+"""Sinh 30 persona kiểm thử từ catalog thật (không hard-code khoảng giá).
 
-Moi persona co them truong `text` - cau noi tu nhien - de kiem thu ca Mo hinh C
-(TF-IDF + kNN phan loai cau tu do), khong chi kiem thu wizard dang dropdown.
+Mỗi persona có thêm trường `text` (câu nói tự nhiên) để kiểm thử cả Mô hình C
+(TF-IDF + kNN phân loại câu tự do), không chỉ wizard dạng dropdown.
 
-Chay: python data/generate_personas.py   (chay SAU generate_catalog.py)
+Chạy: python data/generate_personas.py (chạy sau generate_catalog.py)
 """
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ random.seed(42)
 ROOT = Path(__file__).resolve().parent
 catalog = pd.read_csv(ROOT / "processed" / "catalog_vn.csv")
 
-# Khoang gia thuc te cua tung phan khuc (phan vi 20-80) => persona khong bao gio "khong co ung vien"
+# Khoảng giá thực tế của từng phân khúc (phân vị 15-80), để persona luôn có ứng viên phù hợp
 BUDGET_BY_SEGMENT = {
     seg: (
         int(round(sub["price_vnd"].quantile(0.15) / 1e6) * 1e6),
@@ -25,11 +25,11 @@ BUDGET_BY_SEGMENT = {
     )
     for seg, sub in catalog.groupby("segment")
 }
-print("Khoang ngan sach suy tu catalog that:")
+print("Khoảng ngân sách suy từ catalog thật:")
 for seg, (lo, hi) in BUDGET_BY_SEGMENT.items():
-    print(f"  {seg:10s} {lo/1e6:5.1f} - {hi/1e6:5.1f} trieu")
+    print(f"  {seg:10s} {lo/1e6:5.1f} - {hi/1e6:5.1f} triệu")
 
-# (mo_ta, cau tu do, segment ky vong, nhan nhu cau ky vong cua Mo hinh C, activities, priorities, must)
+# (mô tả, câu tự do, segment kỳ vọng, nhãn nhu cầu kỳ vọng của Mô hình C, activities, priorities, must)
 TEMPLATES = [
     ("Sinh vien nam nhat, hoc online, ngan sach thap",
      "em là sinh viên năm nhất cần laptop học online giá rẻ",
@@ -126,7 +126,7 @@ TEMPLATES = [
 personas = []
 for i, (mo_ta, text, seg, need_label, activities, priorities, must) in enumerate(TEMPLATES, start=1):
     lo, hi = BUDGET_BY_SEGMENT[seg]
-    # Persona uu tien gia cao -> ngan sach thap hon trong khoang cua phan khuc
+    # Persona coi trọng giá (price cao) thì ngân sách nằm ở nửa thấp của khoảng phân khúc
     if priorities["price"] >= 5:
         budget = [lo, int(lo + 0.45 * (hi - lo))]
     elif priorities["price"] <= 2:
@@ -136,7 +136,7 @@ for i, (mo_ta, text, seg, need_label, activities, priorities, must) in enumerate
 
     expect = {
         "segment_in": [seg],
-        # Cho phep noi ngan sach 10% (dung bang co che budget_relax cua backend)
+        # Nới ngân sách 10%, khớp cơ chế budget_relax của backend
         "all_price_lte": int(budget[1] * 1.1),
     }
     if must.get("ram_min"):
@@ -161,4 +161,4 @@ for i, (mo_ta, text, seg, need_label, activities, priorities, must) in enumerate
 
 out = ROOT / "personas" / "personas.json"
 out.write_text(json.dumps(personas, ensure_ascii=False, indent=2), encoding="utf-8")
-print(f"\nDa sinh {len(personas)} persona -> {out}")
+print(f"\nĐã sinh {len(personas)} persona -> {out}")
