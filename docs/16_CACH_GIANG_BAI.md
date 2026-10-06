@@ -146,8 +146,10 @@ rồi mình góp ý. Câu hỏi hội đồng đã soạn cho từng mô hình n
 | TV1 — **Bước 3 huấn luyện: thử 64 tổ hợp** (`grid_search` ở `models/classifier.py`, tính tay 64 x 5 = 320), `uniform` vs `distance` (có khối tổng kết 30 giây, docs/15 mục 1.6) | ✅ (câu kiểm tra k = 4 còn treo) |
 | Bản đồ tìm file: công thức 4 câu hỏi (docs/18) | ✅ (người học đã thử đoán 3 việc, 1 đúng, 2 sai, đã giải thích) |
 | TV1 — `predict_proba` = số phiếu ÷ 7; ngưỡng tin cậy 0,6 (`segment.service.ts:138`) và hàng đợi Duyệt nhãn; chia 80/20; rò rỉ dữ liệu (đã đo: 0,7938 so với 0,7923, ảnh hưởng nhỏ); đọc ma trận nhầm lẫn | ✅ |
-| TV1 — precision / recall / macro-F1 (từ ma trận nhầm lẫn); baseline; ablation; vòng đời mô hình + huấn luyện lại từ phản hồi; câu hỏi hội đồng | ⏳ bước kế tiếp: precision/recall/macro-F1 |
-| (cũ) TV1 — tìm 7 láng giềng + bỏ phiếu (`predict_proba`, `kneighbors`; `models/classifier.py`, `main.py` dòng 96) | ⏳ |
+| TV1 — precision / recall / F1 / macro-F1 (đọc đoạn code `train.py:69-72`); baseline dummy 0,128 và luật tay 0,632; ablation (chỉ cắt 4 thành phần, không xếp hạng được 11 đặc trưng) | ✅ |
+| TV1 — vòng đời mô hình: Dự phòng / Đang sử dụng, cổng 2 quy tắc khi "Đưa vào sử dụng" (`models.routes.ts:63`), `LATEST` (`registry.py`); nút "Xuất nhãn đã duyệt (CSV)" khép vòng phản hồi (Duyệt nhãn, docs/15 mục 1.14) | ✅ (câu kiểm tra X/Y/Z đã chữa) |
+| TV1 — **ôn câu hỏi hội đồng** (docs/15 mục 1.9, 1.0), tập trả lời miệng không nhìn tài liệu | **Bước kế tiếp** |
+| (cũ) TV1 — tìm 7 láng giềng + bỏ phiếu (`predict_proba`, `kneighbors`) | ✅ (đã học ở bài 1) |
 | TV1 — huấn luyện: `GridSearchCV`, `Pipeline` chống rò rỉ dữ liệu, macro-F1 | ⏳ |
 | Quản lý mô hình: huấn luyện chỉ lưu bản Dự phòng, `Đưa vào sử dụng` mới đổi `LATEST`; có nút Xóa bản dư (không xóa Champion) | ✅ đã làm trong code, chưa giảng |
 | TV1 — hàng đợi Duyệt nhãn / khóa nhãn (`applySegmentLabel`) | ⏳ |
