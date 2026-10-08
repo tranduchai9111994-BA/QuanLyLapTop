@@ -102,6 +102,11 @@ def run_training() -> dict:
     # Bước 4: Dự đoán 200 máy test (chưa từng thấy trong huấn luyện)
     # best_pipe sẽ chuẩn hóa 200 máy này dùng σ từ 800 máy (không rò rỉ dữ liệu)
     y_pred_test = best_pipe.predict(X_test[MODEL_A_FEATURES])
+    # ⚠ DÙNG MACRO-F1 CHỨ KHÔNG PHẢI ACCURACY (lý do: dữ liệu lệch lớp)
+    # Dữ liệu: GAMING 33,5%, OFFICE 34,4%, ULTRABOOK 20%, CREATOR 12% ← lệch lớp
+    # Nếu dùng accuracy, lớp CREATOR (12%) có thể bị "hy sinh" mà ta không nhận ra
+    # Macro-F1 = (F1_GAMING + F1_OFFICE + F1_ULTRABOOK + F1_CREATOR) / 4 → buộc chăm sóc đều 4 lớp
+    # Ví dụ: accuracy 0.85 (cao ảo) nhưng CREATOR recall = 0.375 (yếu) → macro-F1 bắt được (0.787)
     test_f1_macro = f1_score(y_test, y_pred_test, average="macro")  # macro-F1 trên test (thực tế)
     report = classification_report(y_test, y_pred_test, output_dict=True)  # precision, recall, F1 per class
     cm = confusion_matrix(y_test, y_pred_test, labels=sorted(y.unique()))  # ma trận nhầm lẫn 4×4
