@@ -28,10 +28,21 @@ ARTIFACTS_DIR = Path(__file__).resolve().parents[2] / "artifacts"
 
 
 def dataset_hash(path: Path) -> str:
+    """Tính hash SHA256 của file CSV để lưu vào metadata; dùng phát hiện khi dữ liệu đổi."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def load_dataset() -> tuple[pd.DataFrame, Path]:
+    """BƯỚC 1: Đọc 1.000 laptop từ CSV, tra bảng benchmark CPU/GPU để có điểm số, làm giàu các cột số.
+
+    Đầu vào:
+    - catalog_vn.csv: 1.000 máy với tên CPU/GPU, cấu hình (RAM, SSD...)
+    - cpu_benchmark.csv, gpu_benchmark.csv: bảng tra cứu điểm hiệu năng
+
+    Đầu ra:
+    - DataFrame 1.000 máy với 11 cột số (sau chuẩn hóa) + nhãn segment
+    - Đường dẫn file CSV (để tính hash)
+    """
     catalog_path = DATA_DIR / "processed" / "catalog_vn.csv"
     catalog = pd.read_csv(catalog_path)
     format_errors = check_catalog_format(catalog)
@@ -39,17 +50,36 @@ def load_dataset() -> tuple[pd.DataFrame, Path]:
         raise ValueError("File catalog_vn.csv sai định dạng: " + " | ".join(format_errors))
     cpu_bench = pd.read_csv(DATA_DIR / "processed" / "cpu_benchmark.csv")
     gpu_bench = pd.read_csv(DATA_DIR / "processed" / "gpu_benchmark.csv")
-    enriched = enrich_catalog(catalog, cpu_bench, gpu_bench)
+    enriched = enrich_catalog(catalog, cpu_bench, gpu_bench)  # tra benchmark, thêm cột cpu_score, gpu_score, ppi...
     return enriched, catalog_path
 
 
 def run_training() -> dict:
-    """Huấn luyện + lưu phiên bản mới, trả về metadata của bản vừa train (KHÔNG đổi mô hình đang dùng)."""
-    df, catalog_path = load_dataset()  # Bước 1: đọc CSV 1.000 máy, tra điểm CPU/GPU để có các cột số
+    """CHẠY TOÀN BỘ HUẤN LUYỆN TRÊN 1.000 MÁY — 11 bước (xem dòng 48-150).
+
+    Luồng:
+    1. Đọc dữ liệu (load_dataset)
+    2. Chia 80/20 (800 học, 200 test)
+    3. GridSearchCV thử 64 tổ hợp × 5 phần = 320 lần → chọn k, metric, weights tốt nhất
+    4. Chấm điểm trên 200 máy test
+    5. So sánh 2 baseline (dummy 0.128, rule 0.632)
+    6. Vẽ đường cong k (macro-F1 vs k)
+    7. Lưu model.joblib vào thư mục phiên bản (tên ngày giờ)
+    8. Ghi metadata.json (tham số tốt nhất, điểm số, k_curve)
+    9. Vẽ 2 ảnh (ma trận nhầm lẫn, đường cong k)
+    10. Huấn luyện Mô hình C (câu tự do: TF-IDF + kNN)
+    11. Ghi LATEST (chỉ lần đầu; các lần sau đổi bằng tay "Đưa vào sử dụng")
+
+    Trả về: metadata dict (tham số, điểm, baseline, k_curve)
+    ⚠ KHÔNG đổi LATEST tự động (đã quy định D-08)
+    """
+    df, catalog_path = load_dataset()  # Bước 1: đọc 1.000 máy, tra benchmark
     X = df
     y = df["segment"]
 
-    # Bước 2: chia 80% (800 máy) để học, 20% (200 máy) để kiểm tra; giữ đúng tỷ lệ 4 phân khúc
+    # Bước 2: chia 80% (800 máy) để học, 20% (200 máy) để kiểm tra
+    # stratify=y: giữ đúng tỷ lệ 4 phân khúc trong cả train lẫn test (OFFICE, GAMING, ULTRABOOK, CREATOR)
+    # random_state=42: cố định seed để mỗi lần chạy chia giống nhau
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, stratify=y, random_state=RANDOM_STATE
     )
@@ -60,16 +90,21 @@ def run_training() -> dict:
         X_test.to_csv(golden_path, index=False)
         print(f"Đã đóng băng golden_test.csv ({len(X_test)} mẫu)")
 
-    search = grid_search(X_train, y_train)  # Bước 3: thử mọi tổ hợp (k, cách đo, trọng số phiếu), chấm bằng kiểm thử chéo 5 phần
-    best_pipe = search.best_estimator_
-    best_params = search.best_params_
+    # Bước 3: GridSearchCV thử 64 tổ hợp (16 k × 2 weights × 2 metric) × 5 phần CV = 320 lần học
+    # Mỗi lần: fit StandardScaler + kNN trên 640 máy, test trên 160 máy, ghi macro-F1
+    # Chọn bộ tham số (k, weights, metric) có macro-F1 cao nhất trung bình 5 phần
+    search = grid_search(X_train, y_train)
+    best_pipe = search.best_estimator_  # Pipeline đã fit (chuẩn hóa + kNN) với bộ tham số tốt nhất
+    best_params = search.best_params_   # {"knn__n_neighbors": 7, "knn__weights": "uniform", "knn__metric": "euclidean"}
     print("Best params:", best_params)
-    print(f"CV f1_macro mean={search.best_score_:.4f}")
+    print(f"CV f1_macro mean={search.best_score_:.4f}")  # macro-F1 trung bình 5 phần
 
-    y_pred_test = best_pipe.predict(X_test[MODEL_A_FEATURES])  # Bước 4: chấm điểm trên 200 máy chưa từng thấy
-    test_f1_macro = f1_score(y_test, y_pred_test, average="macro")
-    report = classification_report(y_test, y_pred_test, output_dict=True)
-    cm = confusion_matrix(y_test, y_pred_test, labels=sorted(y.unique()))
+    # Bước 4: Dự đoán 200 máy test (chưa từng thấy trong huấn luyện)
+    # best_pipe sẽ chuẩn hóa 200 máy này dùng σ từ 800 máy (không rò rỉ dữ liệu)
+    y_pred_test = best_pipe.predict(X_test[MODEL_A_FEATURES])
+    test_f1_macro = f1_score(y_test, y_pred_test, average="macro")  # macro-F1 trên test (thực tế)
+    report = classification_report(y_test, y_pred_test, output_dict=True)  # precision, recall, F1 per class
+    cm = confusion_matrix(y_test, y_pred_test, labels=sorted(y.unique()))  # ma trận nhầm lẫn 4×4
 
     # Bước 5: 2 mốc so sánh (đoán lớp đông nhất / luật if-else tự viết)
     dummy = dummy_baseline(y_train)
@@ -88,21 +123,22 @@ def run_training() -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
     joblib.dump(best_pipe, out_dir / "model.joblib")
 
-    # Bước 8: ghi tham số tốt nhất, điểm số, số mẫu... vào metadata.json (file đọc được bằng VS Code)
+    # Bước 8: Lưu metadata (JSON) — tất cả thông tin huấn luyện vào 1 file đọc được
+    # Dùng để báo cáo, demo, so sánh phiên bản khác nhau, bảo vệ trước hội đồng
     metadata = {
-        "version": version,
+        "version": version,  # phiên bản (ngày giờ)
         "type": "classifier",
         "trained_at": datetime.now(timezone.utc).isoformat(),
-        "dataset_hash": dataset_hash(catalog_path),
-        "n_samples": len(df),
-        "class_counts": y.value_counts().to_dict(),
-        "best_params": best_params,
-        "cv_f1_macro_mean": float(search.best_score_),
-        "cv_f1_macro_std": float(search.cv_results_["std_test_score"][search.best_index_]),
-        "test_metrics": {"f1_macro": float(test_f1_macro), "report": report, "confusion_matrix": cm.tolist(), "labels": sorted(y.unique().tolist())},
-        "baseline": {"dummy_f1_macro": float(dummy_f1), "rule_f1_macro": float(rule_f1)},
-        "k_curve": curve,
-        "feature_list": MODEL_A_FEATURES,
+        "dataset_hash": dataset_hash(catalog_path),  # Hash của CSV input (phát hiện dữ liệu đổi)
+        "n_samples": len(df),  # 1000
+        "class_counts": y.value_counts().to_dict(),  # OFFICE 344, GAMING 335, ULTRABOOK 201, CREATOR 120
+        "best_params": best_params,  # k=7, weights=uniform, metric=euclidean
+        "cv_f1_macro_mean": float(search.best_score_),  # 0.7938 (CV trung bình 5 phần)
+        "cv_f1_macro_std": float(search.cv_results_["std_test_score"][search.best_index_]),  # dao động
+        "test_metrics": {"f1_macro": float(test_f1_macro), "report": report, "confusion_matrix": cm.tolist(), "labels": sorted(y.unique().tolist())},  # điểm test 200 máy
+        "baseline": {"dummy_f1_macro": float(dummy_f1), "rule_f1_macro": float(rule_f1)},  # mốc so sánh: 0.128, 0.632
+        "k_curve": curve,  # [(k=1, 0.7566), (k=3, 0.7647), ..., (k=31, 0.6968)] → dùng vẽ biểu đồ
+        "feature_list": MODEL_A_FEATURES,  # 11 đặc trưng: ram_gb, ssd_gb, cpu_score, ...
         "sklearn_version": sklearn.__version__,
     }
     (out_dir / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -135,11 +171,13 @@ def run_training() -> dict:
     metadata["text_model"] = text_meta
     (out_dir / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    # Bước 11: chỉ khi CHƯA có bản nào đang dùng (lần huấn luyện đầu tiên) mới ghi LATEST; các lần sau
-    # LATEST chỉ đổi khi bấm "Đưa vào sử dụng" (registry.save_latest), để huấn luyện không tự thay mô hình
+    # Bước 11: Ghi phiên bản LATEST (chỉ lần đầu; các lần sau = quyết định D-08)
+    # Quyết định thiết kế D-08: huấn luyện không tự đổi mô hình → phải bấm "Đưa vào sử dụng" tay
+    # Lý do: an toàn; người duyệt quyết định có chấp nhận bản này không trước khi replace production
     latest_path = ARTIFACTS_DIR / "LATEST"
     if not latest_path.exists():
         latest_path.write_text(version, encoding="utf-8")
+        print(f"⚠ Lần đầu: ghi LATEST = {version}. Các lần sau cần bấm 'Đưa vào sử dụng' tay (D-08)")
 
     print(f"Test macro-F1={test_f1_macro:.4f} (mục tiêu >= 0.75)")
     print(f"Vượt dummy: +{test_f1_macro - dummy_f1:.4f} (mục tiêu >= 0.30)")
