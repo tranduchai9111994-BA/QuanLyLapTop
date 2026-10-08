@@ -18,13 +18,15 @@ RANDOM_STATE = 42  # cố định để chạy lại ra cùng kết quả
 
 # Thử 64 tổ hợp = 16 k × 2 weights × 2 metric để tìm bộ tham số tốt nhất
 # - k: 1→31 lẻ (range(1, 32, 2) = [1,3,5,7,...,31]); lẻ để không hòa phiếu
-#   ⚠ Áp lực: k=1 khớp quá, k=31 mất đặc điểm → tìm cân bằng
+#   Nguyên tắc: k ≤ √n (n=800 máy huấn luyện) → √800≈28; chọn tới 31 là hợp lý
+#   ⚠ Áp lực: k=1 khớp quá (overfitting), k=31 mất đặc điểm (underfitting) → tìm cân bằng
+#   Bằng chứng: metadata.json k_curve, k=7 cao nhất (0.794), k≥31 giảm dần
 # - weights: uniform (mỗi 7 láng giềng bỏ 1 phiếu bằng nhau)
 #          vs distance (láng giềng gần → phiếu nặng 1/khoảng_cách, xa → nhẹ)
 # - metric: euclidean (Pytago: √(Σ(x-y)²), giữ kích cỡ RAM/CPU)
 #        vs manhattan (lưới: Σ|x-y|, chịu ngoại lệ hơn)
 PARAM_GRID = {  # 16 x 2 x 2 = 64 tổ hợp
-    "knn__n_neighbors": list(range(1, 32, 2)),  # k = 1, 3, 5, 7, ..., 31
+    "knn__n_neighbors": list(range(1, 32, 2)),  # k = 1, 3, 5, 7, ..., 31; giới hạn: k ≤ √n
     "knn__weights": ["uniform", "distance"],  # cách bỏ phiếu của 7 láng giềng
     "knn__metric": ["euclidean", "manhattan"],  # cách đo khoảng cách
 }
