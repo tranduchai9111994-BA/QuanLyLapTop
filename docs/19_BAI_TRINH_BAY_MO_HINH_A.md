@@ -256,9 +256,11 @@ mô hình không ghi đè quyết định của người."
 1. Tìm `Predator Helios 0051`, bấm **Sửa**, bấm nút AI như trên.
 2. Mong đợi: xác suất `Văn phòng 14% / Mỏng nhẹ 43% / Gaming 0% / Đồ họa 43%`; "3 Đồ họa, 3 Mỏng nhẹ, 1 Văn phòng";
    khoảng cách `1.80 ... 2.29`; nhãn **"Cần xác minh"** và dòng cảnh báo "Hệ thống chưa chắc chắn".
-3. Bấm **Hủy**.
+3. Giao diện còn hiện "Bạn đang chọn phân khúc khác với AI" vì ô Phân khúc của máy này đang là Đồ họa – Kỹ thuật
+   (nhãn thật), khác với nhãn AI hiện ở dòng đầu (Mỏng nhẹ).
+4. Bấm **Hủy** (hoặc phím Esc).
    *Lời nói:* "Hai nhóm hòa 3-3 nên độ tin cậy 43%, dưới ngưỡng 60%, máy vào hàng đợi cho người xác nhận.
-   Khi hòa phiếu giao diện hiện nhãn đứng sau là Mỏng nhẹ, nhưng đó là hòa."
+   Khi hòa phiếu giao diện hiện Mỏng nhẹ chỉ do thứ tự sắp xếp trong code (Phần 2, mục D3), không phải AI nghiêng về Mỏng nhẹ."
 
 **Demo 3: để trống phân khúc, AI tự gán khi Lưu**
 1. **+ Thêm mới**: CPU `Intel Core i9-13900H`, GPU `RTX 4070`, RAM 32, SSD 1024, màn 16", 240 Hz, nặng 2,6 kg, giá 45 triệu,
@@ -267,8 +269,11 @@ mô hình không ghi đè quyết định của người."
 3. **Xóa máy thử** sau khi demo (nút Xóa ở dòng đó). Demo này ghi dữ liệu thật vào DB nên bắt buộc dọn.
 
 **Demo 4: hàng đợi Duyệt nhãn**
-Menu **Dữ liệu → Duyệt nhãn** (huy hiệu số máy đang chờ). Mỗi thẻ có phân bố xác suất, ô chọn phân khúc, checkbox
-"Khóa nhãn, không cho mô hình thay đổi", nút Duyệt. Hiện có 6 máy MODEL ở trạng thái NEEDS_REVIEW chờ duyệt.
+Menu **Dữ liệu → Duyệt nhãn** (huy hiệu số 6). Mỗi thẻ có phân bố xác suất, ô chọn phân khúc, checkbox
+"Khóa nhãn, không cho mô hình thay đổi", nút **Duyệt (giữ nhãn AI)**; góc trên có nút **Xuất nhãn đã duyệt (CSV)**.
+**Lưu ý trung thực:** 6 thẻ này là **dữ liệu mẫu** do `backend/scripts/seedReviewQueue.ts` tạo (cột `predictedBy` =
+`demo-seed-review-queue`), không phải mô hình hiện tại đoán. Dấu hiệu: xác suất như 52%, 47% không phải bội số của 1/7.
+Mô hình hiện tại (k = 7, uniform) chỉ ra được 0%, 14%, 29%, 43%, 57%, 71%, 86%, 100%. Nếu hội đồng hỏi thì nói đúng như vậy.
 
 ---
 
@@ -322,3 +327,571 @@ Menu **Dữ liệu → Duyệt nhãn** (huy hiệu số máy đang chờ). Mỗi
 - [ ] Nêu được ba số của macro-F1 (0,787 test; 0,794 GridSearch; 0,773 chạy lại) và biết khi nào dùng số nào.
 - [ ] Làm trôi chảy Demo 1 và Demo 2, kết thúc bằng nút **Hủy**.
 - [ ] Biết nói "chưa đo" với những gì chưa đo (so với Random Forest, xếp hạng 11 đặc trưng).
+
+---
+---
+
+# PHẦN 2 — ĐI SÂU: từng dòng code, từng phép tính, kèm thao tác trên giao diện
+
+> **Cách đọc phần này:** đi theo đúng thứ tự một lần bấm nút trên giao diện, từ trình duyệt → backend → ML → quay về.
+> Mỗi mục có 4 khối: **(a) Trên giao diện** bấm gì, thấy gì · **(b) Code** từng dòng, câu mẫu "A gọi B" ·
+> **(c) Tính từng bước** bằng số thật · **(d) Tổng kết 30 giây**.
+> Số liệu lấy bằng cách chạy chính `model.joblib` đang dùng (`clf-2026.09.27-160831`) trên `data/processed/catalog_vn.csv`,
+> và đã so khớp với giao diện ngày 10/10/2026. Máy ví dụ xuyên suốt: **Acer Predator Helios 0051** (nhãn thật CREATOR,
+> thuộc 200 máy giữ riêng nên mô hình chưa từng "thấy").
+
+**Bản đồ cả chuyến đi của một lần bấm nút**
+
+```
+[D1] Trình duyệt  SegmentSuggester.tsx:48   api.post('/laptops/predict-segment')
+        │
+[D2] Backend      laptops.routes.ts:258     -> predictSegment()  segment.service.ts:59
+        │         tra điểm CPU/GPU, tính ppi, gói 11 đặc trưng, mlClient.post('/predict-segment')
+        │
+[D3] ML           main.py:88 predict_segment()
+        │           [D4] chuẩn hóa: log2 + z-score  (features.py:188)
+        │           [D5] đo khoảng cách tới 800 máy, lấy 7 máy gần nhất
+        │           [D6] đếm phiếu -> xác suất, chọn nhãn
+        │
+[D2] Backend      trả JSON cho trình duyệt -> hiện "Dự đoán ... %", 7 khoảng cách
+        │
+[D7] Khi bấm Lưu  applySegmentLabel()  segment.service.ts:106 -> so ngưỡng 0,6 -> VERIFIED / NEEDS_REVIEW
+```
+
+Những thứ dùng ở D4–D6 (trung bình, độ lệch chuẩn, 800 máy, k = 7) đều được **tạo ra lúc huấn luyện** (mục D8–D10).
+
+---
+
+## D1. Trình duyệt: nút "AI gợi ý phân khúc từ cấu hình"
+
+**(a) Trên giao diện.** Dữ liệu → Laptop → tìm `Predator Helios 0051` → **Sửa** → bấm **AI gợi ý phân khúc từ cấu hình**.
+Nút này **chỉ xem trước, không lưu** (bấm Hủy là không có gì thay đổi).
+
+**(b) Code** — `frontend/src/components/admin/SegmentSuggester.tsx`
+
+```tsx
+// dòng 39-45: kiểm tra đủ dữ liệu trước khi gọi
+const requiredBase = ['cpuId', 'gpuId', 'ramGb', 'ssdGb', 'screenInch', 'weightKg'];
+...
+if (missingBase.length || missingResolution) {
+  message.warning('Hãy nhập đủ CPU, GPU, RAM, SSD, màn hình, độ phân giải và trọng lượng trước.');
+  return;
+}
+// dòng 48-59: gửi thông số trong form sang backend
+const r = await api.post('/laptops/predict-segment', {
+  cpuId: v.cpuId, gpuId: v.gpuId,          // chỉ gửi MÃ CPU/GPU, chưa phải điểm
+  ramGb: v.ramGb, ssdGb: v.ssdGb, screenInch: v.screenInch, resWidth, resHeight,
+  refreshHz: v.refreshHz ?? 60,            // bỏ trống -> 60 Hz
+  srgb100: !!v.srgb100,
+  weightKg: v.weightKg,
+  batteryWh: v.batteryWh ?? 55,            // bỏ trống -> 55 Wh
+});
+// dòng 62-63: ô Phân khúc đang trống thì điền sẵn nhãn AI, đã chọn rồi thì không ghi đè
+if (!form.getFieldValue('segment')) form.setFieldValue('segment', p.label);
+```
+
+- **[CẤU TRÚC]** `api.post(đường dẫn, dữ liệu)`; khối `try / catch / finally`.
+- **[DỮ LIỆU/CẤU HÌNH]** danh sách ô bắt buộc; giá trị mặc định 60 Hz, 55 Wh.
+- Dòng 62-63 giải thích Demo 2: ô Phân khúc của Helios đã có "Đồ họa – Kỹ thuật" nên không bị ghi đè, và giao diện báo
+  "Bạn đang chọn phân khúc khác với AI".
+
+**Câu mẫu:** *"Hàm `suggest` trong `SegmentSuggester.tsx` (dòng 27, lời gọi ở dòng 48) gọi sang backend `/laptops/predict-segment` để **lấy
+phân khúc dự đoán**. Nó gửi **mã CPU/GPU và 9 thông số trong form**, nhận về **nhãn, xác suất 4 lớp và 7 láng giềng**."*
+
+---
+
+## D2. Backend: `predictSegment` gói 11 đặc trưng
+
+**(a) Trên giao diện.** Không thấy trực tiếp; nếu CPU/GPU đã chọn không còn trong bảng benchmark, giao diện hiện thông báo "Không tìm thấy CPU/GPU đã chọn…" (dòng 66-72).
+
+**(b) Code** — `backend/src/modules/laptops/laptops.routes.ts:258-260` nhận yêu cầu, chỉ cho STAFF/ADMIN:
+
+```ts
+laptopsRouter.post('/predict-segment', requireAuth, requireRole('STAFF', 'ADMIN'), async (req, res, next) => {
+  res.json({ success: true, data: await predictSegment(req.body) });   // chỉ dự đoán, không lưu
+```
+
+`backend/src/modules/laptops/segment.service.ts:59-100`:
+
+```ts
+const [cpu, gpu] = await Promise.all([                       // 61-64: tra BẢNG BENCHMARK lấy điểm
+  prisma.cpuBenchmark.findUnique({ where: { id: f.cpuId } }),
+  prisma.gpuBenchmark.findUnique({ where: { id: f.gpuId } }),
+]);
+if (!cpu || !gpu) { throw new AppError(404, 'BENCHMARK_NOT_FOUND', ...) }   // 66-72
+const r = await mlClient.post('/predict-segment', {          // 74: khớp @app.post("/predict-segment") bên main.py
+  items: [{
+    cpu_score: cpu.score, gpu_score: gpu.score,              // 77-78: điểm thang 0-100
+    gpu_dedicated: gpu.dedicated ? 1 : 0,                    // 79: card rời -> 1
+    ram_gb: f.ramGb, ssd_gb: f.ssdGb, screen_inch: f.screenInch,
+    ppi: computePpi(f.resWidth, f.resHeight, f.screenInch),  // 83: mật độ điểm ảnh (Pytago)
+    refresh_hz: f.refreshHz ?? 60,
+    srgb_100: f.srgb100 ? 1 : 0,
+    weight_kg: f.weightKg,
+    battery_wh: f.batteryWh ?? 55,
+  }],
+});
+const item = r.data.items[0];                                // 92: gửi 1 máy nên lấy phần tử đầu
+```
+
+**(c) Tính từng bước: ppi của Helios 0051** (`laptops.service.ts:10-11`: `Math.sqrt(w² + h²) / inch`)
+
+| Bước | Phép tính | Kết quả |
+|---|---|---|
+| Đầu vào | độ phân giải 2560 x 1600, màn 13,6" (cột Rộng/Cao/Màn hình trên trang Laptop) | |
+| 1 | 2560² = 2560 x 2560 | 6.553.600 |
+| 2 | 1600² = 1600 x 1600 | 2.560.000 |
+| 3 | cộng | 9.113.600 |
+| 4 | √9.113.600 (đường chéo tính bằng điểm ảnh) | 3.018,87 |
+| 5 | 3.018,87 ÷ 13,6 | **221,976** |
+
+Bảng 11 đặc trưng backend gửi đi cho Helios 0051:
+
+| ram_gb | ssd_gb | cpu_score | gpu_score | screen_inch | ppi | refresh_hz | weight_kg | battery_wh | gpu_dedicated | srgb_100 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 32 | 512 | 42,4324 | 16,6667 | 13,6 | 221,976 | 120 | 1,74 | 55 | 1 | 1 |
+
+**Lưu ý nói thẳng:** khi bỏ trống pin, backend điền 55 Wh, còn lúc huấn luyện pin thiếu được điền bằng trung vị cùng phân khúc
+(`features.py:148-150`). Hai cách điền khác nhau; ảnh hưởng nhỏ vì pin chỉ là 1 trong 11 cột.
+
+**(d) Tổng kết 30 giây.** Backend đổi mã CPU/GPU thành điểm, tính ppi, gói đủ 11 đặc trưng rồi gọi ML.
+`SegmentSuggester.tsx:48 -> laptops.routes.ts:258 -> segment.service.ts:74 -> main.py:88`.
+
+---
+
+## D3. ML: `predict_segment` từng dòng
+
+**(a) Trên giao diện.** Kết quả của hàm này chính là khối "Dự đoán: …", 4 dòng phần trăm và 7 dòng "#n · khoảng cách".
+
+**(b) Code** — `ml-service/app/main.py:88-122`
+
+| Dòng | Code | Làm gì |
+|---|---|---|
+| 88 | `@app.post("/predict-segment")` | **[CẤU TRÚC]** gắn hàm vào đường dẫn; phải khớp chữ với `mlClient.post` của backend |
+| 91-92 | `if registry.model is None: raise HTTPException(503, ...)` | chưa nạp mô hình thì báo lỗi rõ |
+| 93 | `X = pd.DataFrame(req.items)` | biến JSON thành bảng: 1 máy = 1 hàng, 11 cột |
+| 95-97 | `for col in MODEL_A_FEATURES: ... X[col] = 0` | lưới an toàn nếu thiếu cột |
+| 98 | `proba = registry.model.predict_proba(X[MODEL_A_FEATURES])` | **dòng chính:** chuẩn hóa → 7 láng giềng → tỷ lệ phiếu (D4–D6) |
+| 99 | `labels = registry.model.classes_` | thứ tự 4 nhãn: `CREATOR, GAMING, OFFICE, ULTRABOOK` (theo bảng chữ cái) |
+| 103-104 | `prep = ...["prep"]`, `knn = ...["knn"]` | tách Pipeline thành 2 bước để lấy riêng láng giềng |
+| 105 | `knn.kneighbors(prep.transform(...))` | trả **7 khoảng cách** và **vị trí** 7 máy trong 800 máy học |
+| 106 | `train_labels = knn.classes_[knn._y]` | đổi nhãn đã mã hóa (0,1,2,3) về tên nhãn |
+| 111 | `order = np.argsort(row_proba)[::-1]` | sắp xác suất giảm dần |
+| 113-114 | `"label": labels[order[0]]`, `"proba": ...` | nhãn đứng đầu và độ tin cậy của nó |
+| 116 | `"distribution": {...}` | 4 phần trăm hiện trên giao diện |
+| 117-120 | `"neighbors": [...]` | 7 dòng "#n · khoảng cách" (làm tròn 4 chữ số; giao diện làm tròn 2) |
+| 122 | `return {"items": results, "modelVersion": registry.version}` | trả về backend |
+
+**(c) Vì sao hòa 3-3 lại hiện "Mỏng nhẹ"? (dòng 111)**
+
+| Bước | Giá trị |
+|---|---|
+| `row_proba` theo thứ tự `classes_` [CREATOR, GAMING, OFFICE, ULTRABOOK] | [0,4286; 0; 0,1429; 0,4286] |
+| `np.argsort` sắp tăng dần (trả vị trí) | GAMING, OFFICE, CREATOR, ULTRABOOK |
+| `[::-1]` đảo ngược thành giảm dần | ULTRABOOK, CREATOR, OFFICE, GAMING |
+| `labels[order[0]]` | **ULTRABOOK** (= "Mỏng nhẹ – Di động") |
+
+CREATOR và ULTRABOOK bằng nhau 0,4286; ai đứng đầu chỉ do cách sắp xếp xử lý hai số bằng nhau. Vì thế khi hòa,
+**nhãn hiển thị không có ý nghĩa**; điều quan trọng là độ tin cậy 43% < 60% nên máy phải được người xác minh.
+
+**(d) Tổng kết 30 giây.** `predict_segment` nhận 11 số, gọi `predict_proba` (dòng 98) để lấy tỷ lệ phiếu, gọi
+`kneighbors` (dòng 105) để lấy 7 máy đã bỏ phiếu, rồi trả nhãn cao nhất. **Câu mẫu:** *"Hàm A `predictSegment`
+(`segment.service.ts:74`) gọi hàm B `predict_segment` (`main.py:88`) để lấy phân khúc. B nhận 11 đặc trưng, xử lý qua
+dòng 98 (chuẩn hóa, 7 láng giềng, đếm phiếu) và dòng 105 (lấy danh sách láng giềng), rồi trả nhãn, xác suất và 7 khoảng cách
+cho A."*
+
+---
+
+## D4. Bên trong `predict_proba` (1): chuẩn hóa log2 + z-score
+
+**(a) Trên giao diện.** Không hiện; nhưng nếu thiếu bước này, khoảng cách hiện trên giao diện sẽ bị cột ppi (số hàng trăm)
+"nuốt" hết các cột khác.
+
+**(b) Code** — `ml-service/app/data/features.py:196-215`
+
+```python
+("log", Pipeline([
+    ("impute", SimpleImputer(strategy="median")),                          # ô trống -> trung vị
+    ("log", FunctionTransformer(np.log2, feature_names_out="one-to-one")), # 32 -> 5, 512 -> 9
+    ("sc", StandardScaler()),                                              # (x - TB) / ĐLC
+]), NUMERIC_LOG),
+("num", Pipeline([("impute", ...), ("sc", StandardScaler())]), NUMERIC),
+("bin", "passthrough", BINARY),                                            # 0/1 giữ nguyên
+```
+
+Lúc dự đoán, `StandardScaler` **không tính lại** trung bình/độ lệch chuẩn; nó dùng số đã học trên 800 máy, lưu trong
+`model.joblib`.
+
+**(c) Tính từng bước cho Helios 0051.** Công thức `z = (giá trị − TB) ÷ ĐLC`. TB, ĐLC lấy từ `model.joblib`; đã tính lại
+độc lập trên 800 máy học (độ lệch chuẩn kiểu "chia n", tức Excel `STDEV.P`) và khớp đến 4 chữ số.
+
+| Cột | Giá trị | Sau log2 | TB | ĐLC | Thay số | z |
+|---|---|---|---|---|---|---|
+| ram_gb | 32 | 5 (vì 2⁵ = 32) | 3,7938 | 0,7913 | (5 − 3,7938) ÷ 0,7913 = 1,2062 ÷ 0,7913 | **1,5243** |
+| ssd_gb | 512 | 9 (vì 2⁹ = 512) | 8,9125 | 0,7809 | (9 − 8,9125) ÷ 0,7809 = 0,0875 ÷ 0,7809 | **0,1120** |
+| cpu_score | 42,4324 | | 48,9933 | 20,5806 | (42,4324 − 48,9933) ÷ 20,5806 = −6,5609 ÷ 20,5806 | **−0,3188** |
+| gpu_score | 16,6667 | | 30,9521 | 28,9868 | (16,6667 − 30,9521) ÷ 28,9868 = −14,2854 ÷ 28,9868 | **−0,4928** |
+| screen_inch | 13,6 | | 15,3732 | 0,9616 | (13,6 − 15,3732) ÷ 0,9616 = −1,7732 ÷ 0,9616 | **−1,8442** |
+| ppi | 221,976 | | 156,7983 | 34,0465 | (221,976 − 156,7983) ÷ 34,0465 = 65,1777 ÷ 34,0465 | **1,9144** |
+| refresh_hz | 120 | | 98,7750 | 46,5490 | (120 − 98,775) ÷ 46,549 = 21,225 ÷ 46,549 | **0,4560** |
+| weight_kg | 1,74 | | 1,8325 | 0,5652 | (1,74 − 1,8325) ÷ 0,5652 = −0,0925 ÷ 0,5652 | **−0,1636** |
+| battery_wh | 55 | | 58,8963 | 14,5795 | (55 − 58,8963) ÷ 14,5795 = −3,8963 ÷ 14,5795 | **−0,2672** |
+| gpu_dedicated | 1 | | | | giữ nguyên | **1** |
+| srgb_100 | 1 | | | | giữ nguyên | **1** |
+
+**Cách đọc z:** z = 1,9144 ở ppi nghĩa là màn Helios nét hơn trung bình gần 2 "độ lệch chuẩn"; z = −1,8442 ở màn hình
+nghĩa là nhỏ hơn hẳn trung bình (13,6" so với 15,37"). Sau bước này mọi cột cùng một thước đo.
+
+**Tự kiểm tra:** lệnh xem TB/ĐLC ở docs/17; trong Excel, `=AVERAGE(...)` và `=STDEV.P(...)` trên cột tương ứng của 800 máy
+học (RAM, SSD lấy `=LOG(x;2)` trước).
+
+**(d) Tổng kết 30 giây.** RAM/SSD lấy log2 rồi chuẩn hóa, 7 cột số chuẩn hóa thẳng, 2 cột 0/1 giữ nguyên. Thước đo lấy từ
+800 máy học, không tính lại lúc dự đoán.
+
+---
+
+## D5. Bên trong `predict_proba` (2): đo khoảng cách, lấy 7 máy gần nhất
+
+**(a) Trên giao diện.** 7 dòng `#1 · khoảng cách 1.80` … `#7 · khoảng cách 2.29` ở Demo 2.
+
+**(b) Code.** Không có hàm tự viết; `KNeighborsClassifier` (khai báo ở `classifier.py:39`) với `metric="euclidean"`,
+`n_neighbors=7` đã chọn lúc huấn luyện. Nó so máy mới với **cả 800 máy** đã ghi nhớ (đã kiểm: `knn._fit_X` đúng bằng 800 máy
+học sau chuẩn hóa).
+
+**(c) Tính từng bước: khoảng cách Helios 0051 → láng giềng #1 Gigabyte G5 0276** (z của máy #1 xem docs/15 mục 1.13)
+
+| Cột | z Helios | z Gigabyte | Hiệu | Hiệu² |
+|---|---|---|---|---|
+| ram_gb | 1,5243 | 0,2606 | 1,2637 | 1,5969 |
+| ssd_gb | 0,1120 | 0,1120 | 0 | 0 |
+| cpu_score | −0,3188 | −0,4370 | 0,1182 | 0,0140 |
+| gpu_score | −0,4928 | −0,1335 | −0,3594 | 0,1291 |
+| screen_inch | −1,8442 | −2,1561 | 0,3120 | 0,0973 |
+| ppi | 1,9144 | 2,8948 | −0,9804 | 0,9612 |
+| refresh_hz | 0,4560 | 0,4560 | 0 | 0 |
+| weight_kg | −0,1636 | 0,4556 | −0,6193 | 0,3835 |
+| battery_wh | −0,2672 | −0,0615 | −0,2058 | 0,0423 |
+| gpu_dedicated | 1 | 1 | 0 | 0 |
+| srgb_100 | 1 | 1 | 0 | 0 |
+| | | | **Tổng** | **3,2244** |
+
+Euclidean = √3,2244 = **1,7957** (giao diện làm tròn **1.80**). Nếu dùng Manhattan thì cộng trị tuyệt đối của cột Hiệu:
+1,2637 + 0,1182 + 0,3594 + 0,3120 + 0,9804 + 0,6193 + 0,2058 = **3,8588**. Hai cách cho số khác nhau, nhưng thứ tự gần/xa
+thường giống nhau, nên điểm cuối cùng tương đương (Phần 1 mục 4).
+
+Làm như vậy với cả 800 máy, giữ 7 số nhỏ nhất:
+
+| # | Máy | Nhãn | Khoảng cách | Giao diện hiện |
+|---|---|---|---|---|
+| 1 | Gigabyte G5 0276 | CREATOR | 1,7957 | 1.80 |
+| 2 | Dell G15 0228 | CREATOR | 2,0203 | 2.02 |
+| 3 | Apple MacBook Pro 0645 | CREATOR | 2,1111 | 2.11 |
+| 4 | HP ProBook 0390 | OFFICE | 2,1276 | 2.13 |
+| 5 | Huawei MateBook X 0557 | ULTRABOOK | 2,1909 | 2.19 |
+| 6 | Avita Liber 0426 | ULTRABOOK | 2,1944 | 2.19 |
+| 7 | Apple MacBook Air 0140 | ULTRABOOK | 2,2928 | 2.29 |
+
+**So với Demo 1 (TUF Gaming 0001):** láng giềng #1 có khoảng cách **0,00** vì TUF 0001 **nằm trong 800 máy học**, nên nó tìm
+thấy chính nó và tự bỏ một phiếu. Kết quả "100%" vì thế hơi dễ. Muốn demo công bằng thì dùng máy thuộc 200 máy giữ riêng
+như Helios 0051. (Láng giềng #4 của TUF là "LG Gram Pro 0094" mang nhãn GAMING, cho thấy dữ liệu tổng hợp có chỗ chưa tự nhiên.)
+
+**(d) Tổng kết 30 giây.** Mỗi máy mới được đo khoảng cách Pytago 11 chiều tới 800 máy, giữ 7 máy gần nhất. RAM, ppi và
+cân nặng đóng góp nhiều nhất cho khoảng cách 1,7957 (49,5%, 29,8%, 11,9% tổng).
+
+---
+
+## D6. Bên trong `predict_proba` (3): đếm phiếu ra xác suất
+
+**(a) Trên giao diện.** "Văn phòng 14% / Mỏng nhẹ 43% / Gaming 0% / Đồ họa 43%", nhãn **Cần xác minh**.
+
+**(b) Code.** `weights="uniform"` (chọn lúc huấn luyện, `classifier.py:30`): mỗi láng giềng 1 phiếu, xác suất = số phiếu ÷ 7.
+
+**(c) Tính từng bước**
+
+| Nhãn | Láng giềng | Số phiếu | Phép tính | Xác suất | Giao diện |
+|---|---|---|---|---|---|
+| CREATOR (Đồ họa) | #1, #2, #3 | 3 | 3 ÷ 7 | 0,4286 | 43% |
+| ULTRABOOK (Mỏng nhẹ) | #5, #6, #7 | 3 | 3 ÷ 7 | 0,4286 | 43% |
+| OFFICE (Văn phòng) | #4 | 1 | 1 ÷ 7 | 0,1429 | 14% |
+| GAMING | | 0 | 0 ÷ 7 | 0 | 0% |
+| | | **7** | | **1,0000** | |
+
+**Đối chiếu: nếu dùng `distance` (phiếu nặng = 1 ÷ khoảng cách)**
+
+| Nhãn | Cộng 1 ÷ khoảng cách | Tổng | Tỷ lệ |
+|---|---|---|---|
+| CREATOR | 1÷1,7957 + 1÷2,0203 + 1÷2,1111 = 0,5569 + 0,4950 + 0,4737 | 1,5256 | 1,5256 ÷ 3,3438 = **0,4562** |
+| ULTRABOOK | 1÷2,1909 + 1÷2,1944 + 1÷2,2928 = 0,4564 + 0,4557 + 0,4361 | 1,3482 | 1,3482 ÷ 3,3438 = 0,4032 |
+| OFFICE | 1÷2,1276 | 0,4700 | 0,4700 ÷ 3,3438 = 0,1406 |
+| | | **3,3438** | |
+
+Với `distance`, Helios sẽ được đoán đúng CREATOR (vì 3 máy CREATOR gần hơn), nhưng 0,4562 vẫn dưới 0,6 nên vẫn vào hàng đợi.
+Trên toàn bộ 800 máy, `distance` được 0,7920 còn `uniform` được 0,7938 (mục D9), nên hệ thống giữ `uniform`.
+**Một ví dụ không quyết định cách nào tốt hơn; điểm trung bình trên nhiều máy mới quyết định.**
+
+**Tự kiểm tra ngưỡng:** 5 ÷ 7 = 0,714 ≥ 0,6 (qua); 4 ÷ 7 = 0,571 < 0,6 (không qua). Vậy với `uniform`, k = 7, máy cần
+**từ 5/7 phiếu** mới được tự duyệt.
+
+**(d) Tổng kết 30 giây.** 7 láng giềng mỗi máy 1 phiếu, xác suất là số phiếu chia 7. Helios hòa 3-3 nên chỉ 43%.
+
+---
+
+## D7. Khi bấm Lưu: `applySegmentLabel` quyết định VERIFIED hay NEEDS_REVIEW
+
+**(a) Trên giao diện.** Demo 3 (thêm máy, để trống Phân khúc, bấm **Lưu**). Nếu độ tin cậy thấp, thông báo có dạng
+"AI chỉ tin cậy 43% (dưới ngưỡng 60%) — đã gán tạm … và đưa vào hàng đợi cần xác minh." Demo này ghi vào DB: **xóa máy thử sau đó**.
+
+**(b) Code** — `backend/src/modules/laptops/segment.service.ts:106-160`
+
+| Dòng | Code | Làm gì |
+|---|---|---|
+| 112-116 | `if (existing?.locked && !requested) return ...` | nhãn đã **khóa** và người không chọn lại → giữ nguyên, không hỏi AI |
+| 119-124 | `try { prediction = await predictSegment(features) } catch { logger.warn(...) }` | ML lỗi vẫn lưu được laptop (không trả lỗi 500) |
+| 126-133 | `if (!requested && !prediction) return { warning: ... }` | không chọn và AI lỗi → báo máy sẽ chưa được gợi ý |
+| 135 | `const threshold = await getConfidenceThreshold()` | đọc ngưỡng từ bảng cấu hình tri thức, mặc định 0,6 (dòng 25, 52-56) |
+| 136 | `const segment = requested ?? prediction.label` | người chọn thì dùng nhãn người, không thì dùng nhãn AI |
+| 137 | `const source = ...` | ghi ai quyết định: `MODEL` hay `ADMIN` |
+| 138 | `const status = ...` | **dòng chính:** so độ tin cậy với ngưỡng |
+| 149-153 | `prisma.segmentLabel.upsert(...)` | có nhãn rồi thì sửa, chưa có thì tạo |
+| 155-158 | `warning = ... Math.round(prediction.proba * 100) ...` | câu cảnh báo hiện trên giao diện |
+
+**(c) Bảng các trường hợp của dòng 137-138**
+
+| Người dùng chọn ô Phân khúc? | AI đoán | Độ tin cậy | `segment` | `source` | `status` |
+|---|---|---|---|---|---|
+| Không | GAMING | 1,0000 (7/7) | GAMING | MODEL | VERIFIED (1,0 ≥ 0,6) |
+| Không | ULTRABOOK (hòa) | 0,4286 (3/7) | ULTRABOOK | MODEL | **NEEDS_REVIEW** (0,4286 < 0,6) |
+| Có, chọn CREATOR | ULTRABOOK | 0,4286 | CREATOR | ADMIN (khác AI) | VERIFIED (người đã quyết) |
+| Có, chọn GAMING | GAMING | 1,0000 | GAMING | MODEL (trùng AI) | VERIFIED |
+
+Câu cảnh báo cho dòng thứ hai: `Math.round(0,4286 x 100)` = `Math.round(42,86)` = **43** → "AI chỉ tin cậy 43% (dưới ngưỡng 60%)".
+
+**(d) Tổng kết 30 giây.** Lưu laptop luôn kết thúc bằng một nhãn. Người chọn thì nhãn người thắng. Người không chọn thì
+nhãn AI, tự duyệt nếu từ 0,6 trở lên, ngược lại vào hàng đợi. Nhãn đã khóa thì AI không được đổi.
+
+---
+
+## D8. Huấn luyện (1): chia 800 / 200 và chia 5 phần
+
+**(a) Trên giao diện.** Trí tuệ → **Quản lý mô hình**: 2 dòng `clf-2026.10.04-124455` (Dự phòng, 78,7%) và
+`clf-2026.09.27-160831` (**Đang sử dụng**, 78,7%, 1000 mẫu). Cột "macro-F1 (test)" 78,7% chính là 0,7866 làm tròn.
+**Không bấm** "Huấn luyện mô hình mới" khi demo (tạo thêm một phiên bản).
+
+**(b) Code** — `ml-service/app/lifecycle/train.py:83-85` và `classifier.py:46`
+
+```python
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, stratify=y, random_state=RANDOM_STATE)    # 20% giữ riêng; giữ tỷ lệ 4 lớp; seed 42
+cv = StratifiedKFold(5, shuffle=True, random_state=RANDOM_STATE)   # chia 800 máy học thành 5 phần
+```
+
+**(c) Tính từng bước: `stratify` giữ tỷ lệ**
+
+| Lớp | Cả 1.000 | x 0,8 | Tập học (800) | Tập giữ riêng (200) | Tỷ lệ trong 200 |
+|---|---|---|---|---|---|
+| OFFICE | 344 | 275,2 | 275 | 69 | 34,5% |
+| GAMING | 335 | 268,0 | 268 | 67 | 33,5% |
+| ULTRABOOK | 201 | 160,8 | 161 | 40 | 20,0% |
+| CREATOR | 120 | 96,0 | 96 | 24 | 12,0% |
+| Tổng | 1.000 | | 800 | 200 | |
+
+**5 phần của 800 máy** (mỗi lần: học 640, kiểm tra 160)
+
+| Lần | Học | Kiểm tra | Kiểm tra gồm OFFICE / GAMING / ULTRABOOK / CREATOR |
+|---|---|---|---|
+| 1 | 640 | 160 | 55 / 54 / 32 / 19 |
+| 2 | 640 | 160 | 55 / 54 / 32 / 19 |
+| 3 | 640 | 160 | 55 / 54 / 32 / 19 |
+| 4 | 640 | 160 | 55 / 53 / 33 / 19 |
+| 5 | 640 | 160 | 55 / 53 / 32 / 20 |
+
+Mỗi máy trong 800 máy được làm "bài kiểm tra" đúng 1 lần và làm "tài liệu học" 4 lần. 200 máy giữ riêng **không tham gia** 5 phần này.
+
+**(d) Tổng kết 30 giây.** Giữ riêng 200 máy để chấm cuối; 800 máy còn lại chia 5 phần để chọn tham số. Cả hai lần chia
+đều giữ tỷ lệ 4 phân khúc và cố định seed 42.
+
+---
+
+## D9. Huấn luyện (2): `grid_search` thử 64 tổ hợp, tính điểm trung bình
+
+**(b) Code** — `classifier.py:43-51`
+
+```python
+pipe = build_pipeline()                                       # 45: chuẩn hóa + kNN (chuẩn hóa nằm TRONG pipeline)
+search = GridSearchCV(pipe, PARAM_GRID, cv=cv, scoring="f1_macro", n_jobs=-1, return_train_score=True)
+search.fit(X[MODEL_A_FEATURES], y)                            # 50: 64 x 5 = 320 lần học, rồi học lại bộ thắng trên 800 máy
+```
+
+- `scoring="f1_macro"`: chấm mỗi lần bằng macro-F1 (cách tính ở D10).
+- `n_jobs=-1`: chạy song song trên mọi nhân CPU cho nhanh.
+- Sau 320 lần, GridSearch **học lại** bộ thắng trên đủ 800 máy; đó là `best_estimator_` được lưu thành `model.joblib`
+  (`train.py:97, 129`).
+
+**(c) Tính từng bước: điểm 0,7938 của bộ thắng (k = 7, uniform, euclidean)**
+
+| Lần | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| macro-F1 trên 160 máy kiểm tra | 0,7714 | 0,8409 | 0,7703 | 0,8542 | 0,7321 |
+
+- Trung bình: (0,7714 + 0,8409 + 0,7703 + 0,8542 + 0,7321) ÷ 5 = 3,9689 ÷ 5 = **0,7938**
+- Độ lệch từng lần so với 0,7938: −0,0224; +0,0471; −0,0235; +0,0604; −0,0617
+- Bình phương: 0,000501; 0,002220; 0,000551; 0,003651; 0,003804 → cộng = 0,010727 → ÷ 5 = 0,002145
+- Độ lệch chuẩn = √0,002145 = **0,0463** (khớp `cv_f1_macro_std` trong `metadata.json`)
+
+Cùng một bộ tham số mà 5 lần chấm dao động từ 0,73 đến 0,85. Vì thế các chênh lệch dưới khoảng 0,03–0,05 giữa các tổ hợp
+không nên coi là "hơn hẳn".
+
+**8 tổ hợp đứng đầu** (trong 64, chạy lại hôm nay, khớp `metadata.json`):
+
+| Hạng | k | weights | metric | macro-F1 TB | ĐLC |
+|---|---|---|---|---|---|
+| 1 | 7 | uniform | euclidean | **0,7938** | 0,0463 |
+| 2 | 7 | distance | euclidean | 0,7920 | 0,0374 |
+| 3 | 7 | uniform | manhattan | 0,7855 | 0,0273 |
+| 4 | 9 | distance | euclidean | 0,7854 | 0,0311 |
+| 5 | 9 | distance | manhattan | 0,7852 | 0,0294 |
+| 6 | 9 | uniform | euclidean | 0,7844 | 0,0289 |
+| 7 | 11 | distance | manhattan | 0,7840 | 0,0411 |
+| 8 | 7 | distance | manhattan | 0,7812 | 0,0331 |
+
+**Cách nói:** "Hạng 1 và hạng 2 chỉ chênh 0,0018; hệ thống chọn theo điểm cao nhất, nhưng 8 tổ hợp đầu đều quanh 0,78–0,79,
+tức mô hình ổn định với nhiều cách đặt tham số."
+
+**(d) Tổng kết 30 giây.** `grid_search` thử 64 tổ hợp, mỗi tổ hợp chấm 5 lần trên 160 máy, lấy trung bình; bộ cao nhất là
+k = 7, uniform, euclidean với 0,7938 ± 0,0463.
+
+---
+
+## D10. Chấm cuối trên 200 máy: precision, recall, F1, macro-F1
+
+**(a) Trên giao diện.** Quản lý mô hình → **Xem chi tiết** ở dòng Đang sử dụng (`AdminModels.tsx:220-275`). Trang này có
+4 khối, theo thứ tự: bảng **So với đường cơ sở** (kNN 78,7%, Luôn đoán phân khúc đông nhất 12,8%, Luật đơn giản 63,2%);
+**Đường cong chọn k** (đường đứt nét "k đã chọn" ở k = 7); bảng **Precision / Recall / F1 theo từng phân khúc**
+(CREATOR recall 37,5%); **Ma trận nhầm lẫn**. Ảnh tĩnh cho slide: `artifacts/clf-2026.09.27-160831/confusion_matrix.png`
+và `k_curve.png`.
+
+**(b) Code** — `train.py:104-112`
+
+```python
+y_pred_test = best_pipe.predict(X_test[MODEL_A_FEATURES])           # 104: đoán 200 máy giữ riêng
+test_f1_macro = f1_score(y_test, y_pred_test, average="macro")     # 110: F1 từng lớp, trung bình đều
+report = classification_report(y_test, y_pred_test, output_dict=True)
+cm = confusion_matrix(y_test, y_pred_test, labels=sorted(y.unique()))
+```
+
+**(c) Tính từng bước từ ma trận nhầm lẫn** (hàng = thật, cột = đoán)
+
+| thật \ đoán | CREATOR | GAMING | OFFICE | ULTRABOOK | Tổng hàng |
+|---|---|---|---|---|---|
+| CREATOR | **9** | 14 | 1 | 0 | 24 |
+| GAMING | 3 | **63** | 1 | 0 | 67 |
+| OFFICE | 0 | 1 | **65** | 3 | 69 |
+| ULTRABOOK | 0 | 0 | 7 | **33** | 40 |
+| Tổng cột | 12 | 78 | 74 | 36 | 200 |
+
+Định nghĩa (ô chéo = đúng):
+- **Precision** = ô chéo ÷ tổng **cột** ("AI nói là X thì đúng bao nhiêu phần").
+- **Recall** = ô chéo ÷ tổng **hàng** ("máy thật là X thì AI nhận ra bao nhiêu phần").
+- **F1** = 2 x P x R ÷ (P + R) (trung bình điều hòa, thấp nếu một trong hai thấp).
+
+| Lớp | Precision | Recall | 2 x P x R | P + R | F1 |
+|---|---|---|---|---|---|
+| CREATOR | 9 ÷ 12 = 0,7500 | 9 ÷ 24 = 0,3750 | 0,5625 | 1,1250 | **0,5000** |
+| GAMING | 63 ÷ 78 = 0,8077 | 63 ÷ 67 = 0,9403 | 1,5190 | 1,7480 | **0,8690** |
+| OFFICE | 65 ÷ 74 = 0,8784 | 65 ÷ 69 = 0,9420 | 1,6549 | 1,8204 | **0,9091** |
+| ULTRABOOK | 33 ÷ 36 = 0,9167 | 33 ÷ 40 = 0,8250 | 1,5125 | 1,7417 | **0,8684** |
+
+- **macro-F1** = (0,5000 + 0,8690 + 0,9091 + 0,8684) ÷ 4 = 3,1465 ÷ 4 = **0,7866**
+- **Độ chính xác (accuracy)** = tổng ô chéo ÷ 200 = (9 + 63 + 65 + 33) ÷ 200 = 170 ÷ 200 = **0,85**
+- **F1 có trọng số theo số máy** (để đối chiếu) = (0,5 x 24 + 0,8690 x 67 + 0,9091 x 69 + 0,8684 x 40) ÷ 200
+  = (12,00 + 58,22 + 62,73 + 34,74) ÷ 200 = 167,69 ÷ 200 = **0,8384**
+
+**Vì sao chọn macro-F1:** accuracy 0,85 và F1 có trọng số 0,8384 đều cao vì lớp đông (GAMING, OFFICE) làm tốt và chiếm nhiều
+máy. macro-F1 cho CREATOR (chỉ 24 máy) **cùng tiếng nói** với các lớp khác, nên kéo điểm xuống 0,7866. Đó là điều ta muốn
+thấy: điểm yếu không bị che.
+
+**Đọc hàng CREATOR:** 24 máy CREATOR thật thì 9 đoán đúng, **14 bị đoán thành GAMING**, 1 thành OFFICE.
+
+**(d) Tổng kết 30 giây.** Precision chia theo cột, recall chia theo hàng, F1 kết hợp hai số; macro-F1 là trung bình đều
+4 lớp = 0,7866. CREATOR có recall 0,375 là điểm yếu.
+
+---
+
+## D11. Hai mốc so sánh: tính tay 0,128 và 0,632
+
+**(b) Code** — `classifier.py:54-74`, `train.py:115-120`
+
+```python
+clf = DummyClassifier(strategy="most_frequent")   # luôn đoán lớp đông nhất của tập học
+...
+if row["gpu_dedicated"] and row["refresh_hz"] >= 120:  preds.append("GAMING")     # card rời + màn nhanh
+elif row["srgb_100"] and row["cpu_score"] >= p70_cpu:  preds.append("CREATOR")    # màn chuẩn màu + CPU top 30%
+elif row["weight_kg"] <= 1.4:                         preds.append("ULTRABOOK")  # nhẹ
+else:                                                 preds.append("OFFICE")
+```
+
+**(c) Tính tay mốc Dummy.** Lớp đông nhất trong 800 máy học là OFFICE (275) → đoán **OFFICE cho cả 200 máy**.
+
+| Lớp | Precision | Recall | F1 |
+|---|---|---|---|
+| OFFICE | 69 ÷ 200 = 0,345 | 69 ÷ 69 = 1 | 2 x 0,345 x 1 ÷ 1,345 = 0,690 ÷ 1,345 = **0,5130** |
+| CREATOR, GAMING, ULTRABOOK | không đoán lần nào | 0 | **0** |
+
+macro-F1 = (0,5130 + 0 + 0 + 0) ÷ 4 = **0,1283**. Trong khi accuracy của Dummy là 69 ÷ 200 = 0,345: lại một ví dụ accuracy
+"nhìn đỡ tệ" hơn macro-F1.
+
+**Tính tay mốc luật if-else.** Ma trận nhầm lẫn của luật trên cùng 200 máy:
+
+| thật \ đoán | CREATOR | GAMING | OFFICE | ULTRABOOK |
+|---|---|---|---|---|
+| CREATOR (24) | **5** | 13 | 6 | 0 |
+| GAMING (67) | 4 | **52** | 11 | 0 |
+| OFFICE (69) | 1 | 1 | **47** | 20 |
+| ULTRABOOK (40) | 1 | 0 | 2 | **37** |
+
+Ví dụ lớp CREATOR: precision = 5 ÷ (5 + 4 + 1 + 1) = 5 ÷ 11 = 0,4545; recall = 5 ÷ 24 = 0,2083;
+F1 = 2 x 0,4545 x 0,2083 ÷ (0,4545 + 0,2083) = 0,1894 ÷ 0,6628 = **0,2857**.
+Bốn lớp: 0,2857; 0,7820 (GAMING); 0,6963 (OFFICE); 0,7629 (ULTRABOOK) → macro-F1 = 2,5269 ÷ 4 = **0,6317**.
+
+**So sánh:** kNN 0,7866 hơn luật 0,6317 là **+0,1549**; hơn Dummy là **+0,6583**. Ở lớp khó nhất CREATOR, luật chỉ được F1 0,29,
+kNN được 0,50.
+
+**Lưu ý nói thẳng:** trong code, mốc "CPU top 30%" (`p70_cpu`) được tính trên chính 200 máy đang chấm (`rule_based_baseline(X_test)`).
+Lần này giá trị trùng với khi tính trên 800 máy học (đều 62,1622), nên không ảnh hưởng kết quả; nhưng về nguyên tắc nên tính
+trên tập học.
+
+**(d) Tổng kết 30 giây.** Đoán bừa lớp đông được 0,128; luật tay được 0,632; kNN được 0,787. kNN thắng rõ, nhất là ở CREATOR.
+
+---
+
+## D12. Hàng đợi Duyệt nhãn và nút Xuất CSV
+
+**(a) Trên giao diện.** Dữ liệu → **Duyệt nhãn** (huy hiệu 6). Mỗi thẻ: tên máy, CPU/GPU, giá, "Dự đoán: … %",
+**Cần xác minh**, 4 phần trăm, ô chọn phân khúc, checkbox **Khóa nhãn, không cho mô hình thay đổi**, nút **Duyệt (giữ nhãn AI)**.
+Nút **Xuất nhãn đã duyệt (CSV)** ở trên cùng. Chỉ xem, không bấm Duyệt nếu không định đổi dữ liệu.
+
+**(c) Kiểm tra số trên thẻ.** Thẻ "Avita Pura 0874: Văn phòng 52%, Mỏng nhẹ 41%, Gaming 5%, Đồ họa 2%". Với k = 7 uniform,
+xác suất chỉ có thể là 0/7 … 7/7, tức 0%, 14%, 29%, 43%, 57%, 71%, 86%, 100%. 52% không nằm trong danh sách, nên thẻ này không
+do mô hình hiện tại tạo ra. Đúng vậy: trong DB, cột `predictedBy` của 6 thẻ là `demo-seed-review-queue`, tạo bởi
+`backend/scripts/seedReviewQueue.ts` để có sẵn dữ liệu demo hàng đợi.
+**Cách nói:** "Sáu thẻ này là dữ liệu mẫu để minh họa giao diện. Một máy thật vào hàng đợi thì xác suất sẽ là bội số của 1/7,
+như Helios 0051 ở Demo 2 là 43%."
+
+**(d) Tổng kết 30 giây.** Máy dưới ngưỡng vào hàng đợi; người chọn nhãn, có thể khóa; nhãn đã duyệt xuất CSV để huấn luyện lần sau.
+
+---
+
+## D13. Tự luyện: 5 bài tính lại (đáp án bên dưới, che lại trước khi làm)
+
+1. Máy RAM 16GB: log2 bằng bao nhiêu, z bằng bao nhiêu? (TB 3,7938; ĐLC 0,7913)
+2. 7 láng giềng là 5 GAMING, 2 CREATOR: nhãn, độ tin cậy, VERIFIED hay NEEDS_REVIEW?
+3. Từ ma trận nhầm lẫn D10, tính precision và recall của OFFICE mà không nhìn bảng.
+4. Nếu macro-F1 bốn lớp là 0,6; 0,9; 0,9; 0,9 thì macro-F1 bằng bao nhiêu? Accuracy có thể vẫn cao không, vì sao?
+5. Màn 1920 x 1080, 15,6": ppi bằng bao nhiêu?
+
+**Đáp án:**
+1. log2(16) = 4; z = (4 − 3,7938) ÷ 0,7913 = 0,2062 ÷ 0,7913 = **0,2606**.
+2. GAMING; 5 ÷ 7 = **0,7143**; 0,7143 ≥ 0,6 nên **VERIFIED**.
+3. Precision = 65 ÷ 74 = **0,8784**; recall = 65 ÷ 69 = **0,9420**.
+4. (0,6 + 0,9 + 0,9 + 0,9) ÷ 4 = 3,3 ÷ 4 = **0,825**. Accuracy vẫn có thể cao nếu lớp 0,6 là lớp ít máy, vì accuracy đếm theo số máy.
+5. 1920² + 1080² = 3.686.400 + 1.166.400 = 4.852.800; √4.852.800 = 2.202,91; 2.202,91 ÷ 15,6 = **141,21**.

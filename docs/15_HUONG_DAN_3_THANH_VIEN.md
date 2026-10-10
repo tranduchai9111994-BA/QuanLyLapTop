@@ -161,8 +161,9 @@ Code: `ml-service/app/models/classifier.py` — `PARAM_GRID` (dòng 21–25), `g
   (xem bằng `python -m app.lifecycle.inspect_model`); không có hàm đếm phiếu nào tự viết, scikit-learn làm.
 - **Lưu ý:** không cần nhớ phép tính; hỏi "sao chọn uniform" thì trả lời "hệ thống tự thử rồi chọn theo
   điểm kiểm thử chéo 0,7938". Model C (TV2) khác: cố định `distance` (`text_classifier.py:128`).
-- **Ví dụ khi cần giải thích kỹ:** 7 láng giềng của Predator Helios 0051 (GAMING x4, CREATOR x3):
-  `uniform` thắng 4 - 3; `distance` cộng 1/khoảng cách: GAMING 1,945 so với CREATOR 1,400.
+- **Ví dụ khi cần giải thích kỹ:** 7 láng giềng của Predator Helios 0051 (CREATOR x3, ULTRABOOK x3, OFFICE x1):
+  `uniform` hòa 3 - 3 (43%); `distance` cộng 1/khoảng cách: CREATOR 1,526 so với ULTRABOOK 1,348 (tỷ lệ 0,456).
+  Tính từng bước ở docs/19 mục D6.
 
 **k nhỏ quá** (1–3) → nhạy với mẫu lạ (overfit). **k lớn quá** → mờ ranh giới, thiên về lớp đông.
 Có sẵn biểu đồ "đường cong chọn k" trong `artifacts/<phiên bản>/k_curve.png` để đưa lên slide.
