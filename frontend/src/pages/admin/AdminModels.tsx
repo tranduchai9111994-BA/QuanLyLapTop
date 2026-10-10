@@ -223,7 +223,7 @@ export function AdminModels() {
               pagination={false}
               dataSource={[
                 { name: 'Mô hình kNN (đã tối ưu)', f1: metrics.test.f1_macro },
-                { name: 'Đoán ngẫu nhiên có trọng số', f1: metrics.baseline.dummy_f1_macro },
+                { name: 'Luôn đoán phân khúc đông nhất', f1: metrics.baseline.dummy_f1_macro }, // khớp DummyClassifier(strategy="most_frequent")
                 { name: 'Luật đơn giản (rule-based)', f1: metrics.baseline.rule_f1_macro },
               ]}
               columns={[
