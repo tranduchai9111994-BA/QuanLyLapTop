@@ -218,7 +218,7 @@ export function AdminLayout() {
         </Content>
       </Layout>
 
-      <Drawer title="Menu quản trị" open={drawerOpen} onClose={() => setDrawerOpen(false)} placement="left" width={260}>
+      <Drawer title="Menu quản trị" open={drawerOpen} onClose={() => setDrawerOpen(false)} placement="left" size={260}>
         <Menu
           mode="inline"
           selectedKeys={[location.pathname]}

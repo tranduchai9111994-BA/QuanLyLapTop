@@ -188,7 +188,7 @@ export function AdminModels() {
         ]}
       />
 
-      <Drawer title={`Chi tiết phiên bản ${detail?.version ?? ''}`} open={!!detail} onClose={() => setDetail(null)} width={640}>
+      <Drawer title={`Chi tiết phiên bản ${detail?.version ?? ''}`} open={!!detail} onClose={() => setDetail(null)} size={640}>
         {detail && metrics && (
           <>
             <div style={{ marginBottom: 16 }}>

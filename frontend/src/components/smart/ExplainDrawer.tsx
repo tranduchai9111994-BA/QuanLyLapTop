@@ -70,7 +70,7 @@ export function ExplainDrawer({
     }));
 
   return (
-    <Drawer title="Vì sao gợi ý?" open={open} onClose={onClose} width={480}>
+    <Drawer title="Vì sao gợi ý?" open={open} onClose={onClose} size={480}>
       <h4>Điểm mạnh</h4>
       <ul>
         {item.explanation.strengths.map((s, i) => (

@@ -91,7 +91,7 @@ function TopNav() {
           <span style={{ fontWeight: 700, fontSize: 18, color: t.primary700 }}>SmartLap</span>
         </Link>
         <MenuOutlined style={{ fontSize: 20, color: t.textPrimary, cursor: 'pointer' }} onClick={() => setDrawerOpen(true)} />
-        <Drawer title="Menu" open={drawerOpen} onClose={() => setDrawerOpen(false)} placement="right" width={280}>
+        <Drawer title="Menu" open={drawerOpen} onClose={() => setDrawerOpen(false)} placement="right" size={280}>
           <Menu mode="inline" selectedKeys={[location.pathname]} items={navMenuItems} style={{ marginBottom: 16, border: 'none' }} />
           {/* docs/07_UIUX.md muc 6.1: "So sanh (N)" + "♡" yeu thich la 2 lien ket nhanh luon co
               mat tren TopNav, khong chi nam trong dropdown tai khoan - danh sach so sanh dung

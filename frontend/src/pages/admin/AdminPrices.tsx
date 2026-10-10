@@ -412,7 +412,7 @@ export function AdminPrices() {
         okText="Áp dụng thật"
         cancelText="Đóng"
         okButtonProps={{ danger: true, disabled: !bulkPreview, loading: bulkBusy }}
-        maskClosable={false}
+        mask={{ closable: false }}
       >
         <Alert
           type="warning"

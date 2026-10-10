@@ -3,10 +3,19 @@ import { mlClient } from '../../lib/mlClient';
 import { logger } from '../../lib/logger';
 
 export async function snapshotSync() {
-  const laptops = await prisma.laptop.findMany({
-    where: { isActive: true },
-    include: { cpu: true, gpu: true, segmentLabel: true, brand: true },
-  });
+  // Bọc cả truy vấn DB trong try: nếu SQL Server chưa sẵn sàng lúc khởi động mà để lỗi nổi lên,
+  // đó là unhandled rejection làm sập cả backend (login báo lỗi vì không có API). Trả null để
+  // syncWithRetry (server.ts) thử lại thay vì chết.
+  let laptops;
+  try {
+    laptops = await prisma.laptop.findMany({
+      where: { isActive: true },
+      include: { cpu: true, gpu: true, segmentLabel: true, brand: true },
+    });
+  } catch (err) {
+    logger.error('snapshotSync that bai (khong doc duoc DB)', err);
+    return null;
+  }
 
   const items = laptops
     .filter((l) => l.segmentLabel)

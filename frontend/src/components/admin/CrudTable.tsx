@@ -115,7 +115,13 @@ export function CrudTable({
   /** Lưu form cho cả THÊM MỚI và SỬA (phân biệt bằng `editing`). `transformSubmit` làm ngược lại
    * `transformEdit`: đưa giá trị form về đúng định dạng API. */
   async function handleSubmit() {
-    const values = await form.validateFields(); // ném lỗi nếu còn trường bắt buộc trống, AntD tự hiện lỗi
+    // validateFields ném lỗi nếu còn trường bắt buộc trống - AntD đã tự hiện lỗi dưới từng ô, nên chỉ cần dừng lại
+    let values;
+    try {
+      values = await form.validateFields();
+    } catch {
+      return;
+    }
     const payload = transformSubmit ? transformSubmit(values) : values;
     try {
       const r = editing
@@ -255,6 +261,8 @@ export function CrudTable({
   const formFields = fields.filter((f) => !f.hideInForm);
   // Form nhiều trường (vd Laptop) hiện lưới 2 cột cho gọn; form ít trường giữ 1 cột
   const useGrid = formFields.length > 4;
+  // Form rất nhiều trường (Laptop ~14) dùng 3 cột để thường vừa 1 màn hình, không phải cuộn
+  const gridCols = formFields.length > 8 ? 3 : 2;
 
   return (
     <div>
@@ -303,19 +311,19 @@ export function CrudTable({
         onOk={handleSubmit}
         okText="Lưu"
         cancelText="Hủy"
-        width={useGrid ? 720 : 480}
+        width={useGrid ? (gridCols === 3 ? 1040 : 720) : 480}
         centered
         // Form dài: thân popup tự cuộn, tiêu đề và nút Lưu/Hủy luôn hiện
-        styles={{ body: { maxHeight: 'calc(100vh - 200px)', overflowY: 'auto', paddingRight: 8 } }}
+        styles={{ body: { maxHeight: 'calc(100vh - 160px)', overflowY: 'auto', paddingRight: 8 } }}
         // Không đóng khi bấm ra ngoài để tránh mất dữ liệu đang nhập
-        maskClosable={false}
+        mask={{ closable: false }}
       >
         <Form form={form} layout="vertical">
           <div key={formKey}>{renderFormExtra?.(form, !!editing)}</div>
           <div
             style={
               useGrid
-                ? { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }
+                ? { display: 'grid', gridTemplateColumns: `repeat(${gridCols}, 1fr)`, gap: '0 20px' }
                 : undefined
             }
           >
@@ -325,6 +333,7 @@ export function CrudTable({
                 name={f.key}
                 label={f.label}
                 extra={f.help}
+                style={useGrid ? { marginBottom: 12 } : undefined}
                 valuePropName={f.type === 'boolean' ? 'checked' : undefined}
                 rules={[
                   ...(f.required ? [{ required: true, message: `Vui lòng nhập ${f.label}` }] : []),
