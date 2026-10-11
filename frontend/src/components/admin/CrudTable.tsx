@@ -27,6 +27,8 @@ export interface CrudField {
   /** Tự tính giá trị hiện trong bảng từ cả dòng (khi giá trị không nằm ở `row[key]`). Nếu trả về
    * chuỗi thì ô tìm kiếm cũng tìm theo chuỗi này. */
   tableValue?: (row: any) => ReactNode;
+  /** Độ rộng cột trong bảng (px). Bảng nhiều cột (Laptop) cần đặt, nếu không các cột bị chia đều và chữ dài bị bẻ từng chữ. */
+  tableWidth?: number;
 }
 
 /** Bảng CRUD dùng chung cho nhiều thực thể (Brand, CPU/GPU Benchmark, Laptop). Có tìm kiếm
@@ -226,6 +228,7 @@ export function CrudTable({
         title: f.label,
         dataIndex: f.key,
         key: f.key,
+        width: f.tableWidth,
         // boolean -> "Có"/"Không"; select -> nhãn hiển thị từ ID; còn lại hiện nguyên giá trị
         render: (v: any, row: any) =>
           f.tableValue
@@ -302,7 +305,7 @@ export function CrudTable({
         </div>
       )}
 
-      <Table rowKey="id" loading={loading} columns={columns} dataSource={filteredRows} pagination={{ pageSize: 10 }} scroll={{ x: true }} />
+      <Table rowKey="id" loading={loading} columns={columns} dataSource={filteredRows} pagination={{ pageSize: 10 }} scroll={{ x: 'max-content' }} />
 
       <Modal
         title={editing ? `Sửa ${title}` : `Thêm ${title}`}

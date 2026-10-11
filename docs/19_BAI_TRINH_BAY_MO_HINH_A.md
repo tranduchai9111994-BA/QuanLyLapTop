@@ -833,7 +833,7 @@ Trên toàn bộ 800 máy, `distance` được 0,7920 còn `uniform` được 0,
 
 ## D6b. Icon "!" trên giao diện: giải thích toán học ngay tại chỗ khi thầy hỏi
 
-Sau khi bấm **AI gợi ý phân khúc từ cấu hình**, mỗi láng giềng `#1 … #7` có một icon **"!"** và sau `#7` có nút **"! Vì sao 43%?"**.
+Sau khi bấm **AI gợi ý phân khúc từ cấu hình**, mỗi láng giềng `#1 … #7` có một icon **"!"** và sau `#7` có nút **"! Chi tiết"**.
 Bấm vào là ra bảng toán học, không cần mở Excel hay terminal. Số trong bảng là số **thật của mô hình đang dùng**, và đã đối chiếu
 với phần tính tay ở D4–D6 (ví dụ Helios 0051: tổng hiệu² = 3,2244; khoảng cách = 1,7957; 3 ÷ 7 = 0,4286).
 
@@ -842,28 +842,36 @@ với phần tính tay ở D4–D6 (ví dụ Helios 0051: tổng hiệu² = 3,22
   - *Bước 1:* bảng đổi 11 thông số của máy đang nhập sang z-score, mỗi dòng có phép tính `(x − TB) ÷ ĐLC = z`;
   - *Bước 2:* bảng so với máy #1: giá trị gốc hai máy, z hai máy, hiệu, hiệu², % của tổng, dòng **Tổng hiệu² = 3.2244**;
   - kết luận **Khoảng cách = √3.2244 = 1.7957**.
-- bấm **"! Vì sao 43%?"**: cửa sổ **"Vì sao độ tin cậy là 43%?"**
-  - *Bước 1:* 7 láng giềng, nhãn, khoảng cách, 1 phiếu mỗi máy;
-  - *Bước 2:* đếm phiếu `3 ÷ 7 = 0.4286` cho từng phân khúc (khớp xác suất hệ thống trả về);
-  - *Bước 3:* so với ngưỡng 60% (cần ít nhất 5/7 phiếu), kết luận "43% < 60%: vào hàng đợi Cần xác minh", kèm ghi chú nếu hòa phiếu.
+- bấm **"! Chi tiết"** (sau `#7`): cửa sổ **"Vì sao độ tin cậy là 43%?"**, gồm **5 bước đi từ đầu đến cuối**
+  - *Bước 1:* chuẩn hóa 11 thông số của máy đang nhập (cùng bảng z-score ở trên);
+  - *Bước 2:* đo khoảng cách tới 800 máy đã ghi nhớ, giữ 7 máy gần nhất: bảng 7 máy với **tổng hiệu² của 11 cột**, **khoảng cách = √ tổng**, và cột "Hệ thống trả về" để đối chiếu;
+  - *Bước 3:* mỗi láng giềng bỏ phiếu (nhãn, khoảng cách, 1 phiếu mỗi máy);
+  - *Bước 4:* đếm phiếu `3 ÷ 7 = 0.4286` cho từng phân khúc (khớp xác suất hệ thống trả về);
+  - *Bước 5:* so với ngưỡng 60% (cần ít nhất 5/7 phiếu), kết luận "43% < 60%: vào hàng đợi Cần xác minh", kèm ghi chú nếu hòa phiếu.
+  - Nếu láng giềng #1 cách 0.0000 (máy đang xét đã nằm trong 800 máy học, ví dụ `Avita Pura 0874` ra 100%) thì có thêm dòng lưu ý
+    "máy này tự bỏ một phiếu cho chính mình".
 - Đóng bằng dấu X; **Hủy** để không lưu gì.
 
 **(b) Code**
 
 | Việc | File và dòng |
 |---|---|
-| Icon "!" trên từng chip, nút "Vì sao …%?", mở cửa sổ | `frontend/src/components/admin/SegmentSuggester.tsx:105-133` (state ở dòng 28) |
-| Hai cửa sổ toán học (bảng z-score, bảng hiệu, bảng đếm phiếu, so ngưỡng) | `frontend/src/components/admin/SegmentMathModal.tsx` (`NeighborMath` dòng 79, `VoteMath` dòng 227) |
+| Icon "!" trên từng chip, nút "Chi tiết", mở cửa sổ | `frontend/src/components/admin/SegmentSuggester.tsx:105-133` (state ở dòng 28) |
+| Hai cửa sổ toán học (bảng z-score, bảng hiệu, bảng khoảng cách tới 7 máy, đếm phiếu, so ngưỡng) | `frontend/src/components/admin/SegmentMathModal.tsx` (`NeighborMath` dòng 79, `ZScoreTable` dòng 191, `VoteMath` dòng 242) |
 | ML trả thêm số liệu giải thích cho mỗi máy: trung bình, độ lệch chuẩn, z của máy đang xét, z và giá trị gốc của 7 láng giềng | `ml-service/app/models/segment_explain.py` (`build_explain`); gắn vào kết quả ở `ml-service/app/main.py:124` |
 | Backend chỉ chuyển tiếp trường `explain` | `backend/src/modules/laptops/segment.service.ts:50, 101` |
 | Test: cộng hiệu² rồi lấy căn phải ra đúng khoảng cách của kNN | `ml-service/tests/test_segment_explain.py` |
+
+**Lỗi giao diện đã sửa cùng lúc (bảng Laptop):** cột Phân khúc và cột Sửa/Xóa trước đây bị bóp (chữ bị bẻ từng chữ, hai nút chồng lên nhau)
+vì 18 cột được chia đều chiều rộng. Nay mỗi cột có độ rộng riêng (`AdminLaptops.tsx`, hằng `COLUMN_WIDTH`; `CrudTable.tsx`, trường
+`tableWidth` và `scroll={{ x: 'max-content' }}`); bảng cuộn ngang được và cột Hành động cố định bên phải.
 
 **Câu mẫu:** *"Hàm `build_explain` (`segment_explain.py`) được `predict_segment` (`main.py:124`) gọi để lấy số liệu giải thích. Nó nhận
 pipeline đã huấn luyện, dòng 11 đặc trưng của máy và vị trí 7 láng giềng, rồi trả trung bình, độ lệch chuẩn, z của máy đang xét và
 z của 7 láng giềng. Giao diện (`SegmentMathModal.tsx`) dùng đúng các số đó để dựng bảng."*
 
 **(c) Khi thầy hỏi "43% ở đâu ra?", nói theo thứ tự này:**
-1. Bấm "! Vì sao 43%?": "Mô hình lấy 7 máy giống nhất rồi mỗi máy bỏ 1 phiếu."
+1. Bấm "! Chi tiết": "Mô hình lấy 7 máy giống nhất rồi mỗi máy bỏ 1 phiếu."
 2. Chỉ bảng Bước 2: "3 máy Đồ họa, 3 máy Mỏng nhẹ, 1 máy Văn phòng; 3 chia 7 bằng 0,4286, tức 43%."
 3. Chỉ Bước 3: "43% thấp hơn ngưỡng 60% nên máy này cần người xác minh." Muốn đi sâu hơn thì đóng cửa sổ, bấm "!" cạnh `#1` để chỉ ra
    cách ra khoảng cách 1,80.

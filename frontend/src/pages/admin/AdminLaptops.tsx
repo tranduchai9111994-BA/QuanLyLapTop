@@ -32,6 +32,12 @@ function segmentCell(row: any): string {
   return l.status === 'NEEDS_REVIEW' ? `${name} · cần xác minh` : name;
 }
 
+// Độ rộng cột bảng Laptop (px). Cột Phân khúc cần rộng vì có chữ "· cần xác minh"; cột Hành động (Sửa/Xóa) do CrudTable cố định bên phải.
+const COLUMN_WIDTH: Record<string, number> = {
+  id: 70, sku: 110, name: 190, brandId: 100, cpuId: 210, gpuId: 240, ramGb: 90, ssdGb: 90, screenInch: 110,
+  resWidth: 90, resHeight: 90, refreshHz: 110, srgb100: 100, weightKg: 120, batteryWh: 90, priceVnd: 130, segment: 300,
+};
+
 export function AdminLaptops() {
   const [fields, setFields] = useState<CrudField[] | null>(null);
 
@@ -116,7 +122,7 @@ export function AdminLaptops() {
       title="Laptop"
       endpoint="/laptops"
       listEndpoint="/laptops?pageSize=1000"
-      fields={fields}
+      fields={fields.map((f) => ({ ...f, tableWidth: COLUMN_WIDTH[f.key] }))}
       renderFormExtra={(form) => <SegmentSuggester form={form} />}
       // Form dung o `resolution` dang "2560x1440" cho de chon; backend nhan resWidth/resHeight
       transformSubmit={(values) => {

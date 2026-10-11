@@ -127,7 +127,7 @@ export function SegmentSuggester({ form }: { form: FormInstance }) {
                 icon={<ExclamationCircleOutlined />}
                 onClick={() => setMathView({ type: 'vote' })}
               >
-                Vì sao {Math.round(pred.proba * 100)}%?
+                Chi tiết
               </Button>
             )}
           </Space>

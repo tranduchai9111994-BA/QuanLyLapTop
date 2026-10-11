@@ -87,47 +87,9 @@ function NeighborMath({
   neighbor: SegmentNeighbor;
   manhattan: boolean;
 }) {
-  const { features, scaling, inputs, query_z: qz, neighbors_z, neighbors_raw } = explain;
+  const { features, inputs, query_z: qz, neighbors_z, neighbors_raw } = explain;
   const nz = neighbors_z[index];
   const nraw = neighbors_raw[index];
-
-  // Bước 1: z-score của máy đang nhập
-  const step1 = features.map((f, j) => {
-    const s = scaling[j];
-    const afterLog = s.kind === 'log2_z' ? Math.log2(inputs[j]) : inputs[j];
-    return { key: f, label: FEATURE_LABEL[f] ?? f, raw: inputs[j], afterLog, s, z: qz[j] };
-  });
-  const step1Columns: ColumnsType<(typeof step1)[number]> = [
-    { title: 'Đặc trưng', dataIndex: 'label' },
-    { title: 'Giá trị nhập', dataIndex: 'raw', align: 'right', render: (v: number) => fmt(v, 2) },
-    {
-      title: 'Sau log₂',
-      align: 'right',
-      render: (_, r) => (r.s.kind === 'log2_z' ? fmt(r.afterLog, 4) : '—'),
-    },
-    {
-      title: 'Trung bình (TB)',
-      align: 'right',
-      render: (_, r) => (r.s.mean === null ? '—' : fmt(r.s.mean, 4)),
-    },
-    {
-      title: 'Độ lệch chuẩn (ĐLC)',
-      align: 'right',
-      render: (_, r) => (r.s.std === null ? '—' : fmt(r.s.std, 4)),
-    },
-    {
-      title: 'z = (x − TB) ÷ ĐLC',
-      align: 'right',
-      render: (_, r) =>
-        r.s.mean === null || r.s.std === null ? (
-          <span>giữ nguyên {fmt(r.z, 0)}</span>
-        ) : (
-          <span>
-            ({fmt(r.afterLog, 4)} − {fmt(r.s.mean, 4)}) ÷ {fmt(r.s.std, 4)} = <strong>{fmt(r.z, 4)}</strong>
-          </span>
-        ),
-    },
-  ];
 
   // Bước 2: hiệu từng cột giữa máy đang nhập và máy láng giềng
   const diffs = features.map((_, j) => qz[j] - nz[j]);
@@ -176,7 +138,7 @@ function NeighborMath({
         Để các cột cùng một thước đo (GB, kg, Hz không so trực tiếp được). RAM và SSD lấy log₂ trước. Trung bình và độ lệch chuẩn được
         tính từ {explain.model.n_train} máy huấn luyện, lưu trong mô hình.
       </Typography.Paragraph>
-      <Table size="small" pagination={false} dataSource={step1} columns={step1Columns} scroll={{ x: 'max-content' }} />
+      <ZScoreTable explain={explain} />
 
       <Typography.Title level={5} style={{ marginTop: 20 }}>
         Bước 2. So với máy #{index + 1}: hiệu từng cột rồi cộng lại
@@ -224,6 +186,59 @@ function NeighborMath({
   );
 }
 
+
+/** Bảng "đổi 11 thông số của máy đang nhập sang z-score" (dùng chung cho cửa sổ láng giềng và cửa sổ độ tin cậy). */
+function ZScoreTable({ explain }: { explain: SegmentExplain }) {
+  const { features, scaling, inputs, query_z: qz } = explain;
+  const step1 = features.map((f, j) => {
+    const s = scaling[j];
+    const afterLog = s.kind === 'log2_z' ? Math.log2(inputs[j]) : inputs[j];
+    return { key: f, label: FEATURE_LABEL[f] ?? f, raw: inputs[j], afterLog, s, z: qz[j] };
+  });
+  const step1Columns: ColumnsType<(typeof step1)[number]> = [
+    { title: 'Đặc trưng', dataIndex: 'label' },
+    { title: 'Giá trị nhập', dataIndex: 'raw', align: 'right', render: (v: number) => fmt(v, 2) },
+    {
+      title: 'Sau log₂',
+      align: 'right',
+      render: (_, r) => (r.s.kind === 'log2_z' ? fmt(r.afterLog, 4) : '—'),
+    },
+    {
+      title: 'Trung bình (TB)',
+      align: 'right',
+      render: (_, r) => (r.s.mean === null ? '—' : fmt(r.s.mean, 4)),
+    },
+    {
+      title: 'Độ lệch chuẩn (ĐLC)',
+      align: 'right',
+      render: (_, r) => (r.s.std === null ? '—' : fmt(r.s.std, 4)),
+    },
+    {
+      title: 'z = (x − TB) ÷ ĐLC',
+      align: 'right',
+      render: (_, r) =>
+        r.s.mean === null || r.s.std === null ? (
+          <span>giữ nguyên {fmt(r.z, 0)}</span>
+        ) : (
+          <span>
+            ({fmt(r.afterLog, 4)} − {fmt(r.s.mean, 4)}) ÷ {fmt(r.s.std, 4)} = <strong>{fmt(r.z, 4)}</strong>
+          </span>
+        ),
+    },
+  ];
+
+  return <Table size="small" pagination={false} dataSource={step1} columns={step1Columns} scroll={{ x: 'max-content' }} />;
+}
+
+/** Cộng các số hạng của khoảng cách (hiệu² hoặc |hiệu|) giữa máy đang nhập và láng giềng thứ i. */
+function distanceTotal(explain: SegmentExplain, index: number): number {
+  const manhattan = explain.model.metric === 'manhattan';
+  return explain.query_z.reduce((sum, q, j) => {
+    const d = q - explain.neighbors_z[index][j];
+    return sum + (manhattan ? Math.abs(d) : d * d);
+  }, 0);
+}
+
 function VoteMath({
   explain,
   neighbors,
@@ -243,6 +258,26 @@ function VoteMath({
   const totalWeight = w.reduce((a, b) => a + b, 0);
 
   const voteRows = neighbors.map((n, i) => ({ key: i, rank: i + 1, label: n.label, distance: n.distance, weight: w[i] }));
+
+  const manhattan = explain.model.metric === 'manhattan';
+  const distRows = neighbors.map((n, i) => {
+    const total = distanceTotal(explain, i);
+    return { key: i, rank: i + 1, label: n.label, total, result: manhattan ? total : Math.sqrt(total), system: n.distance };
+  });
+  const distColumns: ColumnsType<(typeof distRows)[number]> = [
+    { title: 'Láng giềng', dataIndex: 'rank', render: (v: number) => `#${v}` },
+    { title: 'Nhãn', dataIndex: 'label', render: (v: string) => <Tag color={segmentColors[v]?.color}>{segName(v)}</Tag> },
+    { title: manhattan ? 'Tổng |hiệu| của 11 cột' : 'Tổng hiệu² của 11 cột', dataIndex: 'total', align: 'right', render: (v: number) => fmt(v) },
+    {
+      title: manhattan ? 'Khoảng cách = tổng' : 'Khoảng cách = √ tổng',
+      dataIndex: 'result',
+      align: 'right',
+      render: (v: number) => <strong>{fmt(v)}</strong>,
+    },
+    { title: 'Hệ thống trả về', dataIndex: 'system', align: 'right', render: (v: number) => fmt(v) },
+  ];
+  // Láng giềng cách 0 nghĩa là máy đang nhập chính là một máy đã nằm trong dữ liệu huấn luyện: nó tự bỏ một phiếu cho chính mình.
+  const selfVote = neighbors.length > 0 && neighbors[0].distance < 1e-6;
 
   const labels = Object.keys(distribution);
   const labelRows = labels
@@ -298,16 +333,43 @@ function VoteMath({
         }
       />
 
-      <Typography.Title level={5}>Bước 1. {k} láng giềng và phiếu của từng máy</Typography.Title>
+      <Typography.Title level={5}>Bước 1. Chuẩn hóa 11 thông số của máy đang nhập (z-score)</Typography.Title>
+      <Typography.Paragraph type="secondary" style={{ marginBottom: 8 }}>
+        Để các cột cùng một thước đo (GB, kg, Hz không so trực tiếp được). RAM và SSD lấy log₂ trước. Trung bình và độ lệch chuẩn được tính từ{' '}
+        {explain.model.n_train} máy huấn luyện, lưu trong mô hình.
+      </Typography.Paragraph>
+      <ZScoreTable explain={explain} />
+
+      <Typography.Title level={5} style={{ marginTop: 20 }}>
+        Bước 2. Đo khoảng cách tới {explain.model.n_train} máy đã ghi nhớ, giữ {k} máy gần nhất
+      </Typography.Title>
+      <Typography.Paragraph type="secondary" style={{ marginBottom: 8 }}>
+        Với mỗi máy trong {explain.model.n_train} máy: lấy hiệu từng cột (đã chuẩn hóa),{' '}
+        {manhattan ? 'cộng |hiệu|' : 'bình phương rồi cộng, lấy căn bậc hai'}. Sắp xếp từ nhỏ đến lớn, giữ {k} máy đầu. Bảng dưới là {k} máy đó
+        (bấm icon "!" cạnh từng máy ở màn hình trước để xem từng cột).
+      </Typography.Paragraph>
+      <Table size="small" pagination={false} dataSource={distRows} columns={distColumns} />
+      {selfVote && (
+        <Alert
+          style={{ marginTop: 8 }}
+          type="info"
+          showIcon
+          message="Láng giềng #1 cách 0.0000: máy này đã nằm trong dữ liệu huấn luyện, nên nó tự bỏ một phiếu cho chính mình (kết quả dễ hơn so với máy mới hoàn toàn)."
+        />
+      )}
+
+      <Typography.Title level={5} style={{ marginTop: 20 }}>
+        Bước 3. Mỗi láng giềng bỏ phiếu
+      </Typography.Title>
       <Table size="small" pagination={false} dataSource={voteRows} columns={voteColumns} />
 
       <Typography.Title level={5} style={{ marginTop: 20 }}>
-        Bước 2. Đếm phiếu ra xác suất
+        Bước 4. Đếm phiếu ra xác suất
       </Typography.Title>
       <Table size="small" pagination={false} dataSource={labelRows} columns={labelColumns} />
 
       <Typography.Title level={5} style={{ marginTop: 20 }}>
-        Bước 3. So với ngưỡng tin cậy
+        Bước 5. So với ngưỡng tin cậy
       </Typography.Title>
       <Table
         size="small"
