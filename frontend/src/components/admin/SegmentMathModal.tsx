@@ -92,10 +92,11 @@ export function SegmentMathModal({ view, onClose, onNavigate, explain, neighbors
       open={view !== null}
       onCancel={onClose}
       footer={footer}
-      width="min(940px, 95vw)"
+      width="min(1500px, 96vw)" // gần toàn màn hình để các bảng 6-8 cột không bị cắt hay phải cuộn ngang
+      centered
       title={title}
       destroyOnHidden
-      styles={{ body: { maxHeight: '70vh', overflowY: 'auto' } }} // thân cuộn riêng, tiêu đề và nút luôn hiện
+      styles={{ body: { maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' } }} // thân cuộn riêng, tiêu đề và nút luôn hiện
     >
       {view?.type === 'neighbor' && neighbors[idx] && (
         <NeighborMath explain={explain} index={idx} neighbor={neighbors[idx]} manhattan={manhattan} />
