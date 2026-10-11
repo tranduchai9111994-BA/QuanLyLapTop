@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Switch, Table, Upload, message } from 'antd';
-import { UploadOutlined, DownloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Table, Tooltip, Upload, message } from 'antd';
+import { UploadOutlined, DownloadOutlined, SearchOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import * as XLSX from 'xlsx';
 import { api } from '../../lib/api';
 import { t } from '../../theme/tokens';
@@ -242,21 +242,21 @@ export function CrudTable({
                 : v,
       })),
     {
+      // Một cột thao tác gọn, chỉ có icon (bút chì = Sửa, thùng rác = Xóa); không cố định bên phải. aria-label giữ tên nút cho trình đọc màn hình và script kiểm thử
       title: '',
       key: 'actions',
-      fixed: 'right' as const,
-      width: 140,
+      width: 96,
       render: (_: any, row: any) => (
-        <>
-          <Button size="small" onClick={() => openEdit(row)} style={{ marginRight: 8 }}>
-            Sửa
-          </Button>
+        <Space size={4}>
+          <Tooltip title="Sửa">
+            <Button size="small" type="text" aria-label="Sửa" icon={<EditOutlined />} onClick={() => openEdit(row)} />
+          </Tooltip>
           <Popconfirm title="Xóa mục này?" onConfirm={() => handleDelete(row)} okText="Xóa" cancelText="Hủy">
-            <Button size="small" danger>
-              Xóa
-            </Button>
+            <Tooltip title="Xóa">
+              <Button size="small" type="text" danger aria-label="Xóa" icon={<DeleteOutlined />} />
+            </Tooltip>
           </Popconfirm>
-        </>
+        </Space>
       ),
     },
   ];

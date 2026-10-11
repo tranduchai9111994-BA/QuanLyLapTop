@@ -366,20 +366,20 @@ Tác động lên mô hình chỉ xảy ra ở bước 3; bản thân nút xuấ
 
 **Demo 1 — "AI gợi ý phân khúc", trường hợp CHẮC CHẮN (7/7 phiếu)**
 1. Menu trái: **Dữ liệu → Laptop**. Gõ `TUF Gaming 0001` vào ô Tìm kiếm.
-2. Bấm **Sửa** ở dòng `ASUS TUF Gaming 0001`.
+2. Bấm icon **bút chì (Sửa)** ở cuối dòng `ASUS TUF Gaming 0001`.
 3. Trong form bấm nút **"AI gợi ý phân khúc từ cấu hình"**.
 4. Kết quả mong đợi: `Dự đoán: Gaming 100%`; "7 máy gần nhất ... đã bỏ phiếu: 7 Gaming"; khoảng cách `0.00 (chính nó), 1.79, 1.83, 1.99, 2.12, 2.14, 2.24`.
 5. Bấm **Hủy** (không lưu gì). *Lời nói gợi ý:* "7 máy giống nhất đều là Gaming nên AI chắc chắn 100%".
 
 **Demo 2 — trường hợp RANH GIỚI (cần xác minh)**
-1. Cũng ở trang Laptop, tìm `Predator Helios 0051`, bấm **Sửa**, bấm nút AI như trên.
+1. Cũng ở trang Laptop, tìm `Predator Helios 0051`, bấm icon **bút chì (Sửa)**, bấm nút AI như trên.
 2. Kết quả mong đợi: xác suất `Văn phòng 14% / Mỏng nhẹ 43% / Gaming 0% / Đồ họa 43%`; "3 Đồ họa, 3 Mỏng nhẹ, 1 Văn phòng"; khoảng cách `1.80 ... 2.29`; nhãn **"Cần xác minh"** và dòng cảnh báo "Hệ thống chưa chắc chắn".
 3. Bấm **Hủy**. *Lời nói gợi ý:* "hai nhóm hòa phiếu 3-3 nên độ tin cậy chỉ 43%, dưới ngưỡng 60%, máy sẽ vào hàng đợi cho người xác nhận". (Khi hòa phiếu giao diện hiện nhãn đứng sau là Mỏng nhẹ; không sao, đó là hòa.)
 
 **Demo 3 — để trống phân khúc, AI tự gán khi Lưu**
 1. Laptop → **+ Thêm mới**, điền thông số (CPU `Intel Core i9-13900H`, GPU `RTX 4070`, RAM 32, SSD 1024, màn 16", 240 Hz, nặng 2,6 kg, giá 45 triệu, SKU bất kỳ), **để trống ô Phân khúc** (có nút xóa nếu đã lỡ chọn).
 2. Bấm **Lưu**. Mong đợi thông báo "Đã gán phân khúc: Gaming"; hàng mới có cột Phân khúc là Gaming.
-3. **Xóa máy thử** sau khi demo (nút Xóa ở dòng đó).
+3. **Xóa máy thử** sau khi demo (icon thùng rác ở cuối dòng đó).
 
 **Demo 4 — hàng đợi "Duyệt nhãn"**: menu **Dữ liệu → Duyệt nhãn** (có huy hiệu số máy đang chờ). Mỗi thẻ hiện
 phân bố xác suất, ô chọn phân khúc, checkbox "Khóa nhãn, không cho mô hình thay đổi", nút Duyệt.

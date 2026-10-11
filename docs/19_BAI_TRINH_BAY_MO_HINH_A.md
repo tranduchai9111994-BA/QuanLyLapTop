@@ -271,14 +271,14 @@ mô hình không ghi đè quyết định của người."
 
 **Demo 1: chắc chắn (7/7 phiếu)**
 1. Menu **Dữ liệu → Laptop**, gõ `TUF Gaming 0001` vào ô tìm kiếm.
-2. Bấm **Sửa** ở dòng `ASUS TUF Gaming 0001`, rồi bấm **"AI gợi ý phân khúc từ cấu hình"**.
+2. Bấm icon **bút chì (Sửa)** ở cuối dòng `ASUS TUF Gaming 0001`, rồi bấm **"AI gợi ý phân khúc từ cấu hình"**.
 3. Mong đợi: `Dự đoán: Gaming 100%`; "7 máy gần nhất đã bỏ phiếu: 7 Gaming"; khoảng cách
    `0.00 (chính nó), 1.79, 1.83, 1.99, 2.12, 2.14, 2.24`.
 4. Bấm **Hủy** (không lưu).
    *Lời nói:* "Bảy máy giống nhất đều là Gaming nên AI chắc chắn 100%. Khoảng cách 0,00 là chính máy này nằm trong dữ liệu."
 
 **Demo 2: ranh giới (cần xác minh)**
-1. Tìm `Predator Helios 0051`, bấm **Sửa**, bấm nút AI như trên.
+1. Tìm `Predator Helios 0051`, bấm icon **bút chì (Sửa)**, bấm nút AI như trên.
 2. Mong đợi: xác suất `Văn phòng 14% / Mỏng nhẹ 43% / Gaming 0% / Đồ họa 43%`; "3 Đồ họa, 3 Mỏng nhẹ, 1 Văn phòng";
    khoảng cách `1.80 ... 2.29`; nhãn **"Cần xác minh"** và dòng cảnh báo "Hệ thống chưa chắc chắn".
 3. Giao diện còn hiện "Bạn đang chọn phân khúc khác với AI" vì ô Phân khúc của máy này đang là Đồ họa – Kỹ thuật
@@ -291,7 +291,7 @@ mô hình không ghi đè quyết định của người."
 1. **+ Thêm mới**: CPU `Intel Core i9-13900H`, GPU `RTX 4070`, RAM 32, SSD 1024, màn 16", 240 Hz, nặng 2,6 kg, giá 45 triệu,
    SKU bất kỳ, **để trống ô Phân khúc**.
 2. Bấm **Lưu**; mong đợi thông báo "Đã gán phân khúc: Gaming".
-3. **Xóa máy thử** sau khi demo (nút Xóa ở dòng đó). Demo này ghi dữ liệu thật vào DB nên bắt buộc dọn.
+3. **Xóa máy thử** sau khi demo (icon thùng rác ở cuối dòng đó). Demo này ghi dữ liệu thật vào DB nên bắt buộc dọn.
 
 **Demo 4: hàng đợi Duyệt nhãn**
 Menu **Dữ liệu → Duyệt nhãn** (huy hiệu số 6). Mỗi thẻ có phân bố xác suất, ô chọn phân khúc, checkbox
@@ -558,7 +558,7 @@ Kết quả mong đợi: `(800, 11)`.
 
 ## D1. Trình duyệt: nút "AI gợi ý phân khúc từ cấu hình"
 
-**(a) Trên giao diện.** Dữ liệu → Laptop → tìm `Predator Helios 0051` → **Sửa** → bấm **AI gợi ý phân khúc từ cấu hình**.
+**(a) Trên giao diện.** Dữ liệu → Laptop → tìm `Predator Helios 0051` → icon **bút chì (Sửa)** → bấm **AI gợi ý phân khúc từ cấu hình**.
 Nút này **chỉ xem trước, không lưu** (bấm Hủy là không có gì thay đổi).
 
 **(b) Code** — `frontend/src/components/admin/SegmentSuggester.tsx`
@@ -837,7 +837,7 @@ Sau khi bấm **AI gợi ý phân khúc từ cấu hình**, mỗi láng giềng 
 Bấm vào là ra bảng toán học, không cần mở Excel hay terminal. Số trong bảng là số **thật của mô hình đang dùng**, và đã đối chiếu
 với phần tính tay ở D4–D6 (ví dụ Helios 0051: tổng hiệu² = 3,2244; khoảng cách = 1,7957; 3 ÷ 7 = 0,4286).
 
-**(a) Thao tác:** Dữ liệu → Laptop → tìm `Predator Helios 0051` → **Sửa** → **AI gợi ý phân khúc từ cấu hình** →
+**(a) Thao tác:** Dữ liệu → Laptop → tìm `Predator Helios 0051` → icon **bút chì (Sửa)** → **AI gợi ý phân khúc từ cấu hình** →
 - bấm **"!"** cạnh `#1 · khoảng cách 1.80`: cửa sổ **"Vì sao máy #1 cách 1.80?"**
   - *Bước 1:* bảng đổi 11 thông số của máy đang nhập sang z-score, mỗi dòng có phép tính `(x − TB) ÷ ĐLC = z`;
   - *Bước 2:* bảng so với máy #1: giá trị gốc hai máy, z hai máy, hiệu, hiệu², % của tổng, dòng **Tổng hiệu² = 3.2244**;
