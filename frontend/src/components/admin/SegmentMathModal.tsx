@@ -3,7 +3,7 @@ import { Alert, Button, Modal, Space, Table, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { segmentColors, t } from '../../theme/tokens';
 
-/** Số liệu ML trả kèm mỗi dự đoán (ml-service/app/models/segment_explain.py) để giải thích bằng toán học. */
+/** Số liệu trung gian ML trả kèm mỗi dự đoán (ml-service/app/models/segment_explain.py): cách chuẩn hóa, z-score và các láng giềng. */
 export interface SegmentExplain {
   model: { k: number; metric: string; weights: string; n_train: number };
   features: string[];
@@ -87,7 +87,12 @@ interface Props {
   notice?: ReactNode;
 }
 
-/** Cửa sổ "Vì sao ra kết quả này?" mở từ icon "!" của SegmentSuggester: bảng toán học từng bước để giải thích với hội đồng. */
+/**
+ * Cửa sổ giải thích kết quả dự đoán phân khúc của Mô hình A bằng chính số liệu của lần dự đoán đó.
+ * Mở từ màn AI gợi ý (SegmentSuggester) và màn Duyệt nhãn (AdminReviewQueue).
+ *
+ * `view` chọn nội dung: bảng tổng hợp (từ chuẩn hóa đến so ngưỡng tin cậy) hoặc bảng tính khoảng cách của một láng giềng.
+ */
 export function SegmentMathModal({ view, onClose, onNavigate, explain, neighbors, distribution, proba, threshold, notice }: Props) {
   const manhattan = explain.model.metric === 'manhattan';
   const names = explain.neighbors_name ?? null;
@@ -162,6 +167,7 @@ export function SegmentMathModal({ view, onClose, onNavigate, explain, neighbors
   );
 }
 
+/** Nội dung cửa sổ của một láng giềng: chuẩn hóa máy đang nhập (Bước 1) và hiệu từng cột tới láng giềng đó (Bước 2). */
 function NeighborMath({
   explain,
   index,
@@ -313,7 +319,7 @@ function ZScoreTable({ explain }: { explain: SegmentExplain }) {
     { title: 'Đặc trưng', dataIndex: 'label' },
     { title: 'Giá trị nhập', dataIndex: 'raw', align: 'right', render: (v: number) => fmt(v, 2) },
     {
-      // RAM/SSD: log₂ của giá trị nhập; nếu là số nguyên thì ghi thêm "vì 2ⁿ = giá trị" cho dễ kiểm tra
+      // RAM/SSD: log₂ của giá trị nhập; khi là số nguyên thì ghi kèm phép nghịch đảo "2ⁿ = giá trị" để đối chiếu
       title: 'Sau log₂',
       align: 'right',
       render: (_, r) =>
@@ -334,7 +340,7 @@ function ZScoreTable({ explain }: { explain: SegmentExplain }) {
       render: (_, r) => (r.s.std === null ? '—' : fmt(r.s.std, 4)),
     },
     {
-      // Thay số vào công thức z = (x − TB) ÷ ĐLC, ghi cả bước trung gian (tử số) để tự tính lại bằng máy tính
+      // Thay số vào z = (x − TB) ÷ ĐLC; ghi kèm tử số đã tính (x − TB) để kiểm tra lại từng bước
       title: 'Công thức',
       align: 'right',
       render: (_, r) =>
@@ -357,6 +363,10 @@ function distanceTotal(explain: SegmentExplain, index: number): number {
   }, 0);
 }
 
+/**
+ * Nội dung bảng tổng hợp, gồm 5 bước: chuẩn hóa máy đang nhập, khoảng cách tới các máy đã ghi nhớ (k máy gần nhất),
+ * phiếu của từng láng giềng, đếm phiếu ra xác suất và so với ngưỡng tin cậy.
+ */
 function VoteMath({
   explain,
   neighbors,

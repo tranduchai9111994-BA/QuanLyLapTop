@@ -864,7 +864,7 @@ với phần tính tay ở D4–D6 (ví dụ Helios 0051: tổng hiệu² = 3,22
 | Việc | File và dòng |
 |---|---|
 | Icon "!" trên từng chip, nút "Chi tiết", mở cửa sổ | `frontend/src/components/admin/SegmentSuggester.tsx:127-172` (state ở dòng 42-45) |
-| Hai cửa sổ toán học (bảng z-score, bảng hiệu, bảng khoảng cách tới 7 máy, đếm phiếu, so ngưỡng; thân cuộn riêng; bấm `#i` để xem tính; nút Trước/Sau) | `frontend/src/components/admin/SegmentMathModal.tsx` (`SegmentMathModal` dòng 91, `NeighborMath` dòng 165, `DistanceBreakdown` dòng 207, `ZScoreTable` dòng 305, `VoteMath` dòng 360) |
+| Hai cửa sổ toán học (bảng z-score, bảng hiệu, bảng khoảng cách tới 7 máy, đếm phiếu, so ngưỡng; thân cuộn riêng; bấm `#i` để xem tính; nút Trước/Sau) | `frontend/src/components/admin/SegmentMathModal.tsx` (`SegmentMathModal` dòng 96, `NeighborMath` dòng 171, `DistanceBreakdown` dòng 213, `ZScoreTable` dòng 311, `VoteMath` dòng 370) |
 | ML trả thêm số liệu giải thích cho mỗi máy: trung bình, độ lệch chuẩn, z của máy đang xét, z và giá trị gốc của 7 láng giềng | `ml-service/app/models/segment_explain.py` (`build_explain`); gắn vào kết quả ở `ml-service/app/main.py:124` |
 | Backend chuyển tiếp `explain` và trả thêm `threshold` (ngưỡng đang cấu hình) | `backend/src/modules/laptops/segment.service.ts:50-52, 97, 104-105` |
 | Test: cộng hiệu² rồi lấy căn phải ra đúng khoảng cách của kNN | `ml-service/tests/test_segment_explain.py` |
