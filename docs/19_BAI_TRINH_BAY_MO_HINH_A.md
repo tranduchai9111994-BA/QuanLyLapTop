@@ -67,7 +67,7 @@ dữ liệu và tra cứu khi cần."
 nên phải đưa về cùng thước đo trước khi đo khoảng cách. Giá cố ý không đưa vào, để phân khúc theo cấu hình chứ không theo giá."
 
 ```python
-# ml-service/app/data/features.py:20-30
+# ml-service/app/data/features.py:20-29
 NUMERIC_LOG = ["ram_gb", "ssd_gb"]   # nhóm 1: log2 rồi chuẩn hóa (8->16GB và 16->32GB đều "gấp đôi")
 NUMERIC = ["cpu_score", "gpu_score", "screen_inch", "ppi", "refresh_hz", "weight_kg", "battery_wh"]  # nhóm 2
 BINARY = ["gpu_dedicated", "srgb_100"]   # nhóm 3: giữ 0/1
@@ -75,7 +75,7 @@ MODEL_A_FEATURES = NUMERIC_LOG + NUMERIC + BINARY   # 11 cột = 2 + 7 + 2
 ```
 
 ```python
-# features.py:188-215 (rút gọn): cùng một bộ tiền xử lý, đặt TRONG Pipeline
+# features.py:187-214 (rút gọn): cùng một bộ tiền xử lý, đặt TRONG Pipeline
 ("log", Pipeline([impute trung vị, FunctionTransformer(np.log2), StandardScaler()]), NUMERIC_LOG),
 ("num", Pipeline([impute trung vị, StandardScaler()]), NUMERIC),
 ("bin", "passthrough", BINARY),
@@ -85,6 +85,31 @@ MODEL_A_FEATURES = NUMERIC_LOG + NUMERIC + BINARY   # 11 cột = 2 + 7 + 2
 - **[DỮ LIỆU/CẤU HÌNH]** danh sách cột nào vào nhóm nào.
 - Trung bình và độ lệch chuẩn tính trên **800 máy huấn luyện**, lưu trong `model.joblib`
   (xem lệnh ở docs/17; cách tự kiểm tra ở docs/15 mục 1.11).
+
+---
+
+## 3b. Dữ liệu từ đâu ra, "học 800 máy, thử 200 máy" nghĩa là gì (bản tóm tắt; bản chi tiết ở Phần 2 mục D0)
+
+**Lời nói:** "Mô hình học từ một file CSV 1.000 máy, mỗi máy đã có sẵn nhãn phân khúc. Ta giữ riêng 200 máy không cho mô hình
+nhìn, 800 máy còn lại là 'sách giáo khoa'. Học xong, ta bắt mô hình đoán nhãn 200 máy giữ riêng rồi so với nhãn thật để chấm điểm."
+
+| Câu hỏi | Trả lời (đã kiểm chứng) |
+|---|---|
+| Dữ liệu học nằm ở đâu? | `data/processed/catalog_vn.csv`: 1.000 dòng, 23 cột, mỗi dòng một máy, cột cuối `segment` là nhãn. Huấn luyện **đọc CSV, không đọc Excel và không đọc database** (`train.py:46-47`) |
+| Điểm CPU/GPU lấy ở đâu? | Tra từ `cpu_benchmark.csv` (29 dòng) và `gpu_benchmark.csv` (21 dòng) cùng thư mục (`train.py:51-53`) |
+| File nào chia 800/200? | `ml-service/app/lifecycle/train.py:83`, hàm `train_test_split`, seed 42 nên chia giống nhau mọi lần chạy |
+| File nào "học"? | `ml-service/app/models/classifier.py:43-51`, hàm `grid_search`, chỉ nhận 800 máy |
+| File nào chấm 200 máy? | `train.py:104-112` |
+| Học xong, mô hình nhớ gì? | Đúng **800 máy sau chuẩn hóa** (ma trận 800 hàng x 11 cột) và nhãn của chúng, cộng trung bình/độ lệch chuẩn của 11 cột. Lưu thành `artifacts/<phiên bản>/model.joblib` (166 KB) |
+
+**Hai điều phải nói thẳng khi bị hỏi về dữ liệu:**
+1. **Nhãn `segment` do chương trình sinh dữ liệu tự gán**, không phải do người hay nhà bán lẻ thật gán
+   (`data/generate_catalog.py:379-406`, hàm `assign_segment`; `data/README.md` ghi "dữ liệu tổng hợp có logic").
+   Hàm này tính điểm GAMING/CREATOR/ULTRABOOK/OFFICE từ chính các cột cấu hình rồi **cộng nhiễu ngẫu nhiên** (độ lệch 0,32).
+   Vì vậy macro-F1 0,787 cho biết kNN **khôi phục lại luật gán nhãn có nhiễu** tốt đến đâu, **chưa chứng minh** đúng với
+   nhãn của thị trường thật.
+2. Cách làm đúng khi có dữ liệu thật: thay `catalog_vn.csv` bằng catalog thu thập thật, giữ nguyên tên cột
+   (`data/README.md`, mục "Việc cần làm khi có dữ liệu thật").
 
 ---
 
@@ -316,6 +341,19 @@ Mô hình hiện tại (k = 7, uniform) chỉ ra được 0%, 14%, 29%, 43%, 57%
 - Trả lời: CREATOR hay bị nhầm thành GAMING (14/24 trên tập giữ riêng; 49/120 trên kiểm thử chéo).
 - Cách xử lý: hàng đợi Duyệt nhãn, xuất nhãn đã duyệt để huấn luyện lại.
 
+**H9. Dữ liệu lấy ở đâu? Nhãn do ai gán?**
+- Trả lời: 1.000 máy trong `data/processed/catalog_vn.csv`, do `data/generate_catalog.py` sinh theo ràng buộc thực tế
+  (chỉ ghép CPU–GPU có trên thị trường, giá theo cấu hình). Nhãn phân khúc được gán bằng công thức điểm có cộng nhiễu.
+- Bằng chứng: `data/README.md`; `generate_catalog.py:379-406`; Phần 2 mục D0.1.
+- Hạn chế nói thẳng: đây là **dữ liệu tổng hợp**; 0,787 là khả năng khôi phục luật gán nhãn có nhiễu, chưa kiểm chứng trên
+  nhãn thị trường thật. Hướng khắc phục: thay bằng catalog thu thập thật và để hai người gán nhãn độc lập (tính Cohen's kappa).
+
+**H10. "Học 800 máy, thử 200 máy" là làm thế nào, sao không chấm trên chính 800 máy?**
+- Trả lời: kNN học bằng cách ghi nhớ 800 máy đã chuẩn hóa. 200 máy giữ riêng không được nhìn trong lúc học, dùng làm "đề thi".
+  Chấm trên chính 800 máy thì mỗi máy tìm thấy chính nó nên điểm cao giả.
+- Bằng chứng: `train.py:83` (chia), `classifier.py:50` (học), `train.py:104-112` (thi); `knn._fit_X.shape = (800, 11)`.
+- Ví dụ: Helios 0051 thuộc 200 máy giữ riêng; TUF Gaming 0001 thuộc 800 máy học (Phần 2 mục D0.5, D5).
+
 ---
 
 ## 12. Danh sách tự kiểm tra trước khi lên nói
@@ -327,6 +365,9 @@ Mô hình hiện tại (k = 7, uniform) chỉ ra được 0%, 14%, 29%, 43%, 57%
 - [ ] Nêu được ba số của macro-F1 (0,787 test; 0,794 GridSearch; 0,773 chạy lại) và biết khi nào dùng số nào.
 - [ ] Làm trôi chảy Demo 1 và Demo 2, kết thúc bằng nút **Hủy**.
 - [ ] Biết nói "chưa đo" với những gì chưa đo (so với Random Forest, xếp hạng 11 đặc trưng).
+- [ ] Chỉ được file nào chia 800/200 (`train.py:83`), file nào học (`classifier.py:50`), file nào dữ liệu (`catalog_vn.csv`).
+- [ ] Nói thẳng được "nhãn là dữ liệu tổng hợp" mà không bị lúng túng (mục 3b, H9).
+- [ ] Không nói "tập test đóng băng" (mục D0.7).
 
 ---
 ---
@@ -343,13 +384,16 @@ Mô hình hiện tại (k = 7, uniform) chỉ ra được 0%, 14%, 29%, 43%, 57%
 **Bản đồ cả chuyến đi của một lần bấm nút**
 
 ```
+[D0] NGOẠI TUYẾN, TRƯỚC ĐÓ  generate_catalog.py -> catalog_vn.csv (1.000 máy) -> train.py chia 800 học / 200 thử
+        │                    -> kNN ghi nhớ 800 máy -> model.joblib       (ML nạp file này khi khởi động)
+        ▼
 [D1] Trình duyệt  SegmentSuggester.tsx:48   api.post('/laptops/predict-segment')
         │
 [D2] Backend      laptops.routes.ts:258     -> predictSegment()  segment.service.ts:59
         │         tra điểm CPU/GPU, tính ppi, gói 11 đặc trưng, mlClient.post('/predict-segment')
         │
 [D3] ML           main.py:88 predict_segment()
-        │           [D4] chuẩn hóa: log2 + z-score  (features.py:188)
+        │           [D4] chuẩn hóa: log2 + z-score  (features.py:187)
         │           [D5] đo khoảng cách tới 800 máy, lấy 7 máy gần nhất
         │           [D6] đếm phiếu -> xác suất, chọn nhãn
         │
@@ -359,6 +403,139 @@ Mô hình hiện tại (k = 7, uniform) chỉ ra được 0%, 14%, 29%, 43%, 57%
 ```
 
 Những thứ dùng ở D4–D6 (trung bình, độ lệch chuẩn, 800 máy, k = 7) đều được **tạo ra lúc huấn luyện** (mục D8–D10).
+
+---
+
+## D0. Trước khi có nút bấm: dữ liệu từ đâu, mô hình "học 800 máy, thử 200 máy" như thế nào
+
+> Đây là phần **chạy ngoại tuyến, một lần**, xảy ra **trước** mọi bước D1–D7. Mọi thứ D4–D6 dùng (800 máy, trung bình,
+> độ lệch chuẩn, k = 7) đều được tạo ở đây.
+
+### D0.1 Dữ liệu học đến từ đâu (chuỗi tạo ra file)
+
+```
+data/generate_catalog.py  ──ghi──►  data/raw/catalog_vn_raw.xlsx           (bản Excel thô, 1.000 dòng)
+(chạy: python data/generate_catalog.py)  data/processed/catalog_vn.csv     (1.000 dòng, 23 cột, có nhãn segment)  ◄── HUẤN LUYỆN ĐỌC FILE NÀY
+                                         data/processed/cpu_benchmark.csv  (29 CPU, điểm PassMark tham chiếu)
+                                         data/processed/gpu_benchmark.csv  (21 GPU)
+```
+
+- **Không có catalog thật được thu thập.** `generate_catalog.py` sinh máy theo ràng buộc thực tế (chỉ ghép CPU–GPU có trên
+  thị trường, giá là hàm của cấu hình x thương hiệu x nhiễu, 35% máy đang giảm giá). Dòng `source_url` trong CSV là
+  `https://example-retailer.vn/mock`. Mô tả đầy đủ: `data/README.md`.
+- **Nhãn `segment` được gán bằng công thức có nhiễu**, `generate_catalog.py:379-406`:
+
+```python
+gaming  = 2.8 * gpu_n + 0.8 * cpu_n + 1.0 * (refresh_hz >= 144) + 0.6 * dedicated - 0.6 * (weight_kg < 1.6)
+creator = 1.5 * cpu_n + 1.2 * gpu_n + 1.0 * srgb_100 + 0.7 * (ppi > 190) + 0.5 * (ram_gb >= 32) - 0.6 * (refresh_hz >= 165)
+...                                                                              # ultra, office tương tự
+noisy = {k: v + np.random.normal(0, 0.32) for k, v in scores.items()}            # cộng nhiễu ngẫu nhiên
+return max(noisy, key=noisy.get)                                                  # nhãn = lớp có điểm cao nhất sau nhiễu
+```
+
+  Công thức dùng **chính các cột cấu hình** mà mô hình cũng nhìn thấy; phần nhiễu làm cho các phân khúc chồng lấn tự nhiên
+  (GAMING và CREATOR hay lẫn nhau). Hệ quả khi trình bày: **điểm 0,787 đo khả năng khôi phục luật gán nhãn có nhiễu, chưa phải
+  độ đúng trên nhãn thị trường thật.** Docs/01 (quyết định D-02) từng dự định dùng nhãn thật của nhà bán lẻ; hiện nhóm đang dùng
+  dữ liệu tổng hợp và `data/README.md` ghi rõ điều này.
+- **Kiểm tra định dạng trước khi học:** `check_catalog_format` (`ml-service/app/data/data_check.py:32`) báo lỗi bằng tiếng Việt
+  nếu thiếu cột, có ô không phải số, hoặc `segment` không thuộc 4 giá trị. Chạy riêng: `python -m app.data.data_check`.
+- **Database của web (1.000 laptop trong trang "Laptop") cũng được nạp từ chính file CSV này** (`backend/prisma/seed.ts:110`),
+  nhưng **huấn luyện không đọc database**. Thêm/sửa máy trên web không tự làm mô hình học thêm. Muốn đưa nhãn đã duyệt vào
+  học thì dùng nút "Xuất nhãn đã duyệt (CSV)" rồi gộp vào `catalog_vn.csv` (docs/15 mục 1.14).
+
+### D0.2 Ai chạy huấn luyện, và chạy ở đâu
+
+- Dòng lệnh: `python -m app.lifecycle.train` (chạy từ thư mục `ml-service`); hoặc
+- Giao diện: **Trí tuệ → Quản lý mô hình → Huấn luyện mô hình mới** → backend `models.routes.ts:35`
+  → ML `main.py:218` (`/train`) → `train_module.run_training()`. Kết quả luôn là bản **Dự phòng**, không đổi mô hình đang dùng.
+  **Khi demo đừng bấm nút này** (mất thời gian và tạo thêm một phiên bản).
+
+### D0.3 Từng bước `run_training` (`ml-service/app/lifecycle/train.py`)
+
+| # | Dòng | Việc | Dữ liệu vào → ra |
+|---|---|---|---|
+| 1 | 76 `load_dataset()` (định nghĩa dòng 35-54) | đọc CSV, kiểm định dạng, tra điểm CPU/GPU, tính ppi, điền ô thiếu | 1.000 dòng thô → bảng 1.000 máy có 11 cột số + `segment` |
+| 2 | 83 `train_test_split(...)` | **chia 800 học / 200 thử** | 1.000 → `X_train` (800), `X_test` (200) |
+| 3 | 96 `grid_search(X_train, y_train)` (`classifier.py:43`) | chọn tham số, chấm trên chính 800 máy | 800 máy → bộ tham số tốt nhất và mô hình đã học |
+| 4 | 104 `best_pipe.predict(X_test[...])` | **thử 200 máy chưa từng thấy** | 200 máy (bỏ nhãn) → 200 nhãn đoán |
+| 5 | 110-112 | so nhãn đoán với nhãn thật của 200 máy | → macro-F1, ma trận nhầm lẫn |
+| 6 | 129 `joblib.dump(best_pipe, ...)` | lưu mô hình | → `artifacts/<phiên bản>/model.joblib` |
+
+Phần "học" thực sự nằm ở bước 3, dòng `classifier.py:50`: `search.fit(X[MODEL_A_FEATURES], y)`.
+`GridSearchCV` thử 64 tổ hợp x 5 phần (mục D8, D9), rồi **học lại bộ thắng trên đủ 800 máy** và trả về `best_estimator_`.
+
+### D0.4 "Học 800 máy" với kNN nghĩa cụ thể là gì
+
+kNN không rút ra công thức. "Học" = **ghi nhớ**:
+
+1. `StandardScaler` tính trung bình và độ lệch chuẩn từ 800 máy (D4).
+2. Biến 800 máy thành 800 dòng số đã chuẩn hóa.
+3. Cất cả 800 dòng đó cùng nhãn vào bộ nhớ. Kiểm tra trên mô hình đang dùng: `knn._fit_X.shape = (800, 11)`,
+   `knn._y.shape = (800,)`, và `_fit_X` đúng bằng `prep.transform(X_train)`.
+
+Ví dụ một "dòng ghi nhớ": `ASUS TUF Gaming 0001` (thuộc 800 máy học) được cất dưới dạng
+`[-1,0031; -1,1685; -0,1218; 0,7290; 2,0038; -0,8654; 0,9716; 1,1988; 0,7616; 1; 1]` kèm nhãn **GAMING**.
+Lúc dự đoán, mô hình chỉ đo khoảng cách từ máy mới tới 800 dòng như vậy (D5). Vì thế file `model.joblib` chỉ nặng 166 KB.
+
+### D0.5 "Thử 200 máy": quy trình chấm điểm
+
+Ví dụ **Acer Predator Helios 0051**, thuộc 200 máy giữ riêng (kiểm tra bằng code: có trong `X_test`, không có trong `X_train`):
+
+| Bước | Việc | Kết quả |
+|---|---|---|
+| 1 | Bỏ nhãn thật (CREATOR), chỉ đưa 11 đặc trưng vào `predict` | mô hình chưa từng thấy máy này |
+| 2 | Mô hình tìm 7 láng giềng trong 800 máy học (D5) | 3 CREATOR, 3 ULTRABOOK, 1 OFFICE |
+| 3 | `predict()` chọn nhãn | **CREATOR** (hòa 3-3, `predict` lấy lớp đứng trước trong thứ tự `CREATOR, GAMING, OFFICE, ULTRABOOK`) |
+| 4 | So với nhãn thật CREATOR | **đúng**, đóng góp 1 vào ô chéo CREATOR của ma trận nhầm lẫn (D10) |
+
+Làm như vậy với cả 200 máy rồi đếm ra ma trận nhầm lẫn và macro-F1 0,7866.
+**Nói thẳng:** hai đoạn code xử lý hòa phiếu khác nhau. `predict()` dùng lúc chấm điểm chọn CREATOR cho Helios,
+còn `main.py:111` (API, giao diện) hiện **Mỏng nhẹ**. Chỉ xảy ra khi hòa phiếu và không đổi điểm chung nhiều, nhưng nếu
+hội đồng thấy Helios hiện "Mỏng nhẹ" trong khi bạn nói mô hình đoán đúng thì đây là lý do.
+
+### D0.6 Vì sao phải giữ riêng 200 máy
+
+Nếu chấm bằng chính 800 máy đã học, mỗi máy sẽ tìm thấy chính nó (khoảng cách 0) và tự bỏ phiếu cho nhãn của mình, điểm
+cao giả (như Demo 1 với TUF Gaming 0001). 200 máy giữ riêng đóng vai "đề thi chưa gặp bao giờ". Hai tầng kiểm tra:
+
+| Tầng | Dùng dữ liệu nào | Để làm gì | Con số |
+|---|---|---|---|
+| Kiểm thử chéo 5 phần | chỉ 800 máy học, chia 640/160 | **chọn** tham số | macro-F1 0,7938 |
+| Thi cuối | 200 máy giữ riêng | **báo cáo** độ tốt | macro-F1 0,7866 |
+
+`random_state=42` nên 200 máy giữ riêng cố định miễn là `catalog_vn.csv` không đổi. Đã kiểm: mã băm (SHA-256) của CSV hiện tại,
+`8f75c4cc7a44...`, **trùng** `dataset_hash` ghi trong `metadata.json` của phiên bản đang dùng, tức mô hình này được huấn luyện đúng trên file hiện tại.
+
+### D0.7 Một điểm lệch cần biết: `golden_test.csv`
+
+Ở lần huấn luyện đầu tiên, `train.py:87-91` lưu 200 máy giữ riêng ra `artifacts/golden_test.csv` với chú thích "đóng băng".
+Kiểm tra thực tế (10/2026):
+- File này có 200 dòng nhưng phân bố nhãn khác tập giữ riêng hiện tại (71/65/38/26 so với 69/67/40/24) và **chỉ 9 mã SKU còn
+  trùng catalog hiện tại**, vì catalog đã được sinh lại sau ngày 27/9.
+- **Không có đoạn code nào đọc file này** (tìm trong `ml-service` và `backend/src` chỉ thấy đoạn ghi file).
+- Cổng khi bấm "Đưa vào sử dụng" (`models.routes.ts:63-83`) so `test.f1_macro` đã lưu của hai phiên bản, mỗi con số
+  chấm trên tập giữ riêng **của lần huấn luyện đó**, chứ không phải trên `golden_test.csv`. Comment "tập test đóng băng" ở
+  dòng 63-64 vì thế chưa đúng với cách chạy thật.
+- **Khi trình bày:** không nói "mô hình được chấm trên tập test đóng băng". Nói "200 máy giữ riêng cố định bằng seed 42".
+
+### D0.8 Tổng kết 30 giây
+
+- **Một câu:** dữ liệu là 1.000 máy tổng hợp trong `catalog_vn.csv`; `train.py:83` chia 800 để học, 200 để thử; "học" của kNN là ghi nhớ
+  800 máy đã chuẩn hóa vào `model.joblib`, rồi chấm trên 200 máy chưa thấy.
+- **Luồng:** `generate_catalog.py` → `catalog_vn.csv` → `load_dataset` (`train.py:35`) → `train_test_split` (`:83`)
+  → `grid_search` (`classifier.py:43`) → `predict` 200 máy (`:104`) → `model.joblib` (`:129`).
+- **Cách đọc:** chia dữ liệu và seed là cấu hình; "học" do scikit-learn làm, không có hàm học tự viết; điểm cuối ở `metadata.json`.
+- **Lưu ý:** nhãn là dữ liệu tổng hợp; `golden_test.csv` đã lệch và không được dùng.
+
+**Tự kiểm tra bằng tay (chạy từ thư mục `ml-service`, PowerShell):**
+
+```powershell
+cd D:\QL_Laptop\ml-service
+$env:PYTHONIOENCODING = "utf-8"
+python -W ignore -c "import joblib; from app.lifecycle.train import ARTIFACTS_DIR; m = joblib.load(ARTIFACTS_DIR / 'clf-2026.09.27-160831' / 'model.joblib'); print(m.named_steps['knn']._fit_X.shape)"
+```
+
+Kết quả mong đợi: `(800, 11)`.
 
 ---
 
@@ -452,7 +629,7 @@ Bảng 11 đặc trưng backend gửi đi cho Helios 0051:
 | 32 | 512 | 42,4324 | 16,6667 | 13,6 | 221,976 | 120 | 1,74 | 55 | 1 | 1 |
 
 **Lưu ý nói thẳng:** khi bỏ trống pin, backend điền 55 Wh, còn lúc huấn luyện pin thiếu được điền bằng trung vị cùng phân khúc
-(`features.py:148-150`). Hai cách điền khác nhau; ảnh hưởng nhỏ vì pin chỉ là 1 trong 11 cột.
+(`features.py:147-149`). Hai cách điền khác nhau; ảnh hưởng nhỏ vì pin chỉ là 1 trong 11 cột.
 
 **(d) Tổng kết 30 giây.** Backend đổi mã CPU/GPU thành điểm, tính ppi, gói đủ 11 đặc trưng rồi gọi ML.
 `SegmentSuggester.tsx:48 -> laptops.routes.ts:258 -> segment.service.ts:74 -> main.py:88`.
@@ -491,7 +668,8 @@ Bảng 11 đặc trưng backend gửi đi cho Helios 0051:
 | `[::-1]` đảo ngược thành giảm dần | ULTRABOOK, CREATOR, OFFICE, GAMING |
 | `labels[order[0]]` | **ULTRABOOK** (= "Mỏng nhẹ – Di động") |
 
-CREATOR và ULTRABOOK bằng nhau 0,4286; ai đứng đầu chỉ do cách sắp xếp xử lý hai số bằng nhau. Vì thế khi hòa,
+CREATOR và ULTRABOOK bằng nhau 0,4286; ai đứng đầu chỉ do cách sắp xếp xử lý hai số bằng nhau
+(còn `predict()` dùng lúc chấm điểm lại chọn CREATOR cho cùng máy này, xem mục D0.5). Vì thế khi hòa,
 **nhãn hiển thị không có ý nghĩa**; điều quan trọng là độ tin cậy 43% < 60% nên máy phải được người xác minh.
 
 **(d) Tổng kết 30 giây.** `predict_segment` nhận 11 số, gọi `predict_proba` (dòng 98) để lấy tỷ lệ phiếu, gọi
@@ -507,7 +685,7 @@ cho A."*
 **(a) Trên giao diện.** Không hiện; nhưng nếu thiếu bước này, khoảng cách hiện trên giao diện sẽ bị cột ppi (số hàng trăm)
 "nuốt" hết các cột khác.
 
-**(b) Code** — `ml-service/app/data/features.py:196-215`
+**(b) Code** — `ml-service/app/data/features.py:195-214`
 
 ```python
 ("log", Pipeline([
