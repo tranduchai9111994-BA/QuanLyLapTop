@@ -104,7 +104,7 @@ nhìn, 800 máy còn lại là 'sách giáo khoa'. Học xong, ta bắt mô hìn
 
 **Hai điều phải nói thẳng khi bị hỏi về dữ liệu:**
 1. **Nhãn `segment` do chương trình sinh dữ liệu tự gán**, không phải do người hay nhà bán lẻ thật gán
-   (`data/generate_catalog.py:379-406`, hàm `assign_segment`; `data/README.md` ghi "dữ liệu tổng hợp có logic").
+   (`data/generate_catalog.py:431-463`, hàm `assign_segment`; `data/README.md` ghi "dữ liệu tổng hợp có logic").
    Hàm này tính điểm GAMING/CREATOR/ULTRABOOK/OFFICE từ chính các cột cấu hình rồi **cộng nhiễu ngẫu nhiên** (độ lệch 0,32).
    Vì vậy macro-F1 0,787 cho biết kNN **khôi phục lại luật gán nhãn có nhiễu** tốt đến đâu, **chưa chứng minh** đúng với
    nhãn của thị trường thật.
@@ -344,7 +344,7 @@ Mô hình hiện tại (k = 7, uniform) chỉ ra được 0%, 14%, 29%, 43%, 57%
 **H9. Dữ liệu lấy ở đâu? Nhãn do ai gán?**
 - Trả lời: 1.000 máy trong `data/processed/catalog_vn.csv`, do `data/generate_catalog.py` sinh theo ràng buộc thực tế
   (chỉ ghép CPU–GPU có trên thị trường, giá theo cấu hình). Nhãn phân khúc được gán bằng công thức điểm có cộng nhiễu.
-- Bằng chứng: `data/README.md`; `generate_catalog.py:379-406`; Phần 2 mục D0.1.
+- Bằng chứng: `data/README.md`; `generate_catalog.py:431-463`; Phần 2 mục D0.1.
 - Hạn chế nói thẳng: đây là **dữ liệu tổng hợp**; 0,787 là khả năng khôi phục luật gán nhãn có nhiễu, chưa kiểm chứng trên
   nhãn thị trường thật. Hướng khắc phục: thay bằng catalog thu thập thật và để hai người gán nhãn độc lập (tính Cohen's kappa).
 
@@ -440,7 +440,7 @@ data/generate_catalog.py  ──ghi──►  data/raw/catalog_vn_raw.xlsx      
 - **Không có catalog thật được thu thập.** `generate_catalog.py` sinh máy theo ràng buộc thực tế (chỉ ghép CPU–GPU có trên
   thị trường, giá là hàm của cấu hình x thương hiệu x nhiễu, 35% máy đang giảm giá). Dòng `source_url` trong CSV là
   `https://example-retailer.vn/mock`. Mô tả đầy đủ: `data/README.md`.
-- **Nhãn `segment` được gán bằng công thức có nhiễu**, `generate_catalog.py:379-406`:
+- **Nhãn `segment` được gán bằng công thức có nhiễu**, `generate_catalog.py:431-463`:
 
 ```python
 gaming  = 2.8 * gpu_n + 0.8 * cpu_n + 1.0 * (refresh_hz >= 144) + 0.6 * dedicated - 0.6 * (weight_kg < 1.6)

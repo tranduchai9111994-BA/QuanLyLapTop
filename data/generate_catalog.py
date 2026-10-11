@@ -1,13 +1,29 @@
-"""Sinh catalog laptop ~1000 dòng có logic (thay generate_mock_catalog.py cũ).
+"""Sinh danh mục laptop tổng hợp (1.000 máy) và bảng điểm benchmark CPU/GPU cho dự án SmartLap.
 
-So với bản cũ (theo góp ý của giảng viên):
-1. Điểm PassMark thật (tham chiếu cpubenchmark.net / videocardbenchmark.net), không phải số bịa.
-2. Chỉ ghép CPU-GPU có thật trên thị trường (không Ryzen + Iris Xe, không Apple + RTX).
-3. Giá phụ thuộc cấu hình + thương hiệu + nhiễu ngẫu nhiên, không random theo phân khúc.
-4. Phân khúc chồng lấn: gán nhãn theo điểm số có ngưỡng mềm + nhiễu, không tách bạch tuyệt đối.
-5. Có thêm `brand_tier` (độ uy tín thương hiệu) để đưa vào mô hình.
+Đầu ra (ghi đè nếu đã có):
+    data/processed/catalog_vn.csv       danh mục có nhãn `segment`, nguồn huấn luyện Mô hình A và B
+    data/processed/cpu_benchmark.csv    bảng điểm CPU (tên -> điểm PassMark tham chiếu)
+    data/processed/gpu_benchmark.csv    bảng điểm GPU, kèm cờ card rời và dung lượng VRAM
+    data/raw/catalog_vn_raw.xlsx        bản Excel không có cột `segment`
 
-Chạy: python data/generate_catalog.py (ghi đè catalog_vn.csv và các file benchmark)
+Cách chạy (từ thư mục gốc dự án):  python data/generate_catalog.py
+
+LƯU Ý VỀ BẢN CHẤT DỮ LIỆU
+- Đây là dữ liệu tổng hợp có ràng buộc thực tế, KHÔNG phải catalog thu thập từ nhà bán lẻ.
+- Nhãn phân khúc do `assign_segment` tự gán từ chính các cột cấu hình rồi cộng nhiễu ngẫu nhiên. Vì vậy điểm của Mô
+  hình A đo khả năng khôi phục luật gán nhãn có nhiễu này, chưa phải độ đúng trên nhãn thị trường thật.
+- Điểm PassMark là giá trị tham chiếu nhập sẵn (đã làm tròn); cần đối chiếu lại trên cpubenchmark.net và
+  videocardbenchmark.net trước khi dùng làm số liệu báo cáo.
+- Seed cố định (RANDOM_STATE = 42): cùng mã nguồn cho cùng kết quả. Sửa mã sinh dữ
+  liệu sẽ làm đổi catalog; khi đó phải huấn luyện lại mô hình (mã băm `dataset_hash`
+  trong metadata.json của các phiên bản cũ sẽ không còn khớp).
+
+Nguyên tắc sinh dữ liệu (cải tiến so với bản mock cũ, theo góp ý của giảng viên):
+1. Điểm benchmark theo thang PassMark thay cho số tùy ý.
+2. Chỉ ghép CPU-GPU có trên thị trường (xem `gpu_compatible`): không Ryzen + Iris Xe, không Apple + RTX.
+3. Giá = f(cấu hình) x hệ số thương hiệu x nhiễu thị trường, không gán theo phân khúc.
+4. Phân khúc chồng lấn: nhãn lấy từ điểm số có trọng số cộng nhiễu, không tách bạch tuyệt đối.
+5. Mỗi máy có `brand_tier` (độ uy tín thương hiệu 1-5), là đặc trưng của Mô hình B.
 """
 from __future__ import annotations
 
@@ -20,9 +36,11 @@ import numpy as np
 import pandas as pd
 
 RANDOM_STATE = 42
+# Cố định seed cho cả `random` và `numpy` để mỗi lần chạy sinh đúng cùng một catalog
 random.seed(RANDOM_STATE)
 np.random.seed(RANDOM_STATE)
 
+# Thư mục đầu ra, tự tạo nếu chưa có (`personas/` dành cho generate_personas.py)
 ROOT = Path(__file__).resolve().parent
 RAW = ROOT / "raw"
 PROCESSED = ROOT / "processed"
@@ -30,15 +48,20 @@ PERSONAS = ROOT / "personas"
 for d in (RAW, PROCESSED, PERSONAS):
     d.mkdir(parents=True, exist_ok=True)
 
+# Chuỗi ghi vào cột `source` của hai file benchmark
 BENCH_SOURCE_CPU = "PassMark CPU Mark - cpubenchmark.net (tham chieu 2025-01)"
 BENCH_SOURCE_GPU = "PassMark G3D Mark - videocardbenchmark.net (tham chieu 2025-01)"
 
 # ---------------------------------------------------------------------------
-# 1) CPU: điểm PassMark thật + dòng chip (U/P/H) để ràng buộc việc ghép GPU
+# 1) CPU: điểm PassMark và dòng chip, dùng để ràng buộc việc ghép GPU
 # ---------------------------------------------------------------------------
-# tier: entry (chip giá rẻ), u (15W mỏng nhẹ), p (28W), h (45W+ hiệu năng cao)
+# Mỗi dòng: (pattern, display_name, passmark, vendor, tier, base_cost_trieu)
+#   pattern          mã ngắn để khớp tên CPU trong bảng benchmark
+#   passmark         điểm PassMark CPU Mark tham chiếu
+#   tier             dòng chip: entry (Celeron/Pentium giá rẻ) | u (~15W, mỏng nhẹ) | p (~28W) |
+#                    h (45W trở lên, hiệu năng cao) | apple
+#   base_cost_trieu  chi phí cơ sở của CPU (triệu VND), đầu vào của công thức giá
 CPUS = [
-    # pattern, display_name, passmark, vendor, tier, base_cost_trieu
     ("celeron-n4500", "Intel Celeron N4500", 1780, "Intel", "entry", 1.2),
     ("pentium-n6000", "Intel Pentium Silver N6000", 2600, "Intel", "entry", 1.5),
     ("i3-1215u", "Intel Core i3-1215U", 10500, "Intel", "u", 2.6),
@@ -71,13 +94,15 @@ CPUS = [
 ]
 
 # ---------------------------------------------------------------------------
-# 2) GPU: điểm PassMark G3D thật + ràng buộc hãng CPU / dòng CPU đi kèm
+# 2) GPU: điểm PassMark G3D và ràng buộc ghép với CPU
 # ---------------------------------------------------------------------------
-# kind: igpu (tích hợp) / dgpu (rời)
-# cpu_vendor: hãng CPU bắt buộc đi kèm (None = tùy)
-# min_cpu_tier: dòng CPU tối thiểu để ghép (tránh U-series + RTX 4080)
+# Mỗi dòng: (pattern, display_name, passmark, kind, vendor, cpu_vendor, min_cpu_tier, vram, cost_trieu)
+#   kind          igpu (tích hợp) | dgpu (card rời)
+#   cpu_vendor    hãng CPU bắt buộc đi kèm; None = không ràng buộc
+#   min_cpu_tier  dòng CPU thấp nhất được ghép, để không gắn card mạnh (RTX 4080) vào chip tiết kiệm điện (U-series)
+#   vram          dung lượng VRAM (GB); None với GPU tích hợp
+#   cost_trieu    chi phí cơ sở của GPU (triệu VND); 0 với GPU tích hợp
 GPUS = [
-    # pattern, display_name, passmark, kind, vendor, cpu_vendor, min_cpu_tier, vram, cost_trieu
     ("uhd-jasper", "Intel UHD Graphics", 700, "igpu", "Intel", "Intel", "entry", None, 0.0),
     ("uhd-alderlake", "Intel UHD Graphics (Alder Lake)", 1500, "igpu", "Intel", "Intel", "u", None, 0.0),
     ("iris-xe", "Intel Iris Xe Graphics", 2600, "igpu", "Intel", "Intel", "u", None, 0.0),
@@ -101,29 +126,31 @@ GPUS = [
     ("rx-7600m", "AMD Radeon RX 7600M XT", 16000, "dgpu", "AMD", "AMD", "h", 8, 8.4),
 ]
 
+# Thứ hạng dòng chip để so sánh với `min_cpu_tier`; Apple Silicon xếp ngang dòng h
 TIER_ORDER = {"entry": 0, "u": 1, "p": 2, "h": 3, "apple": 3}
 
 
 def gpu_compatible(cpu: tuple, gpu: tuple) -> bool:
-    """Chỉ cho phép các cặp CPU-GPU có thật trên thị trường."""
+    """Trả về True nếu cặp (CPU, GPU) có thể xuất hiện trên một máy thật. Áp dụng lần lượt 4 ràng buộc bên dưới."""
     _, _, _, cpu_vendor, cpu_tier, _ = cpu
     _, _, _, kind, gpu_vendor, required_cpu_vendor, min_tier, _, _ = gpu
 
-    # Apple: chỉ dùng GPU Apple, và GPU Apple chỉ đi với CPU Apple
+    # Ràng buộc 1 (Apple): CPU Apple chỉ đi với GPU Apple, và ngược lại
     if cpu_vendor == "Apple":
         return gpu_vendor == "Apple"
     if gpu_vendor == "Apple":
         return False
 
-    # iGPU phải cùng hãng với CPU (CPU Intel không có Radeon 780M tích hợp)
+    # Ràng buộc 2: GPU tích hợp phải cùng hãng với CPU (CPU Intel không có Radeon 780M tích hợp)
     if required_cpu_vendor is not None and required_cpu_vendor != cpu_vendor:
         return False
 
-    # Không gắn card mạnh vào CPU tiết kiệm điện
+    # Ràng buộc 3: dòng CPU phải đạt mức tối thiểu của GPU (không ghép RTX 4080 với chip U-series)
     if TIER_ORDER[cpu_tier] < TIER_ORDER[min_tier]:
         return False
 
-    # Celeron/Pentium không bao giờ đi kèm card rời
+    # Ràng buộc 4: Celeron/Pentium (tier entry) không đi kèm card rời. Hiện ràng buộc
+    # 3 đã loại mọi trường hợp này; giữ lại để an toàn khi thêm GPU mới
     if cpu_tier == "entry" and kind == "dgpu":
         return False
 
@@ -131,9 +158,9 @@ def gpu_compatible(cpu: tuple, gpu: tuple) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# 3) Thương hiệu + hạng uy tín (brand_tier)
+# 3) Thương hiệu, hệ số giá và hạng uy tín (brand_tier)
 # ---------------------------------------------------------------------------
-# brand: (tên, price_multiplier, tier 1-5, 5 = uy tín nhất)
+# Mỗi dòng: (tên, price_multiplier, tier); price_multiplier nhân vào giá, tier từ 1 đến 5 (5 = uy tín nhất)
 BRANDS = [
     ("Apple", 1.45, 5),
     ("Dell", 1.15, 5),
@@ -148,9 +175,11 @@ BRANDS = [
     ("Masstel", 0.78, 1),
     ("Avita", 0.80, 1),
 ]
+# Apple chỉ đi với CPU Apple nên các hãng còn lại có danh sách riêng
 BRANDS_NON_APPLE = [b for b in BRANDS if b[0] != "Apple"]
 
-# Dòng sản phẩm theo hãng và theo kiểu máy, để tránh kiểu "ZenBook 17 inch có RTX 4070"
+# Dòng sản phẩm theo hãng và theo nhóm: thin (mỏng nhẹ) | perf (hiệu năng: gaming, đồ họa) | office (văn phòng).
+# Ràng buộc này tránh tên vô lý như "ZenBook 17 inch gắn RTX 4070".
 SERIES = {
     "Apple": {"thin": ["MacBook Air"], "perf": ["MacBook Pro"], "office": ["MacBook Air"]},
     "Dell": {"thin": ["XPS", "Inspiron Slim"], "perf": ["G15", "Alienware M"], "office": ["Inspiron", "Vostro", "Latitude"]},
@@ -166,28 +195,38 @@ SERIES = {
     "Avita": {"thin": ["Liber"], "perf": ["Pura"], "office": ["Pura"]},
 }
 
-# Kiểu máy -> nhóm dòng sản phẩm phù hợp
+# Kiểu máy (archetype) -> nhóm dòng sản phẩm tạm dùng trong `build_machine`
 ARCH_SERIES_GROUP = {
     "budget_office": "office", "mainstream": "office", "thin_light": "thin",
     "gaming_entry": "perf", "gaming_high": "perf", "creator": "perf", "workstation": "perf",
 }
 
+# Bốn phân khúc đầu ra; dùng để thống kê ở cuối chương trình
 SEGMENTS = ["OFFICE", "ULTRABOOK", "GAMING", "CREATOR"]
 
 
 def pick_archetype() -> str:
-    """Chọn kiểu máy muốn sinh. Kiểu máy chỉ định hướng cấu hình, KHÔNG phải nhãn phân khúc:
-    nhãn được suy ra từ cấu hình ở bước sau nên mới chồng lấn được."""
+    """Chọn ngẫu nhiên một kiểu máy (archetype) theo tỷ trọng thị trường giả định.
+
+    Kiểu máy chỉ định hướng cấu hình (CPU, GPU, màn hình...), KHÔNG phải nhãn phân khúc: nhãn được suy ra từ cấu hình
+    ở `assign_segment` nên các phân khúc mới chồng lấn tự nhiên."""
     return random.choices(
         ["budget_office", "thin_light", "mainstream", "gaming_entry", "gaming_high", "creator", "workstation"],
-        weights=[0.26, 0.15, 0.20, 0.15, 0.10, 0.09, 0.05],
+        weights=[0.26, 0.15, 0.20, 0.15, 0.10, 0.09, 0.05],  # cùng thứ tự với danh sách trên, tổng bằng 1
     )[0]
 
 
 def build_machine(idx: int) -> dict | None:
+    """Sinh cấu hình và giá bán của MỘT máy.
+ Trả về dict các cột (khóa bắt đầu bằng "_" chỉ dùng nội bộ, không ghi ra CSV), hoặc None
+    nếu kiểu máy được chọn không có CPU/GPU hợp lệ (`main` bỏ qua và sinh máy khác).
+ Thứ tự sinh, bước sau dựa vào bước trước: kiểu máy -> CPU -> GPU -> thương hiệu ->
+    RAM/SSD -> màn hình -> sRGB -> trọng lượng -> pin -> giá -> khuyến mãi và lượt bán. Không
+    đổi thứ tự các lời gọi random: làm vậy sẽ đổi toàn bộ catalog dù cùng seed.
+    """
     arch = pick_archetype()
 
-    # --- chọn CPU theo kiểu máy ---
+    # Bước 1. CPU: lọc theo dòng chip (tier) và mức điểm phù hợp với kiểu máy
     if arch == "budget_office":
         pool = [c for c in CPUS if c[4] in ("entry", "u") and c[2] < 15000]
     elif arch == "thin_light":
@@ -207,14 +246,17 @@ def build_machine(idx: int) -> dict | None:
     cpu = random.choice(pool)
     cpu_pattern, cpu_name, cpu_pm, cpu_vendor, cpu_tier, cpu_cost = cpu
 
-    # --- chọn GPU hợp lệ theo kiểu máy ---
+    # Bước 2. GPU: chỉ lấy GPU ghép được với CPU đã chọn (`gpu_compatible`), rồi lọc theo kiểu máy;
+    # bộ lọc rỗng thì dùng toàn bộ GPU hợp lệ (`or valid`)
     valid = [g for g in GPUS if gpu_compatible(cpu, g)]
     if arch in ("budget_office", "thin_light"):
         candidates = [g for g in valid if g[3] == "igpu"] or valid
+        # 15% máy mỏng nhẹ có card rời yếu (<= 6500 điểm: MX550, RTX 2050)
         if arch == "thin_light" and random.random() < 0.15:
             weak_dgpu = [g for g in valid if g[3] == "dgpu" and g[2] <= 6500]
             candidates = weak_dgpu or candidates
     elif arch == "mainstream":
+        # 45%: chọn trong mọi GPU hợp lệ (có thể là card rời); còn lại: GPU tích hợp
         candidates = valid if random.random() < 0.45 else [g for g in valid if g[3] == "igpu"] or valid
     elif arch == "gaming_entry":
         candidates = [g for g in valid if g[3] == "dgpu" and 8000 <= g[2] <= 13500] or valid
@@ -229,22 +271,26 @@ def build_machine(idx: int) -> dict | None:
     gpu = random.choice(candidates)
     gpu_pattern, gpu_name, gpu_pm, gpu_kind, gpu_vendor, _, _, vram, gpu_cost = gpu
 
-    # --- thương hiệu (CPU Apple <=> hãng Apple) ---
+    # Bước 3. Thương hiệu: CPU Apple chỉ thuộc hãng Apple; hãng khác chọn ngẫu nhiên rồi chỉnh theo hạng uy tín
     if cpu_vendor == "Apple":
         brand_name, brand_mult, brand_tier = BRANDS[0]
     else:
         brand_name, brand_mult, brand_tier = random.choice(BRANDS_NON_APPLE)
-        # Hãng giá rẻ (tier 1) không bán máy cấu hình cao
+        # Hãng giá rẻ (tier 1) không bán máy cấu hình cao (CPU trên 16000
+        # điểm hoặc có card rời): đổi sang hãng tier từ 3 trở lên
         if brand_tier == 1 and (cpu_pm > 16000 or gpu_kind == "dgpu"):
             brand_name, brand_mult, brand_tier = random.choice([b for b in BRANDS_NON_APPLE if b[2] >= 3])
-        # Ngược lại, hãng cao cấp (tier >= 4, vd LG Gram/Dell XPS) không dùng Celeron/Pentium
+        # Ngược lại, hãng cao cấp (tier từ 4 trở lên, vd LG Gram, Dell XPS)
+        # không dùng Celeron/Pentium: đổi sang hãng tier không quá 3
         if brand_tier >= 4 and cpu_tier == "entry":
             brand_name, brand_mult, brand_tier = random.choice([b for b in BRANDS_NON_APPLE if b[2] <= 3])
-    # Tên dòng sản phẩm sẽ được đặt lại sau khi có nhãn phân khúc (assign_series_name),
-    # để không còn cảnh "MSI Prestige (dòng doanh nhân) bị gán nhãn Gaming".
+    # Dòng sản phẩm tạm thời theo kiểu máy. `assign_series_name` sẽ chọn lại sau khi có nhãn
+    # phân khúc để tên máy không mâu thuẫn với nhãn (vd "MSI Prestige" là dòng doanh nhân nhưng
+    # mang nhãn Gaming). Lời gọi này vẫn giữ để thứ tự số ngẫu nhiên không đổi.
     series = random.choice(SERIES[brand_name][ARCH_SERIES_GROUP[arch]])
 
-    # --- RAM / SSD tương quan với sức mạnh máy ---
+    # Bước 4. RAM/SSD: chọn ngẫu nhiên có trọng số; CPU càng mạnh (điểm
+    # PassMark càng cao) thì dung lượng lớn càng dễ xuất hiện
     if cpu_pm < 11000:
         ram = random.choices([4, 8, 16], weights=[0.25, 0.65, 0.10])[0]
         ssd = random.choices([128, 256, 512], weights=[0.2, 0.55, 0.25])[0]
@@ -257,11 +303,11 @@ def build_machine(idx: int) -> dict | None:
     else:
         ram = random.choices([16, 32, 64], weights=[0.50, 0.42, 0.08])[0]
         ssd = random.choices([512, 1024, 2048], weights=[0.45, 0.45, 0.10])[0]
-    if arch == "creator":
+    if arch == "creator":  # máy đồ họa tối thiểu 16 GB RAM và 512 GB SSD
         ram = max(ram, 16)
         ssd = max(ssd, 512)
 
-    # --- màn hình ---
+    # Bước 5. Màn hình: cỡ màn, độ phân giải và tần số quét theo kiểu máy
     if arch == "thin_light":
         screen = random.choice([13.3, 13.6, 14.0, 14.0, 14.5])
     elif arch in ("gaming_entry", "gaming_high", "workstation"):
@@ -285,9 +331,10 @@ def build_machine(idx: int) -> dict | None:
         refresh = random.choices([60, 120], weights=[0.85, 0.15])[0]
 
     w_px, h_px = (int(x) for x in resolution.split("x"))
-    ppi = math.sqrt(w_px**2 + h_px**2) / screen
+    ppi = math.sqrt(w_px**2 + h_px**2) / screen  # đường chéo tính bằng điểm ảnh chia đường chéo tính bằng inch
 
-    # sRGB 100%: phụ thuộc kiểu máy và độ phân giải (máy đồ họa gần như luôn có)
+    # Bước 6. sRGB 100%: xác suất theo kiểu máy (máy đồ họa gần như luôn
+    # có); màn nét (ppi > 200) được cộng 0,25, tối đa 0,97
     p_srgb = {
         "budget_office": 0.05, "thin_light": 0.45, "mainstream": 0.20,
         "gaming_entry": 0.45, "gaming_high": 0.75, "creator": 0.92, "workstation": 0.85,
@@ -296,8 +343,9 @@ def build_machine(idx: int) -> dict | None:
         p_srgb = min(0.97, p_srgb + 0.25)
     srgb100 = int(random.random() < p_srgb)
 
-    # --- trọng lượng: hàm của cỡ màn và có card rời hay không ---
-    # Chỉnh theo thực tế: ultrabook 14" ~1.3kg, gaming 15.6" ~2.3kg, gaming 17.3" ~2.8kg
+    # Bước 7. Trọng lượng (kg) = 0,093 x cỡ màn + 0,85 nếu có card rời + 0,30 nếu GPU rất mạnh (>= 16000 điểm) - 0,20
+    # nếu mỏng nhẹ, cộng nhiễu chuẩn (độ lệch 0,11), chặn dưới 0,95. Mốc đối chiếu: máy 14" không card rời ~1,3 kg
+    # (mỏng nhẹ ~1,1 kg); gaming 15,6" ~2,3 kg; gaming 17,3" ~2,5 kg (~2,8 kg khi GPU >= 16000 điểm).
     base_weight = 0.093 * screen + (0.85 if gpu_kind == "dgpu" else 0.0)
     if gpu_pm >= 16000:
         base_weight += 0.30
@@ -305,7 +353,8 @@ def build_machine(idx: int) -> dict | None:
         base_weight -= 0.20
     weight_kg = round(max(0.95, np.random.normal(base_weight, 0.11)), 2)
 
-    # --- pin: máy mỏng nhẹ pin tương đối lớn, máy gaming pin to nhưng nặng ---
+    # Bước 8. Pin (Wh): phân phối chuẩn theo kiểu máy (trung bình 60 mỏng nhẹ, 72
+    # gaming/workstation, 70 đồ họa, 48 còn lại), chặn trong 32-100
     if arch == "thin_light":
         battery = round(np.random.normal(60, 8))
     elif arch in ("gaming_entry", "gaming_high", "workstation"):
@@ -316,19 +365,20 @@ def build_machine(idx: int) -> dict | None:
         battery = round(np.random.normal(48, 8))
     battery = int(max(32, min(100, battery)))
 
-    # --- GIÁ: hàm của cấu hình x thương hiệu x nhiễu (góp ý #4 của thầy) ---
-    ram_cost = 0.18 * ram
-    ssd_cost = 0.0022 * ssd
+    # Bước 9. Giá (triệu VND) = tổng chi phí cấu hình x hệ số thương hiệu x nhiễu thị trường x 1,38 (hệ số bán lẻ/VAT),
+    # làm tròn đến 10.000 đồng, tối thiểu 5,5 triệu
+    ram_cost = 0.18 * ram  # 0,18 triệu mỗi GB RAM
+    ssd_cost = 0.0022 * ssd  # 0,0022 triệu mỗi GB SSD
     screen_cost = 0.4 * (ppi / 100) ** 1.6 + (1.1 if srgb100 else 0) + 0.006 * max(0, refresh - 60)
-    chassis_cost = 2.4 + 0.12 * screen
+    chassis_cost = 2.4 + 0.12 * screen  # vỏ máy, tăng theo cỡ màn
     base_cost = cpu_cost + gpu_cost + ram_cost + ssd_cost + screen_cost + chassis_cost
-    noise = np.random.normal(1.0, 0.07)  # nhiễu thị trường +-7%
-    price = base_cost * brand_mult * max(0.85, noise) * 1.38  # 1.38 = hệ số bán lẻ/VAT
+    noise = np.random.normal(1.0, 0.07)  # nhiễu thị trường khoảng +-7%
+    price = base_cost * brand_mult * max(0.85, noise) * 1.38  # nhiễu chặn dưới 0,85; 1,38 = hệ số bán lẻ/VAT
     price_vnd = int(round(price * 1_000_000 / 10_000) * 10_000)
     price_vnd = max(5_500_000, price_vnd)
 
-    # --- khuyến mãi + lượt bán, mô phỏng hành vi thị trường thật ---
-    # ~35% máy đang giảm giá (5-25%), số còn lại giá niêm yết = giá hiện tại
+    # Bước 10. Khuyến mãi và lượt bán, mô phỏng hành vi thị trường 35% máy đang giảm giá 5-25%: giá
+    # niêm yết gốc = giá hiện tại / (1 - mức giảm); máy còn lại không có giá gốc (ô trống)
     on_sale = random.random() < 0.35
     if on_sale:
         discount_pct = random.uniform(0.05, 0.25)
@@ -336,15 +386,17 @@ def build_machine(idx: int) -> dict | None:
     else:
         original_price_vnd = None
 
-    # Lượt bán tương quan với độ "đáng tiền" (value_index tính sau từ hiệu năng/giá) và brand_tier
-    # (hãng uy tín bán chạy hơn), cộng nhiễu ngẫu nhiên để làm tín hiệu "độ phổ biến" có nghĩa
-    # trong xếp hạng chứ không phải random thuần.
+    # Lượt bán ~ chuẩn quanh `base_sales` (độ lệch chuẩn 40%). `base_sales` tăng theo độ "đáng tiền" ước lượng
+    # (chi phí CPU + GPU trên mỗi triệu đồng giá bán) và theo brand_tier; nhân 1,4 nếu đang giảm giá.
+    # Có nhiễu để tín hiệu "độ phổ biến" có ý nghĩa trong xếp hạng mà không phải ngẫu nhiên thuần.
     approx_value = (cpu_cost + gpu_cost) / max(price_vnd / 1_000_000, 1)
     base_sales = 40 + 25 * approx_value + 15 * brand_tier
     if on_sale:
-        base_sales *= 1.4  # máy giảm giá thường bán chạy hơn
+        base_sales *= 1.4  # máy giảm giá bán chạy hơn
     sales_count = int(max(0, np.random.normal(base_sales, base_sales * 0.4)))
 
+    # Khóa bắt đầu bằng "_" chỉ dùng nội bộ (gán nhãn, thống kê); cột nào
+    # không nằm trong `out_cols` của `main` thì không ghi ra CSV
     return {
         "sku": f"{brand_name[:3].upper()}-{idx:05d}",
         "brand": brand_name,
@@ -374,19 +426,26 @@ def build_machine(idx: int) -> dict | None:
 
 
 # ---------------------------------------------------------------------------
-# 4) Gán nhãn phân khúc: điểm số có trọng số + ngưỡng mềm => chồng lấn tự nhiên
+# 4) Gán nhãn phân khúc: điểm số có trọng số cộng nhiễu => chồng lấn tự nhiên
 # ---------------------------------------------------------------------------
 def assign_segment(m: dict, cpu_max: int, gpu_max: int) -> str:
+    """Trả về nhãn phân khúc của một máy.
+ Mỗi phân khúc có một điểm "thiên hướng" tính từ cấu hình (điểm CPU/GPU chuẩn hóa về 0-1 bằng `cpu_max`,
+    `gpu_max`, tần số quét, cân nặng...). Cộng nhiễu ngẫu nhiên vào từng điểm rồi chọn phân khúc cao nhất.
+ Đây chính là "luật gán nhãn" mà Mô hình A phải khôi phục. Lưu ý: điểm OFFICE dùng
+    `price_vnd`, dù Mô hình A không nhận giá làm đầu vào (quyết định D-04).
+    """
     cpu_n = m["_cpu_pm"] / cpu_max
     gpu_n = m["_gpu_pm"] / gpu_max
     dedicated = m["_gpu_kind"] == "dgpu"
 
-    # Điểm "thiên hướng" từng phân khúc (càng cao càng giống phân khúc đó)
+    # Điểm thiên hướng của từng phân khúc (càng cao càng giống phân khúc đó). Hệ số là trọng số chọn tay;
+    # biểu thức so sánh (True/False) được tính như 1/0
     gaming = 2.8 * gpu_n + 0.8 * cpu_n + 1.0 * (m["refresh_hz"] >= 144) + 0.6 * dedicated - 0.6 * (m["weight_kg"] < 1.6)
     creator = 1.5 * cpu_n + 1.2 * gpu_n + 1.0 * m["srgb_100"] + 0.7 * (m["_ppi"] > 190) + 0.5 * (m["ram_gb"] >= 32) - 0.6 * (m["refresh_hz"] >= 165)
     ultra = 2.2 * max(0.0, (2.10 - m["weight_kg"])) + 0.5 * (m["battery_wh"] >= 58) + 0.4 * (not dedicated) + 0.45 * (m["screen_inch"] <= 14.5)
-    # Trừ điểm OFFICE khi máy quá nhẹ (< 1.35kg): máy nhẹ giá rẻ ngoài thị trường vẫn nghiêng
-    # về ULTRABOOK hơn; thiếu dòng này thì hai lớp chồng lấn quá mức.
+    # OFFICE bị trừ điểm khi máy quá nhẹ (< 1,35 kg): máy nhẹ giá rẻ ngoài thị trường vẫn nghiêng về ULTRABOOK;
+    # thiếu số hạng này thì hai lớp chồng lấn quá mức.
     office = (
         1.6 * (1 - cpu_n) + 0.7 * (not dedicated) + 0.6 * (m["price_vnd"] < 18_000_000)
         + 0.4 * (m["refresh_hz"] <= 60) + 0.3 * (not m["srgb_100"])
@@ -395,39 +454,41 @@ def assign_segment(m: dict, cpu_max: int, gpu_max: int) -> str:
 
     scores = {"GAMING": gaming, "CREATOR": creator, "ULTRABOOK": ultra, "OFFICE": office}
 
-    # Nhiễu gán nhãn: mô phỏng nhà bán lẻ xếp loại không nhất quán (chồng lấn thật).
-    # Đã giảm từ 0.45 xuống 0.32 (thực nghiệm): 0.45 tạo quá nhiều nhãn "sai" so với kappa thực tế
-    # (người gán nhãn thật thường đồng ý >= 70%), kéo macro-F1 xuống dưới ngưỡng hợp lý
-    # trong khi đặc trưng kỹ thuật vẫn chồng lấn tự nhiên.
+    # Nhiễu gán nhãn (độ lệch chuẩn 0,32): mô phỏng nhà bán lẻ xếp loại không nhất quán, tạo chồng lấn
+    # giữa các phân khúc. Giá trị này chọn bằng thử nghiệm: 0,45 cho quá nhiều nhãn trái với cấu hình
+    # (giả định người gán nhãn thật đồng ý khoảng 70% trở lên). Lưu ý: mức nhiễu quyết định trần
+    # macro-F1 của Mô hình A, nên đây là tham số của DỮ LIỆU chứ không phải của mô hình.
     noisy = {k: v + np.random.normal(0, 0.32) for k, v in scores.items()}
     return max(noisy, key=noisy.get)
 
 
-# Nhãn phân khúc -> nhóm dòng sản phẩm được dùng. GAMING và CREATOR dùng chung nhóm "perf"
-# (thực tế một chiếc Acer Nitro vẫn hay bị xếp vào "Đồ họa - Kỹ thuật"); OFFICE/ULTRABOOK dùng
-# nhóm văn phòng/mỏng nhẹ. Vẫn chồng lấn ở đặc trưng kỹ thuật nhưng hết cảnh vô lý kiểu
-# "MSI Prestige (dòng doanh nhân) mang nhãn Gaming".
+# Nhãn phân khúc -> nhóm dòng sản phẩm. GAMING và CREATOR dùng chung nhóm "perf" (thực tế Acer Nitro vẫn hay bị
+# xếp vào "Đồ họa - Kỹ thuật"); OFFICE dùng nhóm office, ULTRABOOK dùng nhóm thin. Nhờ vậy đặc trưng kỹ thuật vẫn
+# chồng lấn nhưng không còn tên dòng máy mâu thuẫn với nhãn (vd "MSI Prestige" mang nhãn Gaming).
 SEGMENT_SERIES_GROUP = {
     "GAMING": "perf", "CREATOR": "perf", "OFFICE": "office", "ULTRABOOK": "thin",
 }
 
 
 def assign_series_name(m: dict, idx: int) -> tuple[str, str]:
-    """Đặt lại dòng sản phẩm (series) sau khi đã có nhãn phân khúc, để tên và nhãn không mâu thuẫn.
-    Trả về (series, tên đầy đủ). `series` lưu thành cột riêng vì giá bán gắn với từng dòng máy,
-    không gắn với hãng."""
+    """Chọn lại dòng sản phẩm (series) theo nhãn phân khúc đã gán, để tên máy và nhãn không mâu thuẫn.
+ Trả về (series, tên đầy đủ). `series` được lưu thành cột riêng vì
+    giá bán gắn với từng dòng máy, không gắn với hãng."""
     group = SEGMENT_SERIES_GROUP[m["segment"]]
     series = random.choice(SERIES[m["brand"]][group])
     return series, f"{m['brand']} {series} {idx:04d}"
 
 
 def main() -> None:
-    cpu_max = max(c[2] for c in CPUS)
+    """Sinh 1.000 máy, gán nhãn, ghi catalog và bảng benchmark, rồi in thống kê để kiểm tra nhanh."""
+    cpu_max = max(c[2] for c in CPUS)  # điểm cao nhất trong bảng, dùng để chuẩn hóa điểm CPU/GPU về 0-1 khi gán nhãn
     gpu_max = max(g[2] for g in GPUS)
 
     machines: list[dict] = []
     idx = 1
     while len(machines) < 1000:
+        # `idx` tăng cả khi một lần thử bị bỏ (None) nên mã SKU có thể thưa; số
+        # thứ tự trong tên máy dùng len(machines) + 1 nên liên tục
         m = build_machine(idx)
         idx += 1
         if m is None:
@@ -437,15 +498,17 @@ def main() -> None:
         machines.append(m)
 
     df = pd.DataFrame(machines)
+    # Cột metadata giả lập: dữ liệu không thu thập từ nhà bán lẻ nên nguồn là địa chỉ mock
     df["source_url"] = "https://example-retailer.vn/mock"
     df["collected_at"] = "2026-01-15"
     df["image_url"] = ""
+    # `retailer_category` được suy ra TỪ nhãn `segment`, không phải dữ liệu độc lập của nhà bán lẻ
     df["retailer_category"] = df["segment"].map({
         "OFFICE": "Hoc tap - Van phong", "ULTRABOOK": "Mong nhe",
         "GAMING": "Laptop Gaming", "CREATOR": "Do hoa - Ky thuat",
     })
 
-    # bảng benchmark (điểm PassMark thật)
+    # Bảng benchmark; `dedicated` = 1 nếu là card rời
     cpu_rows = [{"pattern": p, "display_name": n, "raw_score": s, "source": BENCH_SOURCE_CPU} for p, n, s, _, _, _ in CPUS]
     gpu_rows = [
         {"pattern": p, "display_name": n, "raw_score": s, "dedicated": int(kind == "dgpu"),
@@ -455,6 +518,8 @@ def main() -> None:
     pd.DataFrame(cpu_rows).to_csv(PROCESSED / "cpu_benchmark.csv", index=False, encoding="utf-8-sig")
     pd.DataFrame(gpu_rows).to_csv(PROCESSED / "gpu_benchmark.csv", index=False, encoding="utf-8-sig")
 
+    # Đúng thứ tự 23 cột của catalog_vn.csv (backend `labelExport.ts` và
+    # test giữ nguyên thứ tự này); bản Excel thô bỏ cột `segment`
     out_cols = [
         "sku", "brand", "brand_tier", "series", "name", "cpu_model", "gpu_model", "ram_gb", "ssd_gb",
         "screen_inch", "resolution", "refresh_hz", "srgb_100", "weight_kg", "battery_wh",
@@ -464,6 +529,7 @@ def main() -> None:
     df[out_cols].to_csv(PROCESSED / "catalog_vn.csv", index=False, encoding="utf-8-sig")
     df[[c for c in out_cols if c != "segment"]].to_excel(RAW / "catalog_vn_raw.xlsx", index=False)
 
+    # Thống kê kiểm tra nhanh: phân bố nhãn, giá theo nhãn, số cặp CPU-GPU, mức chồng lấn giá giữa các phân khúc
     print(f"Đã sinh {len(df)} laptop -> data/processed/catalog_vn.csv")
     print("\nPhân bố phân khúc:")
     print(df["segment"].value_counts())
