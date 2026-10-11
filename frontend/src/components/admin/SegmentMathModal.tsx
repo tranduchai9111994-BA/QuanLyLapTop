@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from 'react';
-import { Alert, Button, Modal, Segmented, Space, Table, Tag, Typography } from 'antd';
+import { useLayoutEffect, useRef, type ReactNode } from 'react';
+import { Alert, Button, Modal, Space, Table, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { segmentColors, t } from '../../theme/tokens';
 
@@ -92,6 +92,29 @@ export function SegmentMathModal({ view, onClose, onNavigate, explain, neighbors
   const manhattan = explain.model.metric === 'manhattan';
   const names = explain.neighbors_name ?? null;
   const idx = view?.type === 'neighbor' ? view.index : -1;
+
+  // Bảng tổng hợp bị dựng lại mỗi khi quay về từ cửa sổ láng giềng, nên phải tự nhớ:
+  // vị trí cuộn của thân cửa sổ (savedScroll), để quay về đúng chỗ đang xem thay vì nhảy lên đầu.
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const savedScroll = useRef(0);
+  const bodyEl = () => wrapRef.current?.closest('.ant-modal-body') as HTMLElement | null;
+  const navigate = (next: MathView) => {
+    if (view?.type === 'vote' && next.type === 'neighbor') savedScroll.current = bodyEl()?.scrollTop ?? 0; // lưu trước khi rời bảng tổng hợp
+    onNavigate(next);
+  };
+  const viewKey = view === null ? 'closed' : view.type === 'neighbor' ? `neighbor-${view.index}` : 'vote';
+  useLayoutEffect(() => {
+    const body = bodyEl();
+    if (viewKey !== 'closed' && body) {
+      body.scrollTop = viewKey === 'vote' ? savedScroll.current : 0; // bảng tổng hợp: khôi phục; cửa sổ láng giềng: từ đầu
+    }
+  }, [viewKey]);
+  // Đóng cửa sổ: lần mở sau bắt đầu lại từ đầu trang
+  const close = () => {
+    savedScroll.current = 0;
+    onClose();
+  };
+
   const title =
     view?.type === 'neighbor'
       ? `Vì sao máy #${idx + 1}${names ? ` (${names[idx]})` : ''} cách ${fmt(neighbors[idx]?.distance ?? 0, 2)}${
@@ -103,13 +126,13 @@ export function SegmentMathModal({ view, onClose, onNavigate, explain, neighbors
   const footer =
     view?.type === 'neighbor' ? (
       <Space>
-        <Button disabled={idx <= 0} onClick={() => onNavigate({ type: 'neighbor', index: idx - 1 })}>
+        <Button disabled={idx <= 0} onClick={() => navigate({ type: 'neighbor', index: idx - 1 })}>
           ← Máy trước
         </Button>
-        <Button disabled={idx >= neighbors.length - 1} onClick={() => onNavigate({ type: 'neighbor', index: idx + 1 })}>
+        <Button disabled={idx >= neighbors.length - 1} onClick={() => navigate({ type: 'neighbor', index: idx + 1 })}>
           Máy sau →
         </Button>
-        <Button type="primary" onClick={() => onNavigate({ type: 'vote' })}>
+        <Button type="primary" onClick={() => navigate({ type: 'vote' })}>
           Về bảng tổng hợp
         </Button>
       </Space>
@@ -118,7 +141,7 @@ export function SegmentMathModal({ view, onClose, onNavigate, explain, neighbors
   return (
     <Modal
       open={view !== null}
-      onCancel={onClose}
+      onCancel={close}
       footer={footer}
       width="min(1500px, 96vw)" // gần toàn màn hình để các bảng 6-8 cột không bị cắt hay phải cuộn ngang
       centered
@@ -126,13 +149,15 @@ export function SegmentMathModal({ view, onClose, onNavigate, explain, neighbors
       destroyOnHidden
       styles={{ body: { maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' } }} // thân cuộn riêng, tiêu đề và nút luôn hiện
     >
+      <div ref={wrapRef}>
       {notice}
       {view?.type === 'neighbor' && neighbors[idx] && (
         <NeighborMath explain={explain} index={idx} neighbor={neighbors[idx]} manhattan={manhattan} />
       )}
       {view?.type === 'vote' && (
-        <VoteMath explain={explain} neighbors={neighbors} distribution={distribution} proba={proba} threshold={threshold} onNavigate={onNavigate} />
+        <VoteMath explain={explain} neighbors={neighbors} distribution={distribution} proba={proba} threshold={threshold} onNavigate={navigate} />
       )}
+      </div>
     </Modal>
   );
 }
@@ -178,20 +203,15 @@ function NeighborMath({
 }
 
 
-/**
- * Bảng "hiệu từng cột rồi cộng lại" giữa máy đang nhập và láng giềng thứ `index`, kèm kết luận khoảng cách.
- * Dùng ở cửa sổ của từng láng giềng (đầy đủ) và làm bảng ví dụ ở Bước 2 của cửa sổ tổng hợp (`compact`).
- */
+/** Bảng "hiệu từng cột rồi cộng lại" giữa máy đang nhập và láng giềng thứ `index`, kèm kết luận khoảng cách. */
 function DistanceBreakdown({
   explain,
   index,
   neighbor,
-  compact = false,
 }: {
   explain: SegmentExplain;
   index: number;
   neighbor: SegmentNeighbor;
-  compact?: boolean;
 }) {
   const manhattan = explain.model.metric === 'manhattan';
   const { features, inputs, query_z: qz, neighbors_z, neighbors_raw } = explain;
@@ -219,13 +239,8 @@ function DistanceBreakdown({
   const termTitle = manhattan ? '|Hiệu|' : 'Hiệu²';
   const step2Columns: ColumnsType<(typeof step2)[number]> = [
     { title: 'Đặc trưng', dataIndex: 'label' },
-    // Bản đầy đủ có thêm hai cột giá trị gốc để đối chiếu; bản gọn (compact) bỏ đi cho vừa cửa sổ tổng hợp
-    ...(compact
-      ? []
-      : [
-          { title: 'Máy nhập (gốc)', dataIndex: 'myRaw', align: 'right' as const, render: (v: number) => fmt(v, 2) },
-          { title: `Máy #${index + 1} (gốc)`, dataIndex: 'nRaw', align: 'right' as const, render: (v: number) => fmt(v, 2) },
-        ]),
+    { title: 'Máy nhập (gốc)', dataIndex: 'myRaw', align: 'right', render: (v: number) => fmt(v, 2) },
+    { title: `Máy #${index + 1} (gốc)`, dataIndex: 'nRaw', align: 'right', render: (v: number) => fmt(v, 2) },
     { title: 'z máy nhập', dataIndex: 'myZ', align: 'right', render: (v: number) => fmt(v) },
     { title: `z máy #${index + 1}`, dataIndex: 'nZ', align: 'right', render: (v: number) => fmt(v) },
     { title: 'Hiệu = z nhập − z láng giềng', dataIndex: 'diff', align: 'right', render: (v: number) => fmt(v) },
@@ -252,7 +267,7 @@ function DistanceBreakdown({
         summary={() => (
           <Table.Summary fixed>
             <Table.Summary.Row style={{ background: t.bgSubtle }}>
-              <Table.Summary.Cell index={0} colSpan={compact ? 4 : 6}>
+              <Table.Summary.Cell index={0} colSpan={6}>
                 <strong>Tổng {manhattan ? '|hiệu|' : 'hiệu²'}</strong>
               </Table.Summary.Cell>
               <Table.Summary.Cell index={1} align="right">
@@ -280,7 +295,7 @@ function DistanceBreakdown({
             </span>
           )
         }
-        description={compact ? undefined : `Hệ thống tính ra ${fmt(neighbor.distance)}, giao diện làm tròn ${fmt(neighbor.distance, 2)}. Chênh nhỏ (nếu có) do các z ở bảng đã làm tròn 4 chữ số.`}
+        description={`Hệ thống tính ra ${fmt(neighbor.distance)}, giao diện làm tròn ${fmt(neighbor.distance, 2)}. Chênh nhỏ (nếu có) do các z ở bảng đã làm tròn 4 chữ số.`}
       />
     </>
   );
@@ -359,7 +374,6 @@ function VoteMath({
 }) {
   const { k, weights } = explain.model;
   const names = explain.neighbors_name ?? null;
-  const [example, setExample] = useState(0); // máy láng giềng đang xem làm ví dụ ở Bước 2a (chỉ số 0 = #1)
   // Cột "Láng giềng": bấm vào để xem bảng tính khoảng cách của máy đó
   const rankCell = (rank: number) => (
     <Button type="link" size="small" style={{ padding: 0 }} onClick={() => onNavigate({ type: 'neighbor', index: rank - 1 })}>
@@ -496,29 +510,9 @@ function VoteMath({
       </Typography.Title>
       <Typography.Paragraph type="secondary" style={{ marginBottom: 8 }}>
         Với mỗi máy trong {explain.model.n_train} máy: lấy hiệu từng cột (đã chuẩn hóa),{' '}
-        {manhattan ? 'cộng |hiệu|' : 'bình phương rồi cộng, lấy căn bậc hai'}. Bước 2a minh họa cách tính cho MỘT máy (chọn #1 đến #{k} để xem);
-        Bước 2b là kết quả của {k} máy gần nhất sau khi làm tương tự cho cả {explain.model.n_train} máy.
+        {manhattan ? 'cộng |hiệu|' : 'bình phương rồi cộng, lấy căn bậc hai'}. Sắp xếp từ nhỏ đến lớn, giữ {k} máy đầu. Bảng dưới là {k} máy đó;
+        bấm #i để xem bảng tính từng cột của máy đó.
       </Typography.Paragraph>
-
-      <Typography.Text strong>2a. Ví dụ cách tính khoảng cách tới một máy</Typography.Text>
-      <div style={{ margin: '8px 0' }}>
-        <Space wrap>
-          <Segmented
-            value={example}
-            onChange={(v) => setExample(Number(v))}
-            options={neighbors.map((_, i) => ({ label: `#${i + 1}`, value: i }))}
-          />
-          <span>
-            Máy #{example + 1}
-            {names ? `: ${names[example]}` : ''} (nhãn {segName(neighbors[example].label)}); cột "z máy nhập" lấy từ bảng Bước 1
-          </span>
-        </Space>
-      </div>
-      <DistanceBreakdown explain={explain} index={example} neighbor={neighbors[example]} compact />
-
-      <Typography.Text strong style={{ display: 'block', margin: '16px 0 8px' }}>
-        2b. Kết quả của {k} máy gần nhất (bấm #i để xem bảng đầy đủ của máy đó)
-      </Typography.Text>
       <Table size="small" pagination={false} dataSource={distRows} columns={distColumns} />
       <Typography.Text type={maxDistDiff < 5e-4 ? 'secondary' : 'danger'} style={{ display: 'block', marginTop: 6, fontSize: 12 }}>
         {maxDistDiff < 5e-4
