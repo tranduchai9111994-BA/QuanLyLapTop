@@ -6,26 +6,7 @@ import { api } from '../../lib/api';
 import { segmentColors, t } from '../../theme/tokens';
 import { ConfidenceIndicator } from '../smart/ConfidenceIndicator';
 import { SegmentMathModal } from './SegmentMathModal';
-import type { MathView, SegmentExplain } from './SegmentMathModal';
-
-/**
- * Kết quả của `POST /laptops/predict-segment` (backend `predictSegment` trong segment.service.ts,
- * dữ liệu lấy từ ML `/predict-segment`).
- */
-interface Prediction {
-  /** Mã phân khúc có xác suất cao nhất: OFFICE | ULTRABOOK | GAMING | CREATOR. */
-  label: string;
-  /** Độ tin cậy = xác suất của `label`, từ 0 đến 1 (bằng số phiếu chia k). */
-  proba: number;
-  /** Xác suất của từng phân khúc, tổng bằng 1. */
-  distribution: Record<string, number>;
-  /** k máy gần nhất trong tập huấn luyện đã bỏ phiếu (FR-09): nhãn + khoảng cách. */
-  neighbors: { label: string; distance: number }[];
-  /** Số liệu cho icon "!": giải thích khoảng cách và số phiếu bằng toán học (có thể thiếu nếu ML cũ). */
-  explain?: SegmentExplain;
-  /** Ngưỡng tin cậy đang cấu hình ở backend (Cấu hình tri thức). */
-  threshold?: number;
-}
+import type { MathView, SegmentPrediction } from './SegmentMathModal';
 
 /**
  * Nút "AI gợi ý phân khúc từ cấu hình" trong popup Thêm/Sửa Laptop (truyền vào CrudTable qua `renderFormExtra`).
@@ -39,7 +20,7 @@ interface Prediction {
  * Props: `form` là Form antd của popup, dùng để đọc thông số máy và điền sẵn ô "Phân khúc".
  */
 export function SegmentSuggester({ form }: { form: FormInstance }) {
-  const [pred, setPred] = useState<Prediction | null>(null); // kết quả của lần bấm gần nhất; null khi chưa bấm
+  const [pred, setPred] = useState<SegmentPrediction | null>(null); // kết quả của lần bấm gần nhất; null khi chưa bấm
   const [loading, setLoading] = useState(false); // đang chờ backend/ML trả lời
   // Cửa sổ toán học đang mở: bảng khoảng cách của láng giềng #i, hoặc bảng tổng hợp (null = đóng)
   const [mathView, setMathView] = useState<MathView | null>(null);
@@ -83,7 +64,7 @@ export function SegmentSuggester({ form }: { form: FormInstance }) {
         weightKg: v.weightKg,
         batteryWh: v.batteryWh ?? 55, // bỏ trống thì dùng 55 Wh (mức phổ biến), khớp backend
       });
-      const p: Prediction = r.data.data;
+      const p: SegmentPrediction = r.data.data;
       setPred(p);
       setMathView(null); // đóng cửa sổ toán học của kết quả cũ (nếu còn mở)
       // Ô "Phân khúc" còn trống thì điền sẵn nhãn AI; nếu nhân viên đã chọn thì không ghi đè.

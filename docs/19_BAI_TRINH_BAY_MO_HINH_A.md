@@ -849,7 +849,9 @@ với phần tính tay ở D4–D6 (ví dụ Helios 0051: tổng hiệu² = 3,22
     dòng **Tổng hiệu²** và **Khoảng cách = √ tổng**, vd #1 ra 3,2244 → 1,7957); **2b** là bảng 7 máy với **tổng hiệu² của 11 cột**,
     **khoảng cách = √ tổng** và cột "Hệ thống trả về" để đối chiếu (bấm `#i` để xem bảng đầy đủ của máy đó);
   - *Bước 3:* mỗi láng giềng bỏ phiếu (nhãn, khoảng cách, 1 phiếu mỗi máy);
-  - *Bước 4:* đếm phiếu `3 ÷ 7 = 0.4286` cho từng phân khúc (khớp xác suất hệ thống trả về);
+  - *Bước 4:* đếm phiếu ra xác suất. Bảng có các cột **Phân khúc | Láng giềng | Số phiếu | Phép tính | Xác suất | Giao diện** và dòng **Tổng**:
+    cột Láng giềng liệt kê máy nào đã bỏ phiếu cho phân khúc đó (vd CREATOR: `#1, #2, #3`; bấm `#i` để xem tính khoảng cách của máy đó),
+    `3 ÷ 7`, xác suất `0.4286`, giao diện `43%`; dòng Tổng: 7 phiếu, xác suất cộng lại bằng `1.0000`;
   - *Bước 5:* so với ngưỡng 60% (cần ít nhất 5/7 phiếu), kết luận "43% < 60%: vào hàng đợi Cần xác minh", kèm ghi chú nếu hòa phiếu.
   - Nếu láng giềng #1 cách 0.0000 (máy đang xét đã nằm trong 800 máy học, ví dụ `Avita Pura 0874` ra 100%) thì có thêm dòng lưu ý
     "máy này tự bỏ một phiếu cho chính mình".
@@ -1189,6 +1191,12 @@ trên tập học.
 **(a) Trên giao diện.** Dữ liệu → **Duyệt nhãn** (huy hiệu 6). Mỗi thẻ: tên máy, CPU/GPU, giá, "Dự đoán: … %",
 **Cần xác minh**, 4 phần trăm, ô chọn phân khúc, checkbox **Khóa nhãn, không cho mô hình thay đổi**, nút **Duyệt (giữ nhãn AI)**.
 Nút **Xuất nhãn đã duyệt (CSV)** ở trên cùng. Chỉ xem, không bấm Duyệt nếu không định đổi dữ liệu.
+
+Mỗi thẻ có thêm nút **"! Chi tiết"** dưới thanh xác suất (`AdminReviewQueue.tsx`, hàm `openDetail`): bấm vào mở cùng cửa sổ 5 bước như ở màn AI
+gợi ý. Hàng đợi chỉ lưu nhãn và xác suất tại lúc gán, không lưu số liệu trung gian, nên giao diện **tính lại** bằng mô hình đang dùng
+cho đúng cấu hình của máy (gọi `POST /laptops/predict-segment`). Đầu cửa sổ có ghi chú so sánh với nhãn đang lưu: với thẻ mẫu
+`Avita Pura 0874`, ghi chú nêu "đang lưu Văn phòng 52% (do demo-seed-review-queue dự đoán)" còn bảng tính lại ra **100%** (7/7 láng giềng
+là Văn phòng). Đó là bằng chứng trực quan rằng 6 thẻ này là dữ liệu mẫu.
 
 **(c) Kiểm tra số trên thẻ.** Thẻ "Avita Pura 0874: Văn phòng 52%, Mỏng nhẹ 41%, Gaming 5%, Đồ họa 2%". Với k = 7 uniform,
 xác suất chỉ có thể là 0/7 … 7/7, tức 0%, 14%, 29%, 43%, 57%, 71%, 86%, 100%. 52% không nằm trong danh sách, nên thẻ này không

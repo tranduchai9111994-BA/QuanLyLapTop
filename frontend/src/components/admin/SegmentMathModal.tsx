@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Alert, Button, Modal, Segmented, Space, Table, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { segmentColors, t } from '../../theme/tokens';
@@ -19,6 +19,27 @@ export interface SegmentExplain {
 export interface SegmentNeighbor {
   label: string;
   distance: number;
+}
+
+/**
+ * Kết quả của `POST /laptops/predict-segment` (backend `predictSegment` trong segment.service.ts,
+ * dữ liệu lấy từ ML `/predict-segment`). Dùng chung cho màn AI gợi ý và màn Duyệt nhãn.
+ */
+export interface SegmentPrediction {
+  /** Mã phân khúc có xác suất cao nhất: OFFICE | ULTRABOOK | GAMING | CREATOR. */
+  label: string;
+  /** Độ tin cậy = xác suất của `label`, từ 0 đến 1 (bằng số phiếu chia k). */
+  proba: number;
+  /** Xác suất của từng phân khúc, tổng bằng 1. */
+  distribution: Record<string, number>;
+  /** k máy gần nhất trong tập huấn luyện đã bỏ phiếu (FR-09): nhãn + khoảng cách. */
+  neighbors: SegmentNeighbor[];
+  /** Số liệu cho cửa sổ toán học: z-score, hiệu từng cột, số phiếu (có thể thiếu nếu ML cũ). */
+  explain?: SegmentExplain;
+  /** Ngưỡng tin cậy đang cấu hình ở backend (Cấu hình tri thức). */
+  threshold?: number;
+  /** Phiên bản mô hình đã tạo ra dự đoán này. */
+  modelVersion?: string | null;
 }
 
 export type MathView = { type: 'neighbor'; index: number } | { type: 'vote' };
@@ -60,10 +81,12 @@ interface Props {
   threshold: number;
   /** Chuyển sang cửa sổ khác (bấm vào một láng giềng, nút Trước/Sau, về bảng tổng hợp). */
   onNavigate: (view: MathView) => void;
+  /** Nội dung hiện ở đầu cửa sổ (vd tên máy, ghi chú so sánh với nhãn đang lưu). */
+  notice?: ReactNode;
 }
 
 /** Cửa sổ "Vì sao ra kết quả này?" mở từ icon "!" của SegmentSuggester: bảng toán học từng bước để giải thích với hội đồng. */
-export function SegmentMathModal({ view, onClose, onNavigate, explain, neighbors, distribution, proba, threshold }: Props) {
+export function SegmentMathModal({ view, onClose, onNavigate, explain, neighbors, distribution, proba, threshold, notice }: Props) {
   const manhattan = explain.model.metric === 'manhattan';
   const names = explain.neighbors_name ?? null;
   const idx = view?.type === 'neighbor' ? view.index : -1;
@@ -99,6 +122,7 @@ export function SegmentMathModal({ view, onClose, onNavigate, explain, neighbors
       destroyOnHidden
       styles={{ body: { maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' } }} // thân cuộn riêng, tiêu đề và nút luôn hiện
     >
+      {notice}
       {view?.type === 'neighbor' && neighbors[idx] && (
         <NeighborMath explain={explain} index={idx} neighbor={neighbors[idx]} manhattan={manhattan} />
       )}
@@ -359,7 +383,15 @@ function VoteMath({
     .map((label) => {
       const members = voteRows.filter((r) => r.label === label);
       const sum = members.reduce((a, r) => a + r.weight, 0);
-      return { key: label, label, count: members.length, sum, computed: totalWeight > 0 ? sum / totalWeight : 0, system: distribution[label] };
+      return {
+        key: label,
+        label,
+        ranks: members.map((r) => r.rank), // thứ hạng các láng giềng đã bỏ phiếu cho phân khúc này
+        count: members.length,
+        sum,
+        computed: totalWeight > 0 ? sum / totalWeight : 0,
+        system: distribution[label],
+      };
     })
     .sort((a, b) => b.system - a.system);
 
@@ -386,14 +418,38 @@ function VoteMath({
   ];
   const labelColumns: ColumnsType<(typeof labelRows)[number]> = [
     { title: 'Phân khúc', dataIndex: 'label', render: (v: string) => <Tag color={segmentColors[v]?.color}>{segName(v)}</Tag> },
-    { title: 'Số láng giềng', dataIndex: 'count', align: 'right' },
+    {
+      // Những láng giềng nào đã bỏ phiếu cho phân khúc này (bấm #i để xem cách tính khoảng cách của máy đó)
+      title: 'Láng giềng',
+      key: 'ranks',
+      render: (_, r) =>
+        r.ranks.length === 0
+          ? '—'
+          : r.ranks.map((rank, n) => (
+              <span key={rank}>
+                {n > 0 && ', '}
+                {rankCell(rank)}
+              </span>
+            )),
+    },
+    {
+      title: uniform ? 'Số phiếu' : 'Tổng trọng số phiếu',
+      key: 'votes',
+      align: 'right',
+      render: (_, r) => (uniform ? r.count : fmt(r.sum)),
+    },
     {
       title: uniform ? 'Phép tính = số phiếu ÷ k' : 'Phép tính = tổng trọng số ÷ tổng tất cả',
+      key: 'calc',
       align: 'right',
-      render: (_, r) => (uniform ? `${r.count} ÷ ${k} = ${fmt(r.computed)}` : `${fmt(r.sum)} ÷ ${fmt(totalWeight)} = ${fmt(r.computed)}`),
+      render: (_, r) => (uniform ? `${r.count} ÷ ${k}` : `${fmt(r.sum)} ÷ ${fmt(totalWeight)}`),
     },
-    { title: 'Xác suất', dataIndex: 'system', align: 'right', render: (v: number) => <strong>{pct(v)}</strong> },
+    { title: 'Xác suất', dataIndex: 'computed', align: 'right', render: (v: number) => fmt(v) },
+    { title: 'Giao diện', dataIndex: 'system', align: 'right', render: (v: number) => <strong>{pct(v)}</strong> },
   ];
+  // Dòng tổng: số phiếu cộng lại phải bằng k và xác suất cộng lại bằng 1
+  const totalVotes = uniform ? labelRows.reduce((a, r) => a + r.count, 0) : totalWeight;
+  const totalProba = labelRows.reduce((a, r) => a + r.computed, 0);
 
   const passes = proba >= threshold;
   return (
@@ -462,7 +518,29 @@ function VoteMath({
       <Typography.Title level={5} style={{ marginTop: 20 }}>
         Bước 4. Đếm phiếu ra xác suất
       </Typography.Title>
-      <Table size="small" pagination={false} dataSource={labelRows} columns={labelColumns} />
+      <Table
+        size="small"
+        pagination={false}
+        dataSource={labelRows}
+        columns={labelColumns}
+        summary={() => (
+          <Table.Summary>
+            <Table.Summary.Row style={{ background: t.bgSubtle }}>
+              <Table.Summary.Cell index={0} colSpan={2}>
+                <strong>Tổng</strong>
+              </Table.Summary.Cell>
+              <Table.Summary.Cell index={1} align="right">
+                <strong>{uniform ? totalVotes : fmt(totalVotes)}</strong>
+              </Table.Summary.Cell>
+              <Table.Summary.Cell index={2} />
+              <Table.Summary.Cell index={3} align="right">
+                <strong>{fmt(totalProba)}</strong>
+              </Table.Summary.Cell>
+              <Table.Summary.Cell index={4} />
+            </Table.Summary.Row>
+          </Table.Summary>
+        )}
+      />
 
       <Typography.Title level={5} style={{ marginTop: 20 }}>
         Bước 5. So với ngưỡng tin cậy

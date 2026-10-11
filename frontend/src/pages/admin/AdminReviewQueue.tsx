@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Alert, Button, Card, Checkbox, Empty, Select, Space, message } from 'antd';
-import { CheckCircleOutlined, DownloadOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, DownloadOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { api } from '../../lib/api';
 import { segmentColors, t } from '../../theme/tokens';
 import { formatVnd } from '../../utils/format';
 import { ConfidenceIndicator } from '../../components/smart/ConfidenceIndicator';
+import { SegmentMathModal } from '../../components/admin/SegmentMathModal';
+import type { MathView, SegmentPrediction } from '../../components/admin/SegmentMathModal';
 
 interface QueueItem {
   laptopId: number;
@@ -15,6 +17,18 @@ interface QueueItem {
     cpu: { displayName: string };
     gpu: { displayName: string };
     priceVnd: number;
+    // Thông số đưa vào Mô hình A (API hàng đợi trả đủ các cột của máy); dùng để tính lại khi xem chi tiết
+    cpuId: number;
+    gpuId: number;
+    ramGb: number;
+    ssdGb: number;
+    screenInch: number;
+    resWidth: number;
+    resHeight: number;
+    refreshHz: number | null;
+    srgb100: boolean;
+    weightKg: number;
+    batteryWh: number | null;
   };
   segment: string;
   confidence: number | null;
@@ -39,6 +53,10 @@ export function AdminReviewQueue() {
   const [choices, setChoices] = useState<Record<number, string>>({});
   const [lockChoices, setLockChoices] = useState<Record<number, boolean>>({});
   const [saving, setSaving] = useState<number | null>(null);
+  // Cửa sổ "Chi tiết cách tính" của một máy trong hàng đợi
+  const [detail, setDetail] = useState<{ item: QueueItem; pred: SegmentPrediction } | null>(null);
+  const [mathView, setMathView] = useState<MathView | null>(null); // bảng đang mở (null = đóng)
+  const [detailLoading, setDetailLoading] = useState<number | null>(null); // laptopId đang chờ tính
 
   function load() {
     setLoading(true);
@@ -65,6 +83,60 @@ export function AdminReviewQueue() {
     } finally {
       setSaving(null);
     }
+  }
+
+  /**
+   * Tính lại dự đoán của Mô hình A cho đúng cấu hình của máy này rồi mở bảng toán học.
+   * Hàng đợi chỉ lưu nhãn và xác suất tại thời điểm gán, không lưu số liệu trung gian (z-score, láng giềng),
+   * nên phải gọi lại API dự đoán; kết quả dùng MÔ HÌNH ĐANG DÙNG, có thể khác nhãn đã lưu (xem `detailNotice`).
+   */
+  async function openDetail(item: QueueItem) {
+    const l = item.laptop;
+    setDetailLoading(item.laptopId);
+    try {
+      const r = await api.post('/laptops/predict-segment', {
+        cpuId: l.cpuId,
+        gpuId: l.gpuId,
+        ramGb: l.ramGb,
+        ssdGb: l.ssdGb,
+        screenInch: l.screenInch,
+        resWidth: l.resWidth,
+        resHeight: l.resHeight,
+        refreshHz: l.refreshHz ?? 60,
+        srgb100: !!l.srgb100,
+        weightKg: l.weightKg,
+        batteryWh: l.batteryWh ?? 55,
+      });
+      setDetail({ item, pred: r.data.data });
+      setMathView({ type: 'vote' });
+    } catch (err: any) {
+      message.error(err?.response?.data?.error?.message ?? 'Không tính được chi tiết. Kiểm tra dịch vụ ML có đang chạy không.');
+    } finally {
+      setDetailLoading(null);
+    }
+  }
+
+  /** Ghi chú đầu cửa sổ: tên máy, và nhắc nếu số tính lại khác với nhãn đang lưu trong hàng đợi. */
+  function detailNotice(item: QueueItem, pred: SegmentPrediction) {
+    const name = (code: string) => segmentColors[code]?.label ?? code;
+    const pct = (v: number) => `${Math.round(v * 100)}%`;
+    const sameAsStored = item.confidence !== null && Math.abs(item.confidence - pred.proba) < 0.005;
+    return (
+      <Alert
+        style={{ marginBottom: 12 }}
+        type={sameAsStored ? 'info' : 'warning'}
+        showIcon
+        message={`Máy: ${item.laptop.name}`}
+        description={
+          sameAsStored
+            ? `Khớp với nhãn đang lưu (${name(item.segment)} ${pct(item.confidence ?? 0)}).`
+            : `Nhãn đang lưu trong hàng đợi: ${name(item.segment)} ${item.confidence === null ? '' : pct(item.confidence)}` +
+              ` (do "${item.predictedBy ?? 'không rõ'}" dự đoán). Bảng dưới là TÍNH LẠI bằng mô hình đang dùng` +
+              ` (${pred.modelVersion ?? 'không rõ'}) cho cùng cấu hình: ${name(pred.label)} ${pct(pred.proba)}.` +
+              ' Hai kết quả có thể khác nhau nếu nhãn được tạo bởi phiên bản mô hình khác hoặc là dữ liệu mẫu.'
+        }
+      />
+    );
   }
 
   async function exportLabels() {
@@ -118,6 +190,17 @@ export function AdminReviewQueue() {
 
                 <div style={{ flex: '1 1 260px', minWidth: 220 }}>
                   <ConfidenceIndicator distribution={item.distribution} />
+                  {/* Mở bảng toán học: chuẩn hóa, khoảng cách tới các máy đã ghi nhớ, bỏ phiếu, so ngưỡng */}
+                  <Button
+                    type="link"
+                    size="small"
+                    style={{ paddingLeft: 0 }}
+                    icon={<ExclamationCircleOutlined />}
+                    loading={detailLoading === item.laptopId}
+                    onClick={() => openDetail(item)}
+                  >
+                    Chi tiết
+                  </Button>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 220 }}>
@@ -149,6 +232,21 @@ export function AdminReviewQueue() {
           );
         })}
       </Space>
+
+      {/* Cửa sổ toán học dùng chung với màn AI gợi ý (SegmentMathModal) */}
+      {detail?.pred.explain && (
+        <SegmentMathModal
+          view={mathView}
+          onClose={() => setMathView(null)}
+          onNavigate={setMathView}
+          threshold={detail.pred.threshold ?? 0.6}
+          explain={detail.pred.explain}
+          neighbors={detail.pred.neighbors}
+          distribution={detail.pred.distribution}
+          proba={detail.pred.proba}
+          notice={detailNotice(detail.item, detail.pred)}
+        />
+      )}
     </div>
   );
 }
