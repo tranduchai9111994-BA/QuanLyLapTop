@@ -15,7 +15,7 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException
 
 from app.models.explain import build_explanation
-from app.models.segment_explain import build_explain
+from app.models.segment_explain import build_explain, training_names
 from app.data.features import MODEL_A_FEATURES, MODEL_B_FEATURES
 from app.lifecycle.registry import ARTIFACTS_DIR, registry
 from app.models.retriever import build_ideal_vector, build_weights, fit_scaler, match_pct, recommend, similar_items
@@ -121,7 +121,7 @@ def predict_segment(req: PredictSegmentRequest) -> dict:  # hàm B: req.items = 
                 for j, d in zip(neigh_idx[row_i], neigh_dist[row_i])
             ],
             # Số liệu cho nút "!" ở giao diện: giải thích khoảng cách và số phiếu bằng toán học
-            "explain": build_explain(registry.model, X.iloc[row_i], Z[row_i], neigh_idx[row_i]),
+            "explain": build_explain(registry.model, X.iloc[row_i], Z[row_i], neigh_idx[row_i], training_names(registry.model)),
         })
     return {"items": results, "modelVersion": registry.version}  # trả về cho backend (hàm A)
 

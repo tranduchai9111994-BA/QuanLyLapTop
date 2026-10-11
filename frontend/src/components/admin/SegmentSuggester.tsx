@@ -16,6 +16,8 @@ interface Prediction {
   neighbors: { label: string; distance: number }[];
   /** Số liệu cho icon "!": giải thích khoảng cách và số phiếu bằng toán học (có thể thiếu nếu ML cũ). */
   explain?: SegmentExplain;
+  /** Ngưỡng tin cậy đang cấu hình ở backend (Cấu hình tri thức). */
+  threshold?: number;
 }
 
 /** Khi nhập máy mới, Mô hình A đọc cấu hình và gợi ý phân khúc kèm độ tin cậy + k láng giềng đã
@@ -87,7 +89,7 @@ export function SegmentSuggester({ form }: { form: FormInstance }) {
 
       {pred && (
         <div style={{ marginTop: 10 }}>
-          <ConfidenceIndicator distribution={pred.distribution} />
+          <ConfidenceIndicator distribution={pred.distribution} threshold={pred.threshold} />
 
           {/* FR-09: cho thấy lý do dự đoán (k máy gần nhất đã bỏ phiếu), không phải hộp đen */}
           <div style={{ marginTop: 8, fontSize: 12, color: t.textSecondary }}>
@@ -135,6 +137,8 @@ export function SegmentSuggester({ form }: { form: FormInstance }) {
             <SegmentMathModal
               view={mathView}
               onClose={() => setMathView(null)}
+              onNavigate={setMathView}
+              threshold={pred.threshold ?? 0.6}
               explain={pred.explain}
               neighbors={pred.neighbors}
               distribution={pred.distribution}
@@ -153,7 +157,7 @@ export function SegmentSuggester({ form }: { form: FormInstance }) {
             </div>
           )}
 
-          {pred.proba < 0.6 && (
+          {pred.proba < (pred.threshold ?? 0.6) && (
             <Alert
               type="warning"
               showIcon

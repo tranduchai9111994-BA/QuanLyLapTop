@@ -1,4 +1,4 @@
-import { Alert, Modal, Table, Tag, Typography } from 'antd';
+import { Alert, Button, Modal, Space, Table, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { segmentColors, t } from '../../theme/tokens';
 
@@ -11,6 +11,8 @@ export interface SegmentExplain {
   query_z: number[];
   neighbors_z: number[][];
   neighbors_raw: number[][];
+  /** Tên 7 láng giềng; null khi ML không dựng lại chắc chắn được (xem segment_explain.training_names). */
+  neighbors_name?: string[] | null;
 }
 
 export interface SegmentNeighbor {
@@ -34,9 +36,6 @@ const FEATURE_LABEL: Record<string, string> = {
   srgb_100: 'Màn chuẩn màu sRGB (0/1)',
 };
 
-// Ngưỡng mặc định của backend (segment.service.ts); quản trị có thể đổi ở "Cấu hình tri thức".
-const DEFAULT_THRESHOLD = 0.6;
-
 const fmt = (v: number, digits = 4) => Number(v).toFixed(digits);
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 const segName = (code: string) => segmentColors[code]?.label ?? code;
@@ -56,22 +55,54 @@ interface Props {
   neighbors: SegmentNeighbor[];
   distribution: Record<string, number>;
   proba: number;
+  /** Ngưỡng tin cậy đang cấu hình (backend trả kèm dự đoán). */
+  threshold: number;
+  /** Chuyển sang cửa sổ khác (bấm vào một láng giềng, nút Trước/Sau, về bảng tổng hợp). */
+  onNavigate: (view: MathView) => void;
 }
 
 /** Cửa sổ "Vì sao ra kết quả này?" mở từ icon "!" của SegmentSuggester: bảng toán học từng bước để giải thích với hội đồng. */
-export function SegmentMathModal({ view, onClose, explain, neighbors, distribution, proba }: Props) {
+export function SegmentMathModal({ view, onClose, onNavigate, explain, neighbors, distribution, proba, threshold }: Props) {
   const manhattan = explain.model.metric === 'manhattan';
+  const names = explain.neighbors_name ?? null;
+  const idx = view?.type === 'neighbor' ? view.index : -1;
   const title =
     view?.type === 'neighbor'
-      ? `Vì sao máy #${view.index + 1} cách ${fmt(neighbors[view.index]?.distance ?? 0, 2)}?`
+      ? `Vì sao máy #${idx + 1}${names ? ` (${names[idx]})` : ''} cách ${fmt(neighbors[idx]?.distance ?? 0, 2)}?`
       : `Vì sao độ tin cậy là ${pct(proba)}?`;
 
+  // Cửa sổ láng giềng có nút Trước/Sau để lần lượt xem #1…#7 mà không phải đóng mở
+  const footer =
+    view?.type === 'neighbor' ? (
+      <Space>
+        <Button disabled={idx <= 0} onClick={() => onNavigate({ type: 'neighbor', index: idx - 1 })}>
+          ← Máy trước
+        </Button>
+        <Button disabled={idx >= neighbors.length - 1} onClick={() => onNavigate({ type: 'neighbor', index: idx + 1 })}>
+          Máy sau →
+        </Button>
+        <Button type="primary" onClick={() => onNavigate({ type: 'vote' })}>
+          Về bảng tổng hợp
+        </Button>
+      </Space>
+    ) : null;
+
   return (
-    <Modal open={view !== null} onCancel={onClose} footer={null} width={940} title={title} destroyOnClose>
-      {view?.type === 'neighbor' && neighbors[view.index] && (
-        <NeighborMath explain={explain} index={view.index} neighbor={neighbors[view.index]} manhattan={manhattan} />
+    <Modal
+      open={view !== null}
+      onCancel={onClose}
+      footer={footer}
+      width="min(940px, 95vw)"
+      title={title}
+      destroyOnHidden
+      styles={{ body: { maxHeight: '70vh', overflowY: 'auto' } }} // thân cuộn riêng, tiêu đề và nút luôn hiện
+    >
+      {view?.type === 'neighbor' && neighbors[idx] && (
+        <NeighborMath explain={explain} index={idx} neighbor={neighbors[idx]} manhattan={manhattan} />
       )}
-      {view?.type === 'vote' && <VoteMath explain={explain} neighbors={neighbors} distribution={distribution} proba={proba} />}
+      {view?.type === 'vote' && (
+        <VoteMath explain={explain} neighbors={neighbors} distribution={distribution} proba={proba} threshold={threshold} onNavigate={onNavigate} />
+      )}
     </Modal>
   );
 }
@@ -130,7 +161,7 @@ function NeighborMath({
             ? 'Khoảng cách Manhattan = cộng |hiệu| của cả 11 cột (đã chuẩn hóa).'
             : 'Khoảng cách Euclidean (Pytago nhiều chiều) = √(cộng hiệu² của cả 11 cột đã chuẩn hóa).'
         }
-        description={`Máy láng giềng #${index + 1} là một trong ${explain.model.n_train} máy mô hình đã ghi nhớ khi huấn luyện, nhãn ${segName(neighbor.label)}.`}
+        description={`Máy láng giềng #${index + 1}${explain.neighbors_name ? ` (${explain.neighbors_name[index]})` : ''} là một trong ${explain.model.n_train} máy mô hình đã ghi nhớ khi huấn luyện, nhãn ${segName(neighbor.label)}.`}
       />
 
       <Typography.Title level={5}>Bước 1. Đổi 11 thông số của máy đang nhập sang z-score</Typography.Title>
@@ -244,13 +275,25 @@ function VoteMath({
   neighbors,
   distribution,
   proba,
+  threshold,
+  onNavigate,
 }: {
   explain: SegmentExplain;
   neighbors: SegmentNeighbor[];
   distribution: Record<string, number>;
   proba: number;
+  threshold: number;
+  onNavigate: (view: MathView) => void;
 }) {
   const { k, weights } = explain.model;
+  const names = explain.neighbors_name ?? null;
+  // Cột "Láng giềng": bấm vào để xem bảng tính khoảng cách của máy đó
+  const rankCell = (rank: number) => (
+    <Button type="link" size="small" style={{ padding: 0 }} onClick={() => onNavigate({ type: 'neighbor', index: rank - 1 })}>
+      #{rank}
+    </Button>
+  );
+  const nameColumn = names ? [{ title: 'Máy', key: 'name', render: (_: unknown, r: { rank: number }) => names[r.rank - 1] }] : [];
   const w = voteWeights(
     neighbors.map((n) => n.distance),
     weights
@@ -265,7 +308,8 @@ function VoteMath({
     return { key: i, rank: i + 1, label: n.label, total, result: manhattan ? total : Math.sqrt(total), system: n.distance };
   });
   const distColumns: ColumnsType<(typeof distRows)[number]> = [
-    { title: 'Láng giềng', dataIndex: 'rank', render: (v: number) => `#${v}` },
+    { title: 'Láng giềng (bấm để xem tính)', dataIndex: 'rank', render: (v: number) => rankCell(v) },
+    ...nameColumn,
     { title: 'Nhãn', dataIndex: 'label', render: (v: string) => <Tag color={segmentColors[v]?.color}>{segName(v)}</Tag> },
     { title: manhattan ? 'Tổng |hiệu| của 11 cột' : 'Tổng hiệu² của 11 cột', dataIndex: 'total', align: 'right', render: (v: number) => fmt(v) },
     {
@@ -290,11 +334,12 @@ function VoteMath({
 
   const top = labelRows[0];
   const tie = labelRows.length > 1 && Math.abs(labelRows[0].system - labelRows[1].system) < 1e-9 && labelRows[0].system > 0;
-  const needVotes = Math.ceil(DEFAULT_THRESHOLD * k - 1e-9);
+  const needVotes = Math.ceil(threshold * k - 1e-9);
   const uniform = weights !== 'distance';
 
   const voteColumns: ColumnsType<(typeof voteRows)[number]> = [
-    { title: 'Láng giềng', dataIndex: 'rank', render: (v: number) => `#${v}` },
+    { title: 'Láng giềng', dataIndex: 'rank', render: (v: number) => rankCell(v) },
+    ...nameColumn,
     {
       title: 'Nhãn',
       dataIndex: 'label',
@@ -319,7 +364,7 @@ function VoteMath({
     { title: 'Xác suất', dataIndex: 'system', align: 'right', render: (v: number) => <strong>{pct(v)}</strong> },
   ];
 
-  const passes = proba >= DEFAULT_THRESHOLD;
+  const passes = proba >= threshold;
   return (
     <div>
       <Alert
@@ -377,11 +422,11 @@ function VoteMath({
         showHeader={false}
         dataSource={[
           { key: 1, k: 'Độ tin cậy = xác suất cao nhất', v: `${segName(top.label)}: ${pct(proba)}` },
-          { key: 2, k: 'Ngưỡng tự duyệt (mặc định, đổi ở Cấu hình tri thức)', v: pct(DEFAULT_THRESHOLD) },
+          { key: 2, k: 'Ngưỡng tự duyệt đang cấu hình (đổi ở Cấu hình tri thức)', v: pct(threshold) },
           {
             key: 3,
             k: `Số phiếu tối thiểu để qua ngưỡng (k = ${k})`,
-            v: uniform ? `${needVotes} ÷ ${k} = ${fmt(needVotes / k, 3)} ≥ ${fmt(DEFAULT_THRESHOLD, 2)}` : '—',
+            v: uniform ? `${needVotes} ÷ ${k} = ${fmt(needVotes / k, 3)} ≥ ${fmt(threshold, 2)}` : '—',
           },
         ]}
         columns={[{ dataIndex: 'k' }, { dataIndex: 'v', align: 'right' }]}
@@ -392,8 +437,8 @@ function VoteMath({
         showIcon
         message={
           passes
-            ? `${pct(proba)} ≥ ${pct(DEFAULT_THRESHOLD)}: đủ tin cậy, khi lưu máy được duyệt tự động.`
-            : `${pct(proba)} < ${pct(DEFAULT_THRESHOLD)}: chưa đủ tin cậy, khi lưu mà để trống phân khúc thì máy vào hàng đợi "Cần xác minh".`
+            ? `${pct(proba)} ≥ ${pct(threshold)}: đủ tin cậy, khi lưu máy được duyệt tự động.`
+            : `${pct(proba)} < ${pct(threshold)}: chưa đủ tin cậy, khi lưu mà để trống phân khúc thì máy vào hàng đợi "Cần xác minh".`
         }
         description={
           tie

@@ -48,6 +48,8 @@ export interface SegmentPrediction {
   modelVersion: string | null;
   /** Số liệu để giao diện giải thích bằng toán học (z-score, hiệu từng cột, số phiếu); chỉ để hiển thị. */
   explain?: unknown;
+  /** Ngưỡng tin cậy đang cấu hình (KnowledgeConfig `confidence_threshold`) để giao diện so sánh đúng giá trị đang áp dụng. */
+  threshold: number;
 }
 
 /** Đọc ngưỡng tin cậy từ cấu hình tri thức, mặc định 0,6. */
@@ -92,6 +94,7 @@ export async function predictSegment(f: SegmentFeatures): Promise<SegmentPredict
     ],
   });
   const item = r.data.items[0]; // ML trả danh sách; ta chỉ gửi 1 máy nên lấy phần tử đầu
+  const threshold = await getConfidenceThreshold();
   return { // chọn các trường cần dùng để trả cho nơi gọi
     label: item.label,
     proba: item.proba,
@@ -99,6 +102,7 @@ export async function predictSegment(f: SegmentFeatures): Promise<SegmentPredict
     neighbors: item.neighbors ?? [],
     modelVersion: r.data.modelVersion ?? null,
     explain: item.explain,
+    threshold,
   };
 }
 

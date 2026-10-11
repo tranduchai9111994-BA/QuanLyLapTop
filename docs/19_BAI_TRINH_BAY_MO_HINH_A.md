@@ -358,7 +358,7 @@ Mô hình hiện tại (k = 7, uniform) chỉ ra được 0%, 14%, 29%, 43%, 57%
 - Trả lời: ngưỡng được đọc từ cấu hình mỗi lần gán nhãn nên áp dụng ngay cho máy mới, không áp dụng ngược cho máy đã có nhãn.
   Với k = 7, xác suất chỉ là bội số của 1/7 nên 0,6 và 0,7 cho kết quả giống nhau (đều cần ít nhất 5/7 phiếu).
 - Bằng chứng: `segment.service.ts:52-56, 135, 138`; `labels.routes.ts:24`; Phần 2 mục D7b.
-- Hạn chế nói thẳng: giao diện còn hai chỗ cố định 0,6 (`SegmentSuggester.tsx:118`, `ConfidenceIndicator.tsx:13`).
+- Hạn chế nói thẳng: trang Duyệt nhãn (`AdminReviewQueue.tsx:120`) và cảnh báo `LOW_CONFIDENCE_RATE` (`alertScan.ts:139`) vẫn cố định 0,6.
 
 **H12. Kiểm thử chéo (CV) là gì, khác gì thi cuối 200 máy?**
 - Trả lời: CV chia 800 máy học thành 5 phần, lần lượt lấy 1 phần làm đề thi, rồi lấy điểm trung bình; dùng để chọn tham số.
@@ -857,9 +857,9 @@ với phần tính tay ở D4–D6 (ví dụ Helios 0051: tổng hiệu² = 3,22
 | Việc | File và dòng |
 |---|---|
 | Icon "!" trên từng chip, nút "Chi tiết", mở cửa sổ | `frontend/src/components/admin/SegmentSuggester.tsx:105-133` (state ở dòng 28) |
-| Hai cửa sổ toán học (bảng z-score, bảng hiệu, bảng khoảng cách tới 7 máy, đếm phiếu, so ngưỡng) | `frontend/src/components/admin/SegmentMathModal.tsx` (`NeighborMath` dòng 79, `ZScoreTable` dòng 191, `VoteMath` dòng 242) |
+| Hai cửa sổ toán học (bảng z-score, bảng hiệu, bảng khoảng cách tới 7 máy, đếm phiếu, so ngưỡng; thân cuộn riêng; bấm `#i` để xem tính; nút Trước/Sau) | `frontend/src/components/admin/SegmentMathModal.tsx` (`SegmentMathModal` dòng 65, `NeighborMath` dòng 110, `ZScoreTable` dòng 222, `VoteMath` dòng 273) |
 | ML trả thêm số liệu giải thích cho mỗi máy: trung bình, độ lệch chuẩn, z của máy đang xét, z và giá trị gốc của 7 láng giềng | `ml-service/app/models/segment_explain.py` (`build_explain`); gắn vào kết quả ở `ml-service/app/main.py:124` |
-| Backend chỉ chuyển tiếp trường `explain` | `backend/src/modules/laptops/segment.service.ts:50, 101` |
+| Backend chuyển tiếp `explain` và trả thêm `threshold` (ngưỡng đang cấu hình) | `backend/src/modules/laptops/segment.service.ts:50-52, 97, 104-105` |
 | Test: cộng hiệu² rồi lấy căn phải ra đúng khoảng cách của kNN | `ml-service/tests/test_segment_explain.py` |
 
 **Lỗi giao diện đã sửa cùng lúc (bảng Laptop):** cột Phân khúc và cột Sửa/Xóa trước đây bị bóp (chữ bị bẻ từng chữ, hai nút chồng lên nhau)
@@ -877,9 +877,11 @@ z của 7 láng giềng. Giao diện (`SegmentMathModal.tsx`) dùng đúng các 
    cách ra khoảng cách 1,80.
 
 **(d) Lưu ý trung thực**
-- Cửa sổ so với ngưỡng **mặc định 60%** (cố định trong `SegmentMathModal.tsx:38`), không đọc cấu hình đã đổi (cùng điểm lệch ở D7b).
-- Bảng chỉ có giá trị gốc của **máy đang nhập** và **giá trị gốc đã quy ngược** của láng giềng; không có tên láng giềng vì mô hình chỉ ghi
-  nhớ số, không ghi tên máy (D0.4).
+- Cửa sổ so với **ngưỡng đang cấu hình** (backend trả kèm `threshold`), không còn cố định 60%.
+- **Tên láng giềng chỉ hiện khi ML dựng lại chắc chắn được.** Mô hình chỉ lưu số, nên ML đọc `catalog_vn.csv`, chia 80/20 đúng như lúc
+  huấn luyện rồi đối chiếu: số liệu chuẩn hóa và nhãn của các máy đó phải trùng khít `knn._fit_X` và `knn._y`
+  (`segment_explain.py`, hàm `training_names`). Nếu CSV đã đổi sau khi huấn luyện, hoặc đang bật một phiên bản mô hình cũ, thì không trùng
+  và cửa sổ chỉ hiện `#1`, `#2`, không hiện tên (tránh hiện sai). Có test cho cả hai trường hợp.
 - Nếu ML là bản cũ chưa trả `explain` thì icon và nút không hiện.
 - Kích hoạt mô hình khác: nếu mô hình đang dùng chọn `distance` hoặc `manhattan`, bảng tự đổi công thức (1 ÷ khoảng cách; |hiệu|).
   Phần này đã viết theo code nhưng **chưa thử trên giao diện** vì mô hình hiện tại là `uniform` + `euclidean`.
@@ -949,20 +951,22 @@ const status = ... prediction!.proba >= threshold ? 'VERIFIED' : 'NEEDS_REVIEW';
 
    Mọi ngưỡng trong khoảng **0,58 đến 0,71** đều tương đương (cần ít nhất 5/7). Đổi 0,6 thành 0,7 **không đổi kết quả** nào.
    Từ **0,75 đến 0,85** cần ít nhất 6/7; từ **0,90** trở lên cần 7/7.
-3. **Giao diện vẫn cố định 0,6 ở hai chỗ, không đọc cấu hình:**
-   - cảnh báo "Hệ thống chưa chắc chắn" ở nút AI (`SegmentSuggester.tsx:118`, `pred.proba < 0.6`);
-   - nhãn "Cần xác minh" trên thanh xác suất (`ConfidenceIndicator.tsx:13`, mặc định `threshold = 0.6`; hai nơi gọi
-     `SegmentSuggester.tsx:84` và `AdminReviewQueue.tsx:120` đều không truyền ngưỡng).
+3. **Màn hình "AI gợi ý" đã đọc đúng ngưỡng đang cấu hình** (backend trả kèm `threshold` trong kết quả dự đoán,
+   `segment.service.ts:97, 105`): cảnh báo "Hệ thống chưa chắc chắn", nhãn "Cần xác minh" và cửa sổ "Chi tiết" đều dùng giá trị này
+   (`SegmentSuggester.tsx`). **Còn hai chỗ vẫn cố định 0,6:**
+   - nhãn "Cần xác minh" trên các thẻ ở trang **Duyệt nhãn** (`AdminReviewQueue.tsx:120` không truyền ngưỡng cho `ConfidenceIndicator`);
+   - cảnh báo tự động `LOW_CONFIDENCE_RATE` (`alertScan.ts:139`).
 
-   Cảnh báo tự động `LOW_CONFIDENCE_RATE` cũng dùng 0,6 cố định (`alertScan.ts:139`). Hệ quả: đặt ngưỡng 0,8 thì máy 5/7 phiếu
-   vào hàng đợi (backend), nhưng nút AI vẫn không hiện cảnh báo vì 0,714 > 0,6.
+   Tức là với ngưỡng 0,8, máy 5/7 phiếu vào hàng đợi (backend) và nút AI cảnh báo đúng; trang Duyệt nhãn vẫn tính "Cần xác minh"
+   theo 0,6 trên thanh xác suất. Chưa thử trên app với ngưỡng khác 0,6 (đổi ngưỡng ghi vào cấu hình); luồng dữ liệu đã kiểm: kết quả dự đoán
+   trả `threshold: 0.6` đúng giá trị đang cấu hình.
 
 **Cách tự thử không phá dữ liệu:** kéo slider lên 90% rồi Lưu → vào **Dữ liệu → Duyệt nhãn**, số máy chờ vẫn là 6 (điểm 1).
 Muốn thấy ngưỡng tác động thật thì thêm một máy mới, để trống Phân khúc, Lưu; máy 5/7 phiếu giờ vào hàng đợi. **Xóa máy thử và
 đặt lại slider về 60%** sau khi demo.
 
 **(d) Tổng kết 30 giây.** Ngưỡng đọc từ `KnowledgeConfig` mỗi lần gán nhãn; chỉ ảnh hưởng máy gán nhãn từ sau khi lưu; với k = 7
-phải đặt từ 0,75 trở lên mới đổi được kết quả; giao diện còn hai chỗ cố định 0,6.
+phải đặt từ 0,75 trở lên mới đổi được kết quả; trang Duyệt nhãn và cảnh báo `LOW_CONFIDENCE_RATE` vẫn cố định 0,6.
 Luồng: `AdminKnowledge.tsx:326` → `saveConfig` (dòng 304) → `KnowledgeConfig` → `segment.service.ts:52` → so ở dòng 138
 → `status` lưu DB → hàng đợi lọc theo `status` (`labels.routes.ts:24`).
 
