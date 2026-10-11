@@ -94,7 +94,9 @@ export function SegmentMathModal({ view, onClose, onNavigate, explain, neighbors
   const idx = view?.type === 'neighbor' ? view.index : -1;
   const title =
     view?.type === 'neighbor'
-      ? `Vì sao máy #${idx + 1}${names ? ` (${names[idx]})` : ''} cách ${fmt(neighbors[idx]?.distance ?? 0, 2)}?`
+      ? `Vì sao máy #${idx + 1}${names ? ` (${names[idx]})` : ''} cách ${fmt(neighbors[idx]?.distance ?? 0, 2)}${
+          (neighbors[idx]?.distance ?? 1) < 1e-6 ? ' (chính máy đang nhập)' : ''
+        }?`
       : `Vì sao độ tin cậy là ${pct(proba)}?`;
 
   // Cửa sổ láng giềng có nút Trước/Sau để lần lượt xem #1…#7 mà không phải đóng mở
@@ -201,6 +203,8 @@ function DistanceBreakdown({
   const terms = diffs.map((d) => (manhattan ? Math.abs(d) : d * d));
   const total = terms.reduce((a, b) => a + b, 0);
   const result = manhattan ? total : Math.sqrt(total);
+  // Tổng bằng 0: láng giềng này chính là máy đang nhập (máy đã nằm trong dữ liệu huấn luyện), nên mọi hiệu đều bằng 0
+  const isSelf = total < 1e-9;
   const step2 = features.map((f, j) => ({
     key: f,
     label: FEATURE_LABEL[f] ?? f,
@@ -226,11 +230,19 @@ function DistanceBreakdown({
     { title: `z máy #${index + 1}`, dataIndex: 'nZ', align: 'right', render: (v: number) => fmt(v) },
     { title: 'Hiệu = z nhập − z láng giềng', dataIndex: 'diff', align: 'right', render: (v: number) => fmt(v) },
     { title: termTitle, dataIndex: 'term', align: 'right', render: (v: number) => fmt(v) },
-    { title: '% của tổng', dataIndex: 'share', align: 'right', render: (v: number) => `${fmt(v, 1)}%` },
+    { title: '% của tổng', dataIndex: 'share', align: 'right', render: (v: number) => (isSelf ? '—' : `${fmt(v, 1)}%`) },
   ];
 
   return (
     <>
+      {isSelf && (
+        <Alert
+          style={{ marginBottom: 8 }}
+          type="info"
+          showIcon
+          message={`Máy #${index + 1} chính là máy đang nhập: nó đã nằm trong ${explain.model.n_train} máy huấn luyện nên 11 thông số giống hệt nhau. Mọi hiệu bằng 0 và khoảng cách bằng 0 là đúng, không phải lỗi tính toán.`}
+        />
+      )}
       <Table
         size="small"
         pagination={false}
@@ -247,7 +259,7 @@ function DistanceBreakdown({
                 <strong>{fmt(total)}</strong>
               </Table.Summary.Cell>
               <Table.Summary.Cell index={2} align="right">
-                100%
+                {isSelf ? '—' : '100%'}
               </Table.Summary.Cell>
             </Table.Summary.Row>
           </Table.Summary>

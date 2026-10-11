@@ -889,6 +889,9 @@ z của 7 láng giềng. Giao diện (`SegmentMathModal.tsx`) dùng đúng các 
   huấn luyện rồi đối chiếu: số liệu chuẩn hóa và nhãn của các máy đó phải trùng khít `knn._fit_X` và `knn._y`
   (`segment_explain.py`, hàm `training_names`). Nếu CSV đã đổi sau khi huấn luyện, hoặc đang bật một phiên bản mô hình cũ, thì không trùng
   và cửa sổ chỉ hiện `#1`, `#2`, không hiện tên (tránh hiện sai). Có test cho cả hai trường hợp.
+- **Trường hợp láng giềng #1 cách 0.00** (máy đang xét đã nằm trong 800 máy học, vd `Avita Pura 0874`): bảng của #1 toàn số 0 là **đúng**,
+  vì #1 chính là máy đó. Cửa sổ ghi rõ "(chính máy đang nhập)" ở tiêu đề, có thông báo "không phải lỗi tính toán", và hai ô % ghi "—"
+  thay vì "0.0%" / "100%" (tránh chia 0 cho 0). Khi demo nên chọn máy thuộc 200 máy giữ riêng (như Helios 0051) để có bảng đầy đủ số.
 - Nếu ML là bản cũ chưa trả `explain` thì icon và nút không hiện.
 - Kích hoạt mô hình khác: nếu mô hình đang dùng chọn `distance` hoặc `manhattan`, bảng tự đổi công thức (1 ÷ khoảng cách; |hiệu|).
   Phần này đã viết theo code nhưng **chưa thử trên giao diện** vì mô hình hiện tại là `uniform` + `euclidean`.
