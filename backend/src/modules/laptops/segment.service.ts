@@ -46,6 +46,8 @@ export interface SegmentPrediction {
   /** k laptop gần nhất trong tập huấn luyện đã "bỏ phiếu" cho dự đoán này. */
   neighbors: { label: string; distance: number }[];
   modelVersion: string | null;
+  /** Số liệu để giao diện giải thích bằng toán học (z-score, hiệu từng cột, số phiếu); chỉ để hiển thị. */
+  explain?: unknown;
 }
 
 /** Đọc ngưỡng tin cậy từ cấu hình tri thức, mặc định 0,6. */
@@ -96,6 +98,7 @@ export async function predictSegment(f: SegmentFeatures): Promise<SegmentPredict
     distribution: item.distribution,
     neighbors: item.neighbors ?? [],
     modelVersion: r.data.modelVersion ?? null,
+    explain: item.explain,
   };
 }
 

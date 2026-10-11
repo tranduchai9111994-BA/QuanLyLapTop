@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Alert, Button, Form, Space, Tag, message } from 'antd';
-import { ExperimentOutlined } from '@ant-design/icons';
+import { Alert, Button, Form, Space, Tag, Tooltip, message } from 'antd';
+import { ExperimentOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import type { FormInstance } from 'antd';
 import { api } from '../../lib/api';
 import { segmentColors, t } from '../../theme/tokens';
 import { ConfidenceIndicator } from '../smart/ConfidenceIndicator';
+import { SegmentMathModal } from './SegmentMathModal';
+import type { MathView, SegmentExplain } from './SegmentMathModal';
 
 interface Prediction {
   label: string;
@@ -12,6 +14,8 @@ interface Prediction {
   distribution: Record<string, number>;
   /** k máy gần nhất trong tập huấn luyện đã bỏ phiếu (FR-09): nhãn + khoảng cách. */
   neighbors: { label: string; distance: number }[];
+  /** Số liệu cho icon "!": giải thích khoảng cách và số phiếu bằng toán học (có thể thiếu nếu ML cũ). */
+  explain?: SegmentExplain;
 }
 
 /** Khi nhập máy mới, Mô hình A đọc cấu hình và gợi ý phân khúc kèm độ tin cậy + k láng giềng đã
@@ -21,6 +25,7 @@ interface Prediction {
 export function SegmentSuggester({ form }: { form: FormInstance }) {
   const [pred, setPred] = useState<Prediction | null>(null);
   const [loading, setLoading] = useState(false);
+  const [mathView, setMathView] = useState<MathView | null>(null); // cửa sổ toán học đang mở (láng giềng #i hoặc cách đếm phiếu)
   // Theo dõi ô "Phân khúc" để biết người dùng giữ hay đổi nhãn AI gợi ý
   const chosenSegment = Form.useWatch('segment', form);
 
@@ -60,6 +65,7 @@ export function SegmentSuggester({ form }: { form: FormInstance }) {
       });
       const p: Prediction = r.data.data;
       setPred(p);
+      setMathView(null);
       // Ô "Phân khúc" còn trống thì điền sẵn nhãn AI; nếu người dùng đã chọn thì không ghi đè.
       if (!form.getFieldValue('segment')) form.setFieldValue('segment', p.label);
     } catch (err: any) {
@@ -100,9 +106,41 @@ export function SegmentSuggester({ form }: { form: FormInstance }) {
             {pred.neighbors.map((n, i) => (
               <Tag key={i} color={segmentColors[n.label]?.color} style={{ fontSize: 11, margin: 0 }}>
                 #{i + 1} · khoảng cách {n.distance.toFixed(2)}
+                {pred.explain && (
+                  <Tooltip title="Xem cách tính khoảng cách này">
+                    <ExclamationCircleOutlined
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Xem cách tính khoảng cách của máy #${i + 1}`}
+                      style={{ marginLeft: 4, cursor: 'pointer' }}
+                      onClick={() => setMathView({ type: 'neighbor', index: i })}
+                      onKeyDown={(e) => e.key === 'Enter' && setMathView({ type: 'neighbor', index: i })}
+                    />
+                  </Tooltip>
+                )}
               </Tag>
             ))}
+            {pred.explain && (
+              <Button
+                size="small"
+                type="link"
+                icon={<ExclamationCircleOutlined />}
+                onClick={() => setMathView({ type: 'vote' })}
+              >
+                Vì sao {Math.round(pred.proba * 100)}%?
+              </Button>
+            )}
           </Space>
+          {pred.explain && (
+            <SegmentMathModal
+              view={mathView}
+              onClose={() => setMathView(null)}
+              explain={pred.explain}
+              neighbors={pred.neighbors}
+              distribution={pred.distribution}
+              proba={pred.proba}
+            />
+          )}
 
           {chosenSegment && chosenSegment !== pred.label && (
             <div style={{ marginTop: 8 }}>

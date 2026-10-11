@@ -15,6 +15,7 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException
 
 from app.models.explain import build_explanation
+from app.models.segment_explain import build_explain
 from app.data.features import MODEL_A_FEATURES, MODEL_B_FEATURES
 from app.lifecycle.registry import ARTIFACTS_DIR, registry
 from app.models.retriever import build_ideal_vector, build_weights, fit_scaler, match_pct, recommend, similar_items
@@ -102,7 +103,8 @@ def predict_segment(req: PredictSegmentRequest) -> dict:  # hàm B: req.items = 
     # Gaming"). `knn._y` là nhãn đã mã hóa của tập huấn luyện, đổi lại tên bằng `knn.classes_`.
     prep = registry.model.named_steps["prep"]
     knn = registry.model.named_steps["knn"]
-    neigh_dist, neigh_idx = knn.kneighbors(prep.transform(X[MODEL_A_FEATURES]))  # 7 máy gần nhất: khoảng cách + vị trí
+    Z = prep.transform(X[MODEL_A_FEATURES])  # 11 đặc trưng đã chuẩn hóa (z-score)
+    neigh_dist, neigh_idx = knn.kneighbors(Z)  # 7 máy gần nhất: khoảng cách + vị trí
     train_labels = knn.classes_[knn._y]  # nhãn của từng máy trong tập huấn luyện
 
     results = []
@@ -118,6 +120,8 @@ def predict_segment(req: PredictSegmentRequest) -> dict:  # hàm B: req.items = 
                 {"label": str(train_labels[j]), "distance": round(float(d), 4)}
                 for j, d in zip(neigh_idx[row_i], neigh_dist[row_i])
             ],
+            # Số liệu cho nút "!" ở giao diện: giải thích khoảng cách và số phiếu bằng toán học
+            "explain": build_explain(registry.model, X.iloc[row_i], Z[row_i], neigh_idx[row_i]),
         })
     return {"items": results, "modelVersion": registry.version}  # trả về cho backend (hàm A)
 

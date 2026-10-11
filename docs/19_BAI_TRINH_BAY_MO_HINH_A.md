@@ -424,6 +424,10 @@ Những thứ dùng ở D4–D6 (trung bình, độ lệch chuẩn, 800 máy, k 
 > Đây là phần **chạy ngoại tuyến, một lần**, xảy ra **trước** mọi bước D1–D7. Mọi thứ D4–D6 dùng (800 máy, trung bình,
 > độ lệch chuẩn, k = 7) đều được tạo ở đây.
 
+> **Đừng nhầm hai thư mục tên `data`:** dữ liệu học nằm ở **`D:\QL_Laptop\data\processed\`** (thư mục `data` ở gốc dự án, cùng cấp với
+> `ml-service`, `backend`, `frontend`). Còn `ml-service\app\data\` là thư mục **mã nguồn** (`features.py`, `data_check.py`), không có
+> thư mục `processed`. Trong `train.py`, `ROOT = ...parents[3]` chính là thư mục gốc `D:\QL_Laptop`.
+
 ### D0.1 Dữ liệu học đến từ đâu (chuỗi tạo ra file)
 
 ```
@@ -824,6 +828,53 @@ Trên toàn bộ 800 máy, `distance` được 0,7920 còn `uniform` được 0,
 **từ 5/7 phiếu** mới được tự duyệt.
 
 **(d) Tổng kết 30 giây.** 7 láng giềng mỗi máy 1 phiếu, xác suất là số phiếu chia 7. Helios hòa 3-3 nên chỉ 43%.
+
+---
+
+## D6b. Icon "!" trên giao diện: giải thích toán học ngay tại chỗ khi thầy hỏi
+
+Sau khi bấm **AI gợi ý phân khúc từ cấu hình**, mỗi láng giềng `#1 … #7` có một icon **"!"** và sau `#7` có nút **"! Vì sao 43%?"**.
+Bấm vào là ra bảng toán học, không cần mở Excel hay terminal. Số trong bảng là số **thật của mô hình đang dùng**, và đã đối chiếu
+với phần tính tay ở D4–D6 (ví dụ Helios 0051: tổng hiệu² = 3,2244; khoảng cách = 1,7957; 3 ÷ 7 = 0,4286).
+
+**(a) Thao tác:** Dữ liệu → Laptop → tìm `Predator Helios 0051` → **Sửa** → **AI gợi ý phân khúc từ cấu hình** →
+- bấm **"!"** cạnh `#1 · khoảng cách 1.80`: cửa sổ **"Vì sao máy #1 cách 1.80?"**
+  - *Bước 1:* bảng đổi 11 thông số của máy đang nhập sang z-score, mỗi dòng có phép tính `(x − TB) ÷ ĐLC = z`;
+  - *Bước 2:* bảng so với máy #1: giá trị gốc hai máy, z hai máy, hiệu, hiệu², % của tổng, dòng **Tổng hiệu² = 3.2244**;
+  - kết luận **Khoảng cách = √3.2244 = 1.7957**.
+- bấm **"! Vì sao 43%?"**: cửa sổ **"Vì sao độ tin cậy là 43%?"**
+  - *Bước 1:* 7 láng giềng, nhãn, khoảng cách, 1 phiếu mỗi máy;
+  - *Bước 2:* đếm phiếu `3 ÷ 7 = 0.4286` cho từng phân khúc (khớp xác suất hệ thống trả về);
+  - *Bước 3:* so với ngưỡng 60% (cần ít nhất 5/7 phiếu), kết luận "43% < 60%: vào hàng đợi Cần xác minh", kèm ghi chú nếu hòa phiếu.
+- Đóng bằng dấu X; **Hủy** để không lưu gì.
+
+**(b) Code**
+
+| Việc | File và dòng |
+|---|---|
+| Icon "!" trên từng chip, nút "Vì sao …%?", mở cửa sổ | `frontend/src/components/admin/SegmentSuggester.tsx:105-133` (state ở dòng 28) |
+| Hai cửa sổ toán học (bảng z-score, bảng hiệu, bảng đếm phiếu, so ngưỡng) | `frontend/src/components/admin/SegmentMathModal.tsx` (`NeighborMath` dòng 79, `VoteMath` dòng 227) |
+| ML trả thêm số liệu giải thích cho mỗi máy: trung bình, độ lệch chuẩn, z của máy đang xét, z và giá trị gốc của 7 láng giềng | `ml-service/app/models/segment_explain.py` (`build_explain`); gắn vào kết quả ở `ml-service/app/main.py:124` |
+| Backend chỉ chuyển tiếp trường `explain` | `backend/src/modules/laptops/segment.service.ts:50, 101` |
+| Test: cộng hiệu² rồi lấy căn phải ra đúng khoảng cách của kNN | `ml-service/tests/test_segment_explain.py` |
+
+**Câu mẫu:** *"Hàm `build_explain` (`segment_explain.py`) được `predict_segment` (`main.py:124`) gọi để lấy số liệu giải thích. Nó nhận
+pipeline đã huấn luyện, dòng 11 đặc trưng của máy và vị trí 7 láng giềng, rồi trả trung bình, độ lệch chuẩn, z của máy đang xét và
+z của 7 láng giềng. Giao diện (`SegmentMathModal.tsx`) dùng đúng các số đó để dựng bảng."*
+
+**(c) Khi thầy hỏi "43% ở đâu ra?", nói theo thứ tự này:**
+1. Bấm "! Vì sao 43%?": "Mô hình lấy 7 máy giống nhất rồi mỗi máy bỏ 1 phiếu."
+2. Chỉ bảng Bước 2: "3 máy Đồ họa, 3 máy Mỏng nhẹ, 1 máy Văn phòng; 3 chia 7 bằng 0,4286, tức 43%."
+3. Chỉ Bước 3: "43% thấp hơn ngưỡng 60% nên máy này cần người xác minh." Muốn đi sâu hơn thì đóng cửa sổ, bấm "!" cạnh `#1` để chỉ ra
+   cách ra khoảng cách 1,80.
+
+**(d) Lưu ý trung thực**
+- Cửa sổ so với ngưỡng **mặc định 60%** (cố định trong `SegmentMathModal.tsx:38`), không đọc cấu hình đã đổi (cùng điểm lệch ở D7b).
+- Bảng chỉ có giá trị gốc của **máy đang nhập** và **giá trị gốc đã quy ngược** của láng giềng; không có tên láng giềng vì mô hình chỉ ghi
+  nhớ số, không ghi tên máy (D0.4).
+- Nếu ML là bản cũ chưa trả `explain` thì icon và nút không hiện.
+- Kích hoạt mô hình khác: nếu mô hình đang dùng chọn `distance` hoặc `manhattan`, bảng tự đổi công thức (1 ÷ khoảng cách; |hiệu|).
+  Phần này đã viết theo code nhưng **chưa thử trên giao diện** vì mô hình hiện tại là `uniform` + `euclidean`.
 
 ---
 
