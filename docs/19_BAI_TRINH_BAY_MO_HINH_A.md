@@ -849,7 +849,7 @@ với phần tính tay ở D4–D6 (ví dụ Helios 0051: tổng hiệu² = 3,22
   - *Bước 2:* đo khoảng cách tới 800 máy đã ghi nhớ, giữ 7 máy gần nhất. Chia làm hai phần để không nhảy cóc:
     **2a** là bảng tính từng cột cho MỘT máy (hàng nút **#1 đến #7** để chọn máy làm ví dụ: z máy nhập, z láng giềng, hiệu, hiệu², % của tổng,
     dòng **Tổng hiệu²** và **Khoảng cách = √ tổng**, vd #1 ra 3,2244 → 1,7957); **2b** là bảng 7 máy với **tổng hiệu² của 11 cột**,
-    **khoảng cách = √ tổng** và cột "Hệ thống trả về" để đối chiếu (bấm `#i` để xem bảng đầy đủ của máy đó);
+    **khoảng cách = √ tổng** và một dòng đối chiếu dưới bảng ("khớp với số hệ thống trả về") (bấm `#i` để xem bảng đầy đủ của máy đó);
   - *Bước 3:* mỗi láng giềng bỏ phiếu (nhãn, khoảng cách, 1 phiếu mỗi máy);
   - *Bước 4:* đếm phiếu ra xác suất. Bảng có các cột **Phân khúc | Láng giềng | Số phiếu | Phép tính | Xác suất | Giao diện** và dòng **Tổng**:
     cột Láng giềng liệt kê máy nào đã bỏ phiếu cho phân khúc đó (vd CREATOR: `#1, #2, #3`; bấm `#i` để xem tính khoảng cách của máy đó),

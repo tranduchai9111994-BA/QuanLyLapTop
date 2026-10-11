@@ -391,8 +391,9 @@ function VoteMath({
       align: 'right',
       render: (v: number) => <strong>{fmt(v)}</strong>,
     },
-    { title: 'Hệ thống trả về', dataIndex: 'system', align: 'right', render: (v: number) => fmt(v) },
   ];
+  // Đối chiếu khoảng cách tính ở bảng với số hệ thống trả về (lệch nhỏ là do z làm tròn 6 chữ số)
+  const maxDistDiff = Math.max(0, ...distRows.map((r) => Math.abs(r.result - r.system)));
   // Láng giềng cách 0 nghĩa là máy đang nhập chính là một máy đã nằm trong dữ liệu huấn luyện: nó tự bỏ một phiếu cho chính mình.
   const selfVote = neighbors.length > 0 && neighbors[0].distance < 1e-6;
 
@@ -519,6 +520,11 @@ function VoteMath({
         2b. Kết quả của {k} máy gần nhất (bấm #i để xem bảng đầy đủ của máy đó)
       </Typography.Text>
       <Table size="small" pagination={false} dataSource={distRows} columns={distColumns} />
+      <Typography.Text type={maxDistDiff < 5e-4 ? 'secondary' : 'danger'} style={{ display: 'block', marginTop: 6, fontSize: 12 }}>
+        {maxDistDiff < 5e-4
+          ? 'Đối chiếu: các khoảng cách tính ở bảng khớp với số hệ thống trả về.'
+          : `Cảnh báo: khoảng cách tính ở bảng lệch số hệ thống trả về tối đa ${fmt(maxDistDiff)}.`}
+      </Typography.Text>
       {selfVote && (
         <Alert
           style={{ marginTop: 8 }}
