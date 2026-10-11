@@ -354,6 +354,17 @@ Mô hình hiện tại (k = 7, uniform) chỉ ra được 0%, 14%, 29%, 43%, 57%
 - Bằng chứng: `train.py:83` (chia), `classifier.py:50` (học), `train.py:104-112` (thi); `knn._fit_X.shape = (800, 11)`.
 - Ví dụ: Helios 0051 thuộc 200 máy giữ riêng; TUF Gaming 0001 thuộc 800 máy học (Phần 2 mục D0.5, D5).
 
+**H11. Nếu thay ngưỡng 0,6 bằng 0,7 thì chuyện gì xảy ra?**
+- Trả lời: ngưỡng được đọc từ cấu hình mỗi lần gán nhãn nên áp dụng ngay cho máy mới, không áp dụng ngược cho máy đã có nhãn.
+  Với k = 7, xác suất chỉ là bội số của 1/7 nên 0,6 và 0,7 cho kết quả giống nhau (đều cần ít nhất 5/7 phiếu).
+- Bằng chứng: `segment.service.ts:52-56, 135, 138`; `labels.routes.ts:24`; Phần 2 mục D7b.
+- Hạn chế nói thẳng: giao diện còn hai chỗ cố định 0,6 (`SegmentSuggester.tsx:118`, `ConfidenceIndicator.tsx:13`).
+
+**H12. Kiểm thử chéo (CV) là gì, khác gì thi cuối 200 máy?**
+- Trả lời: CV chia 800 máy học thành 5 phần, lần lượt lấy 1 phần làm đề thi, rồi lấy điểm trung bình; dùng để chọn tham số.
+  200 máy giữ riêng chỉ dùng một lần ở cuối để báo cáo.
+- Bằng chứng: `classifier.py:46`; 5 điểm 0,7714 / 0,8409 / 0,7703 / 0,8542 / 0,7321, trung bình 0,7938 (Phần 2 mục D8, D9).
+
 ---
 
 ## 12. Danh sách tự kiểm tra trước khi lên nói
@@ -368,6 +379,8 @@ Mô hình hiện tại (k = 7, uniform) chỉ ra được 0%, 14%, 29%, 43%, 57%
 - [ ] Chỉ được file nào chia 800/200 (`train.py:83`), file nào học (`classifier.py:50`), file nào dữ liệu (`catalog_vn.csv`).
 - [ ] Nói thẳng được "nhãn là dữ liệu tổng hợp" mà không bị lúng túng (mục 3b, H9).
 - [ ] Không nói "tập test đóng băng" (mục D0.7).
+- [ ] Giải thích được CV bằng ví dụ "5 đề ôn, lần lượt lấy 1 đề thi thử" (mục D8).
+- [ ] Nói đúng khi đổi ngưỡng: chỉ áp dụng máy mới, và 0,6 với 0,7 giống nhau khi k = 7 (mục D7b).
 
 ---
 ---
@@ -849,6 +862,53 @@ nhãn AI, tự duyệt nếu từ 0,6 trở lên, ngược lại vào hàng đ�
 
 ---
 
+## D7b. Đổi ngưỡng 0,6 thành giá trị khác: hệ thống xử lý thế nào
+
+**(a) Trên giao diện.** **Trí tuệ → Cấu hình tri thức**, kéo slider "Ngưỡng tin cậy để tự động duyệt nhãn phân khúc" (30% đến 95%,
+bước 5%), bấm **Lưu** → thông báo "Đã lưu cấu hình." (`AdminKnowledge.tsx:320-326`, hàm `save` dòng 300-312).
+
+**(b) Code.** Giao diện ghi `saveConfig('confidence_threshold', giá trị)` (`AdminKnowledge.tsx:304`) vào bảng `KnowledgeConfig`.
+Backend đọc lại **mỗi lần gán nhãn**, không cần khởi động lại:
+
+```ts
+// segment.service.ts:52-56 và 135, 138
+const row = await prisma.knowledgeConfig.findUnique({ where: { key: 'confidence_threshold' } });
+const threshold = await getConfidenceThreshold();                  // chưa cấu hình thì dùng mặc định 0,6 (dòng 25)
+const status = ... prediction!.proba >= threshold ? 'VERIFIED' : 'NEEDS_REVIEW';
+```
+
+**(c) Ba điều cần nhớ khi nói về chuyện đổi ngưỡng:**
+
+1. **Không áp dụng cho máy đã có nhãn.** `status` được lưu vào DB lúc gán nhãn; hàng đợi chỉ lọc theo cột này
+   (`labels.routes.ts:24`, `where: { status: 'NEEDS_REVIEW' }`). Đổi ngưỡng không kéo máy cũ vào hàng đợi và không đẩy máy cũ ra.
+   Chỉ các máy được gán nhãn **sau khi lưu** mới chịu ngưỡng mới.
+2. **Với k = 7 và `uniform`, xác suất chỉ là bội số của 1/7**, nên nhiều mức ngưỡng cho kết quả y hệt nhau:
+
+   | Số phiếu | 3/7 | 4/7 | 5/7 | 6/7 | 7/7 |
+   |---|---|---|---|---|---|
+   | Xác suất | 0,429 | 0,571 | 0,714 | 0,857 | 1,000 |
+
+   Mọi ngưỡng trong khoảng **0,58 đến 0,71** đều tương đương (cần ít nhất 5/7). Đổi 0,6 thành 0,7 **không đổi kết quả** nào.
+   Từ **0,75 đến 0,85** cần ít nhất 6/7; từ **0,90** trở lên cần 7/7.
+3. **Giao diện vẫn cố định 0,6 ở hai chỗ, không đọc cấu hình:**
+   - cảnh báo "Hệ thống chưa chắc chắn" ở nút AI (`SegmentSuggester.tsx:118`, `pred.proba < 0.6`);
+   - nhãn "Cần xác minh" trên thanh xác suất (`ConfidenceIndicator.tsx:13`, mặc định `threshold = 0.6`; hai nơi gọi
+     `SegmentSuggester.tsx:84` và `AdminReviewQueue.tsx:120` đều không truyền ngưỡng).
+
+   Cảnh báo tự động `LOW_CONFIDENCE_RATE` cũng dùng 0,6 cố định (`alertScan.ts:136`). Hệ quả: đặt ngưỡng 0,8 thì máy 5/7 phiếu
+   vào hàng đợi (backend), nhưng nút AI vẫn không hiện cảnh báo vì 0,714 > 0,6.
+
+**Cách tự thử không phá dữ liệu:** kéo slider lên 90% rồi Lưu → vào **Dữ liệu → Duyệt nhãn**, số máy chờ vẫn là 6 (điểm 1).
+Muốn thấy ngưỡng tác động thật thì thêm một máy mới, để trống Phân khúc, Lưu; máy 5/7 phiếu giờ vào hàng đợi. **Xóa máy thử và
+đặt lại slider về 60%** sau khi demo.
+
+**(d) Tổng kết 30 giây.** Ngưỡng đọc từ `KnowledgeConfig` mỗi lần gán nhãn; chỉ ảnh hưởng máy gán nhãn từ sau khi lưu; với k = 7
+phải đặt từ 0,75 trở lên mới đổi được kết quả; giao diện còn hai chỗ cố định 0,6.
+Luồng: `AdminKnowledge.tsx:326` → `saveConfig` (dòng 304) → `KnowledgeConfig` → `segment.service.ts:52` → so ở dòng 138
+→ `status` lưu DB → hàng đợi lọc theo `status` (`labels.routes.ts:24`).
+
+---
+
 ## D8. Huấn luyện (1): chia 800 / 200 và chia 5 phần
 
 **(a) Trên giao diện.** Trí tuệ → **Quản lý mô hình**: 2 dòng `clf-2026.10.04-124455` (Dự phòng, 78,7%) và
@@ -884,6 +944,22 @@ cv = StratifiedKFold(5, shuffle=True, random_state=RANDOM_STATE)   # chia 800 m�
 | 5 | 640 | 160 | 55 / 53 / 32 / 20 |
 
 Mỗi máy trong 800 máy được làm "bài kiểm tra" đúng 1 lần và làm "tài liệu học" 4 lần. 200 máy giữ riêng **không tham gia** 5 phần này.
+
+**CV (Cross-Validation, kiểm thử chéo) là gì?** Chính là cách làm ở bảng trên: chia dữ liệu học thành 5 phần, lần lượt lấy 1 phần
+làm đề thi, 4 phần còn lại để học, lặp 5 lần rồi lấy điểm trung bình. "Chéo" nghĩa là các phần luân phiên đổi vai.
+Ví dụ bộ tham số thắng (k = 7, uniform, euclidean) được 5 điểm 0,7714; 0,8409; 0,7703; 0,8542; 0,7321, trung bình **0,7938**
+(`cv_f1_macro_mean` trong `metadata.json`).
+
+**Vì sao chuẩn hóa phải nằm TRONG Pipeline?** Ở mỗi lần, 160 máy "đề thi" phải hoàn toàn lạ với mô hình. Nếu tính trung bình và
+độ lệch chuẩn trên cả 800 máy trước khi chia 5 phần thì 160 máy đề thi đã góp vào con số chuẩn hóa ("nhìn lén đề"). Đặt trong
+Pipeline thì mỗi lần chỉ tính từ 640 máy học của lần đó. Đã đo: chuẩn hóa ngoài Pipeline làm điểm lệch rất nhỏ (0,7938 so với
+0,7923); vẫn làm đúng cách và có test chặn (`test_scaler_inside_pipeline`).
+
+| | CV 5 phần | Thi cuối 200 máy |
+|---|---|---|
+| Dữ liệu | chỉ 800 máy học | 200 máy giữ riêng |
+| Mục đích | **chọn** tham số | **báo cáo** độ tốt |
+| Điểm | 0,7938 | 0,7866 |
 
 **(d) Tổng kết 30 giây.** Giữ riêng 200 máy để chấm cuối; 800 máy còn lại chia 5 phần để chọn tham số. Cả hai lần chia
 đều giữ tỷ lệ 4 phân khúc và cố định seed 42.
