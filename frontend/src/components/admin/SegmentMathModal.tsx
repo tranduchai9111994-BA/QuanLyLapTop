@@ -1,4 +1,5 @@
-import { Alert, Button, Modal, Space, Table, Tag, Typography } from 'antd';
+import { useState } from 'react';
+import { Alert, Button, Modal, Segmented, Space, Table, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { segmentColors, t } from '../../theme/tokens';
 
@@ -119,38 +120,6 @@ function NeighborMath({
   neighbor: SegmentNeighbor;
   manhattan: boolean;
 }) {
-  const { features, inputs, query_z: qz, neighbors_z, neighbors_raw } = explain;
-  const nz = neighbors_z[index];
-  const nraw = neighbors_raw[index];
-
-  // Bước 2: hiệu từng cột giữa máy đang nhập và máy láng giềng
-  const diffs = features.map((_, j) => qz[j] - nz[j]);
-  const terms = diffs.map((d) => (manhattan ? Math.abs(d) : d * d));
-  const total = terms.reduce((a, b) => a + b, 0);
-  const result = manhattan ? total : Math.sqrt(total);
-  const step2 = features.map((f, j) => ({
-    key: f,
-    label: FEATURE_LABEL[f] ?? f,
-    myRaw: inputs[j],
-    nRaw: nraw[j],
-    myZ: qz[j],
-    nZ: nz[j],
-    diff: diffs[j],
-    term: terms[j],
-    share: total > 0 ? (terms[j] / total) * 100 : 0,
-  }));
-  const termTitle = manhattan ? '|Hiệu|' : 'Hiệu²';
-  const step2Columns: ColumnsType<(typeof step2)[number]> = [
-    { title: 'Đặc trưng', dataIndex: 'label' },
-    { title: 'Máy nhập (gốc)', dataIndex: 'myRaw', align: 'right', render: (v: number) => fmt(v, 2) },
-    { title: `Máy #${index + 1} (gốc)`, dataIndex: 'nRaw', align: 'right', render: (v: number) => fmt(v, 2) },
-    { title: 'z máy nhập', dataIndex: 'myZ', align: 'right', render: (v: number) => fmt(v) },
-    { title: `z máy #${index + 1}`, dataIndex: 'nZ', align: 'right', render: (v: number) => fmt(v) },
-    { title: 'Hiệu = z nhập − z láng giềng', dataIndex: 'diff', align: 'right', render: (v: number) => fmt(v) },
-    { title: termTitle, dataIndex: 'term', align: 'right', render: (v: number) => fmt(v) },
-    { title: '% của tổng', dataIndex: 'share', align: 'right', render: (v: number) => `${fmt(v, 1)}%` },
-  ];
-
   return (
     <div>
       <Alert
@@ -175,6 +144,67 @@ function NeighborMath({
       <Typography.Title level={5} style={{ marginTop: 20 }}>
         Bước 2. So với máy #{index + 1}: hiệu từng cột rồi cộng lại
       </Typography.Title>
+      <DistanceBreakdown explain={explain} index={index} neighbor={neighbor} />
+    </div>
+  );
+}
+
+
+/**
+ * Bảng "hiệu từng cột rồi cộng lại" giữa máy đang nhập và láng giềng thứ `index`, kèm kết luận khoảng cách.
+ * Dùng ở cửa sổ của từng láng giềng (đầy đủ) và làm bảng ví dụ ở Bước 2 của cửa sổ tổng hợp (`compact`).
+ */
+function DistanceBreakdown({
+  explain,
+  index,
+  neighbor,
+  compact = false,
+}: {
+  explain: SegmentExplain;
+  index: number;
+  neighbor: SegmentNeighbor;
+  compact?: boolean;
+}) {
+  const manhattan = explain.model.metric === 'manhattan';
+  const { features, inputs, query_z: qz, neighbors_z, neighbors_raw } = explain;
+  const nz = neighbors_z[index];
+  const nraw = neighbors_raw[index];
+
+  // Hiệu từng cột giữa máy đang nhập và máy láng giềng
+  const diffs = features.map((_, j) => qz[j] - nz[j]);
+  const terms = diffs.map((d) => (manhattan ? Math.abs(d) : d * d));
+  const total = terms.reduce((a, b) => a + b, 0);
+  const result = manhattan ? total : Math.sqrt(total);
+  const step2 = features.map((f, j) => ({
+    key: f,
+    label: FEATURE_LABEL[f] ?? f,
+    myRaw: inputs[j],
+    nRaw: nraw[j],
+    myZ: qz[j],
+    nZ: nz[j],
+    diff: diffs[j],
+    term: terms[j],
+    share: total > 0 ? (terms[j] / total) * 100 : 0,
+  }));
+  const termTitle = manhattan ? '|Hiệu|' : 'Hiệu²';
+  const step2Columns: ColumnsType<(typeof step2)[number]> = [
+    { title: 'Đặc trưng', dataIndex: 'label' },
+    // Bản đầy đủ có thêm hai cột giá trị gốc để đối chiếu; bản gọn (compact) bỏ đi cho vừa cửa sổ tổng hợp
+    ...(compact
+      ? []
+      : [
+          { title: 'Máy nhập (gốc)', dataIndex: 'myRaw', align: 'right' as const, render: (v: number) => fmt(v, 2) },
+          { title: `Máy #${index + 1} (gốc)`, dataIndex: 'nRaw', align: 'right' as const, render: (v: number) => fmt(v, 2) },
+        ]),
+    { title: 'z máy nhập', dataIndex: 'myZ', align: 'right', render: (v: number) => fmt(v) },
+    { title: `z máy #${index + 1}`, dataIndex: 'nZ', align: 'right', render: (v: number) => fmt(v) },
+    { title: 'Hiệu = z nhập − z láng giềng', dataIndex: 'diff', align: 'right', render: (v: number) => fmt(v) },
+    { title: termTitle, dataIndex: 'term', align: 'right', render: (v: number) => fmt(v) },
+    { title: '% của tổng', dataIndex: 'share', align: 'right', render: (v: number) => `${fmt(v, 1)}%` },
+  ];
+
+  return (
+    <>
       <Table
         size="small"
         pagination={false}
@@ -184,7 +214,7 @@ function NeighborMath({
         summary={() => (
           <Table.Summary fixed>
             <Table.Summary.Row style={{ background: t.bgSubtle }}>
-              <Table.Summary.Cell index={0} colSpan={6}>
+              <Table.Summary.Cell index={0} colSpan={compact ? 4 : 6}>
                 <strong>Tổng {manhattan ? '|hiệu|' : 'hiệu²'}</strong>
               </Table.Summary.Cell>
               <Table.Summary.Cell index={1} align="right">
@@ -212,12 +242,11 @@ function NeighborMath({
             </span>
           )
         }
-        description={`Hệ thống tính ra ${fmt(neighbor.distance)}, giao diện làm tròn ${fmt(neighbor.distance, 2)}. Chênh nhỏ (nếu có) do các z ở bảng đã làm tròn 4 chữ số.`}
+        description={compact ? undefined : `Hệ thống tính ra ${fmt(neighbor.distance)}, giao diện làm tròn ${fmt(neighbor.distance, 2)}. Chênh nhỏ (nếu có) do các z ở bảng đã làm tròn 4 chữ số.`}
       />
-    </div>
+    </>
   );
 }
-
 
 /** Bảng "đổi 11 thông số của máy đang nhập sang z-score" (dùng chung cho cửa sổ láng giềng và cửa sổ độ tin cậy). */
 function ZScoreTable({ explain }: { explain: SegmentExplain }) {
@@ -288,6 +317,7 @@ function VoteMath({
 }) {
   const { k, weights } = explain.model;
   const names = explain.neighbors_name ?? null;
+  const [example, setExample] = useState(0); // máy láng giềng đang xem làm ví dụ ở Bước 2a (chỉ số 0 = #1)
   // Cột "Láng giềng": bấm vào để xem bảng tính khoảng cách của máy đó
   const rankCell = (rank: number) => (
     <Button type="link" size="small" style={{ padding: 0 }} onClick={() => onNavigate({ type: 'neighbor', index: rank - 1 })}>
@@ -391,9 +421,29 @@ function VoteMath({
       </Typography.Title>
       <Typography.Paragraph type="secondary" style={{ marginBottom: 8 }}>
         Với mỗi máy trong {explain.model.n_train} máy: lấy hiệu từng cột (đã chuẩn hóa),{' '}
-        {manhattan ? 'cộng |hiệu|' : 'bình phương rồi cộng, lấy căn bậc hai'}. Sắp xếp từ nhỏ đến lớn, giữ {k} máy đầu. Bảng dưới là {k} máy đó
-        (bấm icon "!" cạnh từng máy ở màn hình trước để xem từng cột).
+        {manhattan ? 'cộng |hiệu|' : 'bình phương rồi cộng, lấy căn bậc hai'}. Bước 2a minh họa cách tính cho MỘT máy (chọn #1 đến #{k} để xem);
+        Bước 2b là kết quả của {k} máy gần nhất sau khi làm tương tự cho cả {explain.model.n_train} máy.
       </Typography.Paragraph>
+
+      <Typography.Text strong>2a. Ví dụ cách tính khoảng cách tới một máy</Typography.Text>
+      <div style={{ margin: '8px 0' }}>
+        <Space wrap>
+          <Segmented
+            value={example}
+            onChange={(v) => setExample(Number(v))}
+            options={neighbors.map((_, i) => ({ label: `#${i + 1}`, value: i }))}
+          />
+          <span>
+            Máy #{example + 1}
+            {names ? `: ${names[example]}` : ''} (nhãn {segName(neighbors[example].label)}); cột "z máy nhập" lấy từ bảng Bước 1
+          </span>
+        </Space>
+      </div>
+      <DistanceBreakdown explain={explain} index={example} neighbor={neighbors[example]} compact />
+
+      <Typography.Text strong style={{ display: 'block', margin: '16px 0 8px' }}>
+        2b. Kết quả của {k} máy gần nhất (bấm #i để xem bảng đầy đủ của máy đó)
+      </Typography.Text>
       <Table size="small" pagination={false} dataSource={distRows} columns={distColumns} />
       {selfVote && (
         <Alert

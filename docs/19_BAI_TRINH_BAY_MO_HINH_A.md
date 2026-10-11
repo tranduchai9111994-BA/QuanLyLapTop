@@ -844,7 +844,10 @@ với phần tính tay ở D4–D6 (ví dụ Helios 0051: tổng hiệu² = 3,22
   - kết luận **Khoảng cách = √3.2244 = 1.7957**.
 - bấm **"! Chi tiết"** (sau `#7`): cửa sổ **"Vì sao độ tin cậy là 43%?"**, gồm **5 bước đi từ đầu đến cuối**
   - *Bước 1:* chuẩn hóa 11 thông số của máy đang nhập (cùng bảng z-score ở trên);
-  - *Bước 2:* đo khoảng cách tới 800 máy đã ghi nhớ, giữ 7 máy gần nhất: bảng 7 máy với **tổng hiệu² của 11 cột**, **khoảng cách = √ tổng**, và cột "Hệ thống trả về" để đối chiếu;
+  - *Bước 2:* đo khoảng cách tới 800 máy đã ghi nhớ, giữ 7 máy gần nhất. Chia làm hai phần để không nhảy cóc:
+    **2a** là bảng tính từng cột cho MỘT máy (hàng nút **#1 đến #7** để chọn máy làm ví dụ: z máy nhập, z láng giềng, hiệu, hiệu², % của tổng,
+    dòng **Tổng hiệu²** và **Khoảng cách = √ tổng**, vd #1 ra 3,2244 → 1,7957); **2b** là bảng 7 máy với **tổng hiệu² của 11 cột**,
+    **khoảng cách = √ tổng** và cột "Hệ thống trả về" để đối chiếu (bấm `#i` để xem bảng đầy đủ của máy đó);
   - *Bước 3:* mỗi láng giềng bỏ phiếu (nhãn, khoảng cách, 1 phiếu mỗi máy);
   - *Bước 4:* đếm phiếu `3 ÷ 7 = 0.4286` cho từng phân khúc (khớp xác suất hệ thống trả về);
   - *Bước 5:* so với ngưỡng 60% (cần ít nhất 5/7 phiếu), kết luận "43% < 60%: vào hàng đợi Cần xác minh", kèm ghi chú nếu hòa phiếu.
@@ -857,7 +860,7 @@ với phần tính tay ở D4–D6 (ví dụ Helios 0051: tổng hiệu² = 3,22
 | Việc | File và dòng |
 |---|---|
 | Icon "!" trên từng chip, nút "Chi tiết", mở cửa sổ | `frontend/src/components/admin/SegmentSuggester.tsx:127-172` (state ở dòng 42-45) |
-| Hai cửa sổ toán học (bảng z-score, bảng hiệu, bảng khoảng cách tới 7 máy, đếm phiếu, so ngưỡng; thân cuộn riêng; bấm `#i` để xem tính; nút Trước/Sau) | `frontend/src/components/admin/SegmentMathModal.tsx` (`SegmentMathModal` dòng 65, `NeighborMath` dòng 111, `ZScoreTable` dòng 223, `VoteMath` dòng 274) |
+| Hai cửa sổ toán học (bảng z-score, bảng hiệu, bảng khoảng cách tới 7 máy, đếm phiếu, so ngưỡng; thân cuộn riêng; bấm `#i` để xem tính; nút Trước/Sau) | `frontend/src/components/admin/SegmentMathModal.tsx` (`SegmentMathModal` dòng 66, `NeighborMath` dòng 112, `DistanceBreakdown` dòng 157, `ZScoreTable` dòng 252, `VoteMath` dòng 303) |
 | ML trả thêm số liệu giải thích cho mỗi máy: trung bình, độ lệch chuẩn, z của máy đang xét, z và giá trị gốc của 7 láng giềng | `ml-service/app/models/segment_explain.py` (`build_explain`); gắn vào kết quả ở `ml-service/app/main.py:124` |
 | Backend chuyển tiếp `explain` và trả thêm `threshold` (ngưỡng đang cấu hình) | `backend/src/modules/laptops/segment.service.ts:50-52, 97, 104-105` |
 | Test: cộng hiệu² rồi lấy căn phải ra đúng khoảng cách của kNN | `ml-service/tests/test_segment_explain.py` |
