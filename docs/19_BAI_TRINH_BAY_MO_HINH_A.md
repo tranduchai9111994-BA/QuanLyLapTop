@@ -895,7 +895,7 @@ const status = ... prediction!.proba >= threshold ? 'VERIFIED' : 'NEEDS_REVIEW';
    - nhãn "Cần xác minh" trên thanh xác suất (`ConfidenceIndicator.tsx:13`, mặc định `threshold = 0.6`; hai nơi gọi
      `SegmentSuggester.tsx:84` và `AdminReviewQueue.tsx:120` đều không truyền ngưỡng).
 
-   Cảnh báo tự động `LOW_CONFIDENCE_RATE` cũng dùng 0,6 cố định (`alertScan.ts:136`). Hệ quả: đặt ngưỡng 0,8 thì máy 5/7 phiếu
+   Cảnh báo tự động `LOW_CONFIDENCE_RATE` cũng dùng 0,6 cố định (`alertScan.ts:139`). Hệ quả: đặt ngưỡng 0,8 thì máy 5/7 phiếu
    vào hàng đợi (backend), nhưng nút AI vẫn không hiện cảnh báo vì 0,714 > 0,6.
 
 **Cách tự thử không phá dữ liệu:** kéo slider lên 90% rồi Lưu → vào **Dữ liệu → Duyệt nhãn**, số máy chờ vẫn là 6 (điểm 1).
