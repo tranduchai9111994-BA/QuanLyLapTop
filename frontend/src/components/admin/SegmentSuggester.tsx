@@ -8,9 +8,16 @@ import { ConfidenceIndicator } from '../smart/ConfidenceIndicator';
 import { SegmentMathModal } from './SegmentMathModal';
 import type { MathView, SegmentExplain } from './SegmentMathModal';
 
+/**
+ * Kết quả của `POST /laptops/predict-segment` (backend `predictSegment` trong segment.service.ts,
+ * dữ liệu lấy từ ML `/predict-segment`).
+ */
 interface Prediction {
+  /** Mã phân khúc có xác suất cao nhất: OFFICE | ULTRABOOK | GAMING | CREATOR. */
   label: string;
+  /** Độ tin cậy = xác suất của `label`, từ 0 đến 1 (bằng số phiếu chia k). */
   proba: number;
+  /** Xác suất của từng phân khúc, tổng bằng 1. */
   distribution: Record<string, number>;
   /** k máy gần nhất trong tập huấn luyện đã bỏ phiếu (FR-09): nhãn + khoảng cách. */
   neighbors: { label: string; distance: number }[];
@@ -20,21 +27,30 @@ interface Prediction {
   threshold?: number;
 }
 
-/** Khi nhập máy mới, Mô hình A đọc cấu hình và gợi ý phân khúc kèm độ tin cậy + k láng giềng đã
- * bỏ phiếu. Việc lưu nhãn do backend làm (segment.service.ts): giữ nhãn AI -> nguồn MODEL, đổi
- * nhãn -> nguồn ADMIN; để trống thì backend tự dùng dự đoán, dưới ngưỡng tin cậy thì vào hàng
- * đợi "Cần xác minh". */
+/**
+ * Nút "AI gợi ý phân khúc từ cấu hình" trong popup Thêm/Sửa Laptop (truyền vào CrudTable qua `renderFormExtra`).
+ *
+ * Mô hình A đọc cấu hình đang nhập và gợi ý phân khúc kèm độ tin cậy và k láng giềng đã bỏ phiếu.
+ * Nút chỉ XEM TRƯỚC, không lưu gì.
+ * Việc lưu nhãn do backend làm khi bấm "Lưu" (segment.service.ts, `applySegmentLabel`):
+ *  - giữ nhãn AI: nguồn MODEL; đổi sang nhãn khác: nguồn ADMIN;
+ *  - để trống ô Phân khúc: backend dùng dự đoán, nếu dưới ngưỡng tin cậy thì máy vào hàng đợi "Cần xác minh".
+ *
+ * Props: `form` là Form antd của popup, dùng để đọc thông số máy và điền sẵn ô "Phân khúc".
+ */
 export function SegmentSuggester({ form }: { form: FormInstance }) {
-  const [pred, setPred] = useState<Prediction | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [mathView, setMathView] = useState<MathView | null>(null); // cửa sổ toán học đang mở (láng giềng #i hoặc cách đếm phiếu)
-  // Theo dõi ô "Phân khúc" để biết người dùng giữ hay đổi nhãn AI gợi ý
+  const [pred, setPred] = useState<Prediction | null>(null); // kết quả của lần bấm gần nhất; null khi chưa bấm
+  const [loading, setLoading] = useState(false); // đang chờ backend/ML trả lời
+  // Cửa sổ toán học đang mở: bảng khoảng cách của láng giềng #i, hoặc bảng tổng hợp (null = đóng)
+  const [mathView, setMathView] = useState<MathView | null>(null);
+  // Theo dõi ô "Phân khúc" (render lại mỗi khi đổi) để biết nhân viên giữ hay đổi nhãn AI gợi ý
   const chosenSegment = Form.useWatch('segment', form);
 
+  /** Đọc thông số trong form, gọi backend dự đoán và hiện kết quả. Không lưu máy. */
   async function suggest() {
     const v = form.getFieldsValue();
-    // Form chỉ có ô "resolution" gộp (vd "2560x1440"); resWidth/resHeight chỉ được tính lúc bấm
-    // "Lưu" (AdminLaptops.tsx transformSubmit) nên ở đây phải tự tách ra như transformSubmit.
+    // Form chỉ có ô "resolution" gộp (vd "2560x1440"); resWidth/resHeight chỉ được tách lúc bấm "Lưu"
+    // (AdminLaptops.tsx, `transformSubmit`), nên ở đây phải tự tách giống như vậy.
     let resWidth: number | undefined = v.resWidth;
     let resHeight: number | undefined = v.resHeight;
     if ((resWidth === undefined || resHeight === undefined) && v.resolution) {
@@ -43,6 +59,7 @@ export function SegmentSuggester({ form }: { form: FormInstance }) {
       resHeight = h;
     }
 
+    // Thiếu thông số bắt buộc thì cảnh báo và không gọi API (dự đoán từ dữ liệu thiếu không có nghĩa)
     const requiredBase = ['cpuId', 'gpuId', 'ramGb', 'ssdGb', 'screenInch', 'weightKg'];
     const missingBase = requiredBase.filter((k) => v[k] === undefined || v[k] === null || v[k] === '');
     const missingResolution = resWidth === undefined || resHeight === undefined || Number.isNaN(resWidth) || Number.isNaN(resHeight);
@@ -52,6 +69,7 @@ export function SegmentSuggester({ form }: { form: FormInstance }) {
     }
     setLoading(true);
     try {
+      // Backend nhận mã CPU/GPU và tự tra điểm PassMark trong bảng benchmark rồi mới gọi ML
       const r = await api.post('/laptops/predict-segment', {
         cpuId: v.cpuId,
         gpuId: v.gpuId,
@@ -60,15 +78,15 @@ export function SegmentSuggester({ form }: { form: FormInstance }) {
         screenInch: v.screenInch,
         resWidth,
         resHeight,
-        refreshHz: v.refreshHz ?? 60,
+        refreshHz: v.refreshHz ?? 60, // bỏ trống thì dùng 60 Hz, khớp giá trị mặc định ở backend
         srgb100: !!v.srgb100,
         weightKg: v.weightKg,
-        batteryWh: v.batteryWh ?? 55,
+        batteryWh: v.batteryWh ?? 55, // bỏ trống thì dùng 55 Wh (mức phổ biến), khớp backend
       });
       const p: Prediction = r.data.data;
       setPred(p);
-      setMathView(null);
-      // Ô "Phân khúc" còn trống thì điền sẵn nhãn AI; nếu người dùng đã chọn thì không ghi đè.
+      setMathView(null); // đóng cửa sổ toán học của kết quả cũ (nếu còn mở)
+      // Ô "Phân khúc" còn trống thì điền sẵn nhãn AI; nếu nhân viên đã chọn thì không ghi đè.
       if (!form.getFieldValue('segment')) form.setFieldValue('segment', p.label);
     } catch (err: any) {
       // Hiện đúng thông báo từ server thay vì đoán là lỗi ML service
@@ -82,6 +100,7 @@ export function SegmentSuggester({ form }: { form: FormInstance }) {
   }
 
   return (
+    // Khung nền xanh nhạt gồm nút gợi ý và (sau khi bấm) phần kết quả
     <div style={{ marginBottom: 16, padding: 12, background: t.primary50, borderRadius: 10 }}>
       <Button icon={<ExperimentOutlined />} onClick={suggest} loading={loading}>
         AI gợi ý phân khúc từ cấu hình
@@ -89,9 +108,11 @@ export function SegmentSuggester({ form }: { form: FormInstance }) {
 
       {pred && (
         <div style={{ marginTop: 10 }}>
+          {/* Thanh xác suất 4 phân khúc; hiện nhãn "Cần xác minh" khi nhãn cao nhất dưới ngưỡng tin cậy */}
           <ConfidenceIndicator distribution={pred.distribution} threshold={pred.threshold} />
 
-          {/* FR-09: cho thấy lý do dự đoán (k máy gần nhất đã bỏ phiếu), không phải hộp đen */}
+          {/* FR-09: cho thấy lý do dự đoán (k máy gần nhất đã bỏ phiếu), không phải hộp đen.
+              Dòng dưới đếm số láng giềng theo nhãn rồi sắp giảm dần, vd "3 Đồ họa, 3 Mỏng nhẹ, 1 Văn phòng". */}
           <div style={{ marginTop: 8, fontSize: 12, color: t.textSecondary }}>
             {pred.neighbors.length} máy gần nhất trong dữ liệu huấn luyện đã bỏ phiếu:{' '}
             {Object.entries(
@@ -104,14 +125,16 @@ export function SegmentSuggester({ form }: { form: FormInstance }) {
               .map(([seg, count]) => `${count} ${segmentColors[seg]?.label ?? seg}`)
               .join(', ')}
           </div>
+          {/* Mỗi láng giềng một thẻ, màu theo nhãn: thứ hạng (#1 gần nhất) và khoảng cách đã chuẩn hóa */}
           <Space size={4} wrap style={{ marginTop: 4 }}>
             {pred.neighbors.map((n, i) => (
               <Tag key={i} color={segmentColors[n.label]?.color} style={{ fontSize: 11, margin: 0 }}>
                 #{i + 1} · khoảng cách {n.distance.toFixed(2)}
+                {/* Icon "!": mở bảng cách tính khoảng cách của máy này (chỉ hiện khi ML trả `explain`) */}
                 {pred.explain && (
                   <Tooltip title="Xem cách tính khoảng cách này">
                     <ExclamationCircleOutlined
-                      role="button"
+                      role="button" // role, tabIndex và onKeyDown giúp bấm bằng bàn phím (phím Enter)
                       tabIndex={0}
                       aria-label={`Xem cách tính khoảng cách của máy #${i + 1}`}
                       style={{ marginLeft: 4, cursor: 'pointer' }}
@@ -122,6 +145,8 @@ export function SegmentSuggester({ form }: { form: FormInstance }) {
                 )}
               </Tag>
             ))}
+            {/* "Chi tiết": bảng tổng hợp 5 bước (chuẩn hóa, khoảng cách tới các máy đã ghi nhớ, bỏ phiếu, đếm phiếu,
+                so ngưỡng) */}
             {pred.explain && (
               <Button
                 size="small"
@@ -133,11 +158,13 @@ export function SegmentSuggester({ form }: { form: FormInstance }) {
               </Button>
             )}
           </Space>
+          {/* Cửa sổ toán học dùng chung cho cả icon "!" và nút "Chi tiết"; `mathView` quyết định bảng nào đang mở.
+              0.6 là ngưỡng mặc định khi backend chưa trả `threshold` */}
           {pred.explain && (
             <SegmentMathModal
               view={mathView}
               onClose={() => setMathView(null)}
-              onNavigate={setMathView}
+              onNavigate={setMathView} // chuyển bảng ngay trong cửa sổ (bấm #i, nút Trước/Sau, Về bảng tổng hợp)
               threshold={pred.threshold ?? 0.6}
               explain={pred.explain}
               neighbors={pred.neighbors}
@@ -146,6 +173,7 @@ export function SegmentSuggester({ form }: { form: FormInstance }) {
             />
           )}
 
+          {/* Nhắc khi nhân viên chọn phân khúc khác với AI: khi lưu, nhãn mang nguồn ADMIN thay vì MODEL */}
           {chosenSegment && chosenSegment !== pred.label && (
             <div style={{ marginTop: 8 }}>
               <span style={{ fontSize: 13, color: t.warning }}>
@@ -157,6 +185,8 @@ export function SegmentSuggester({ form }: { form: FormInstance }) {
             </div>
           )}
 
+          {/* Cảnh báo khi độ tin cậy dưới ngưỡng (lấy từ backend, mặc định 0,6): để trống ô Phân khúc thì máy vào
+              hàng đợi */}
           {pred.proba < (pred.threshold ?? 0.6) && (
             <Alert
               type="warning"

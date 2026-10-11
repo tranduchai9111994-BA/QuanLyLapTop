@@ -400,7 +400,7 @@ Mô hình hiện tại (k = 7, uniform) chỉ ra được 0%, 14%, 29%, 43%, 57%
 [D0] NGOẠI TUYẾN, TRƯỚC ĐÓ  generate_catalog.py -> catalog_vn.csv (1.000 máy) -> train.py chia 800 học / 200 thử
         │                    -> kNN ghi nhớ 800 máy -> model.joblib       (ML nạp file này khi khởi động)
         ▼
-[D1] Trình duyệt  SegmentSuggester.tsx:48   api.post('/laptops/predict-segment')
+[D1] Trình duyệt  SegmentSuggester.tsx:73   api.post('/laptops/predict-segment')
         │
 [D2] Backend      laptops.routes.ts:258     -> predictSegment()  segment.service.ts:59
         │         tra điểm CPU/GPU, tính ppi, gói 11 đặc trưng, mlClient.post('/predict-segment')
@@ -564,7 +564,7 @@ Nút này **chỉ xem trước, không lưu** (bấm Hủy là không có gì th
 **(b) Code** — `frontend/src/components/admin/SegmentSuggester.tsx`
 
 ```tsx
-// dòng 39-45: kiểm tra đủ dữ liệu trước khi gọi
+// dòng 62-67: kiểm tra đủ dữ liệu trước khi gọi
 const requiredBase = ['cpuId', 'gpuId', 'ramGb', 'ssdGb', 'screenInch', 'weightKg'];
 ...
 if (missingBase.length || missingResolution) {
@@ -580,7 +580,7 @@ const r = await api.post('/laptops/predict-segment', {
   weightKg: v.weightKg,
   batteryWh: v.batteryWh ?? 55,            // bỏ trống -> 55 Wh
 });
-// dòng 62-63: ô Phân khúc đang trống thì điền sẵn nhãn AI, đã chọn rồi thì không ghi đè
+// dòng 89-90: ô Phân khúc đang trống thì điền sẵn nhãn AI, đã chọn rồi thì không ghi đè
 if (!form.getFieldValue('segment')) form.setFieldValue('segment', p.label);
 ```
 
@@ -589,7 +589,7 @@ if (!form.getFieldValue('segment')) form.setFieldValue('segment', p.label);
 - Dòng 62-63 giải thích Demo 2: ô Phân khúc của Helios đã có "Đồ họa – Kỹ thuật" nên không bị ghi đè, và giao diện báo
   "Bạn đang chọn phân khúc khác với AI".
 
-**Câu mẫu:** *"Hàm `suggest` trong `SegmentSuggester.tsx` (dòng 27, lời gọi ở dòng 48) gọi sang backend `/laptops/predict-segment` để **lấy
+**Câu mẫu:** *"Hàm `suggest` trong `SegmentSuggester.tsx` (dòng 50, lời gọi ở dòng 73) gọi sang backend `/laptops/predict-segment` để **lấy
 phân khúc dự đoán**. Nó gửi **mã CPU/GPU và 9 thông số trong form**, nhận về **nhãn, xác suất 4 lớp và 7 láng giềng**."*
 
 ---
@@ -649,7 +649,7 @@ Bảng 11 đặc trưng backend gửi đi cho Helios 0051:
 (`features.py:147-149`). Hai cách điền khác nhau; ảnh hưởng nhỏ vì pin chỉ là 1 trong 11 cột.
 
 **(d) Tổng kết 30 giây.** Backend đổi mã CPU/GPU thành điểm, tính ppi, gói đủ 11 đặc trưng rồi gọi ML.
-`SegmentSuggester.tsx:48 -> laptops.routes.ts:258 -> segment.service.ts:74 -> main.py:88`.
+`SegmentSuggester.tsx:73 -> laptops.routes.ts:258 -> segment.service.ts:74 -> main.py:88`.
 
 ---
 
@@ -856,7 +856,7 @@ với phần tính tay ở D4–D6 (ví dụ Helios 0051: tổng hiệu² = 3,22
 
 | Việc | File và dòng |
 |---|---|
-| Icon "!" trên từng chip, nút "Chi tiết", mở cửa sổ | `frontend/src/components/admin/SegmentSuggester.tsx:105-133` (state ở dòng 28) |
+| Icon "!" trên từng chip, nút "Chi tiết", mở cửa sổ | `frontend/src/components/admin/SegmentSuggester.tsx:127-172` (state ở dòng 42-45) |
 | Hai cửa sổ toán học (bảng z-score, bảng hiệu, bảng khoảng cách tới 7 máy, đếm phiếu, so ngưỡng; thân cuộn riêng; bấm `#i` để xem tính; nút Trước/Sau) | `frontend/src/components/admin/SegmentMathModal.tsx` (`SegmentMathModal` dòng 65, `NeighborMath` dòng 111, `ZScoreTable` dòng 223, `VoteMath` dòng 274) |
 | ML trả thêm số liệu giải thích cho mỗi máy: trung bình, độ lệch chuẩn, z của máy đang xét, z và giá trị gốc của 7 láng giềng | `ml-service/app/models/segment_explain.py` (`build_explain`); gắn vào kết quả ở `ml-service/app/main.py:124` |
 | Backend chuyển tiếp `explain` và trả thêm `threshold` (ngưỡng đang cấu hình) | `backend/src/modules/laptops/segment.service.ts:50-52, 97, 104-105` |
