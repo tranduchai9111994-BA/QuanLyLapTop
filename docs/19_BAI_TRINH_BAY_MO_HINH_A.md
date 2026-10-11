@@ -839,7 +839,9 @@ với phần tính tay ở D4–D6 (ví dụ Helios 0051: tổng hiệu² = 3,22
 
 **(a) Thao tác:** Dữ liệu → Laptop → tìm `Predator Helios 0051` → icon **bút chì (Sửa)** → **AI gợi ý phân khúc từ cấu hình** →
 - bấm **"!"** cạnh `#1 · khoảng cách 1.80`: cửa sổ **"Vì sao máy #1 cách 1.80?"**
-  - *Bước 1:* bảng đổi 11 thông số của máy đang nhập sang z-score, mỗi dòng có phép tính `(x − TB) ÷ ĐLC = z`;
+  - *Bước 1:* bảng đổi 11 thông số của máy đang nhập sang z-score, gồm các cột **Giá trị nhập | Sau log₂ | TB | ĐLC | Công thức | z**.
+    Cột Sau log₂ của RAM/SSD ghi thêm "(vì 2⁵ = 32)"; cột **Công thức** thay số vào `z = (giá trị − TB) ÷ ĐLC` kèm bước trung gian
+    (vd RAM: `(5 − 3,7938) ÷ 0,7913 = 1,2062 ÷ 0,7913`), cột **z** là kết quả (`1,5243`), nên tự bấm máy tính lại được;
   - *Bước 2:* bảng so với máy #1: giá trị gốc hai máy, z hai máy, hiệu, hiệu², % của tổng, dòng **Tổng hiệu² = 3.2244**;
   - kết luận **Khoảng cách = √3.2244 = 1.7957**.
 - bấm **"! Chi tiết"** (sau `#7`): cửa sổ **"Vì sao độ tin cậy là 43%?"**, gồm **5 bước đi từ đầu đến cuối**

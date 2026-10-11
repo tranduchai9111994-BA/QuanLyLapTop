@@ -59,6 +59,8 @@ const FEATURE_LABEL: Record<string, string> = {
 };
 
 const fmt = (v: number, digits = 4) => Number(v).toFixed(digits);
+// Số mũ dạng chỉ số trên (5 -> ⁵) để viết "2⁵ = 32"
+const superscript = (n: number) => String(n).replace(/\d/g, (d) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[Number(d)]).replace('-', '⁻');
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 const segName = (code: string) => segmentColors[code]?.label ?? code;
 
@@ -160,7 +162,7 @@ function NeighborMath({
 
       <Typography.Title level={5}>Bước 1. Đổi 11 thông số của máy đang nhập sang z-score</Typography.Title>
       <Typography.Paragraph type="secondary" style={{ marginBottom: 8 }}>
-        Để các cột cùng một thước đo (GB, kg, Hz không so trực tiếp được). RAM và SSD lấy log₂ trước. Trung bình và độ lệch chuẩn được
+        Để các cột cùng một thước đo (GB, kg, Hz không so trực tiếp được), mỗi cột đổi thành z = (giá trị − TB) ÷ ĐLC. RAM và SSD lấy log₂ trước. Trung bình và độ lệch chuẩn được
         tính từ {explain.model.n_train} máy huấn luyện, lưu trong mô hình.
       </Typography.Paragraph>
       <ZScoreTable explain={explain} />
@@ -284,9 +286,15 @@ function ZScoreTable({ explain }: { explain: SegmentExplain }) {
     { title: 'Đặc trưng', dataIndex: 'label' },
     { title: 'Giá trị nhập', dataIndex: 'raw', align: 'right', render: (v: number) => fmt(v, 2) },
     {
+      // RAM/SSD: log₂ của giá trị nhập; nếu là số nguyên thì ghi thêm "vì 2ⁿ = giá trị" cho dễ kiểm tra
       title: 'Sau log₂',
       align: 'right',
-      render: (_, r) => (r.s.kind === 'log2_z' ? fmt(r.afterLog, 4) : '—'),
+      render: (_, r) =>
+        r.s.kind !== 'log2_z'
+          ? '—'
+          : Number.isInteger(r.afterLog)
+            ? `${fmt(r.afterLog, 4)} (vì 2${superscript(r.afterLog)} = ${fmt(r.raw, 0)})`
+            : `${fmt(r.afterLog, 4)} (log₂ của ${fmt(r.raw, 0)})`,
     },
     {
       title: 'Trung bình (TB)',
@@ -299,17 +307,15 @@ function ZScoreTable({ explain }: { explain: SegmentExplain }) {
       render: (_, r) => (r.s.std === null ? '—' : fmt(r.s.std, 4)),
     },
     {
-      title: 'z = (x − TB) ÷ ĐLC',
+      // Thay số vào công thức z = (x − TB) ÷ ĐLC, ghi cả bước trung gian (tử số) để tự tính lại bằng máy tính
+      title: 'Công thức',
       align: 'right',
       render: (_, r) =>
-        r.s.mean === null || r.s.std === null ? (
-          <span>giữ nguyên {fmt(r.z, 0)}</span>
-        ) : (
-          <span>
-            ({fmt(r.afterLog, 4)} − {fmt(r.s.mean, 4)}) ÷ {fmt(r.s.std, 4)} = <strong>{fmt(r.z, 4)}</strong>
-          </span>
-        ),
+        r.s.mean === null || r.s.std === null
+          ? 'giữ nguyên'
+          : `(${fmt(r.afterLog, 4)} − ${fmt(r.s.mean, 4)}) ÷ ${fmt(r.s.std, 4)} = ${fmt(r.afterLog - r.s.mean, 4)} ÷ ${fmt(r.s.std, 4)}`,
     },
+    { title: 'z', align: 'right', render: (_, r) => <strong>{r.s.kind === 'keep' ? fmt(r.z, 0) : fmt(r.z, 4)}</strong> },
   ];
 
   return <Table size="small" pagination={false} dataSource={step1} columns={step1Columns} scroll={{ x: 'max-content' }} />;
@@ -467,7 +473,7 @@ function VoteMath({
 
       <Typography.Title level={5}>Bước 1. Chuẩn hóa 11 thông số của máy đang nhập (z-score)</Typography.Title>
       <Typography.Paragraph type="secondary" style={{ marginBottom: 8 }}>
-        Để các cột cùng một thước đo (GB, kg, Hz không so trực tiếp được). RAM và SSD lấy log₂ trước. Trung bình và độ lệch chuẩn được tính từ{' '}
+        Để các cột cùng một thước đo (GB, kg, Hz không so trực tiếp được), mỗi cột đổi thành z = (giá trị − TB) ÷ ĐLC. RAM và SSD lấy log₂ trước. Trung bình và độ lệch chuẩn được tính từ{' '}
         {explain.model.n_train} máy huấn luyện, lưu trong mô hình.
       </Typography.Paragraph>
       <ZScoreTable explain={explain} />
