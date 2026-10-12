@@ -102,6 +102,9 @@ nhìn, 800 máy còn lại là 'sách giáo khoa'. Học xong, ta bắt mô hìn
 | File nào chấm 200 máy? | `train.py:104-112` |
 | Học xong, mô hình nhớ gì? | Đúng **800 máy sau chuẩn hóa** (ma trận 800 hàng x 11 cột) và nhãn của chúng, cộng trung bình/độ lệch chuẩn của 11 cột. Lưu thành `artifacts/<phiên bản>/model.joblib` (166 KB) |
 
+**Vì sao 80/20, và đầu ra của hai bước này dùng ở đâu trên giao diện:** xem Phần 2 mục D0.8 và D0.9. Tóm tắt: điểm trung bình không đổi theo tỷ lệ chia (0,775 đến 0,778), chỉ độ dao động đổi;
+mô hình đã học dùng cho các màn dự đoán, kết quả thi 200 máy dùng cho trang Quản lý mô hình và cổng "Đưa vào sử dụng".
+
 **Hai điều phải nói thẳng khi bị hỏi về dữ liệu:**
 1. **Nhãn `segment` do chương trình sinh dữ liệu tự gán**, không phải do người hay nhà bán lẻ thật gán
    (`data/generate_catalog.py:431-463`, hàm `assign_segment`; `data/README.md` ghi "dữ liệu tổng hợp có logic").
@@ -365,6 +368,17 @@ Mô hình hiện tại (k = 7, uniform) chỉ ra được 0%, 14%, 29%, 43%, 57%
   200 máy giữ riêng chỉ dùng một lần ở cuối để báo cáo.
 - Bằng chứng: `classifier.py:46`; 5 điểm 0,7714 / 0,8409 / 0,7703 / 0,8542 / 0,7321, trung bình 0,7938 (Phần 2 mục D8, D9).
 
+**H13. Vì sao chia 80/20, sao không phải 70/30 hay 90/10?**
+- Trả lời: 80/20 là tỷ lệ chuẩn. Chúng em đã chạy thử các tỷ lệ 10/90 đến 40/60, mỗi tỷ lệ 40 lần chia: điểm trung bình gần như không đổi (0,775 đến 0,778); khác nhau ở độ dao động của con số chấm.
+  80/20 đủ máy để học (800) và đủ máy để chấm (200, dao động khoảng ±0,03).
+- Bằng chứng: Phần 2 mục D0.8; `python -m app.lifecycle.split_ratio`.
+- Hạn chế nói thẳng: giữ k = 7 cố định khi thử; dữ liệu tổng hợp; 80/20 là lựa chọn quy ước, không phải kết quả tối ưu hóa.
+
+**H14. Kết quả học 800 máy và thi 200 máy được dùng ở những màn hình nào?**
+- Trả lời: mô hình đã học (`model.joblib`) dùng cho AI gợi ý phân khúc, Lưu laptop, Chi tiết, Duyệt nhãn và Wizard (khi khách chưa chọn phân khúc rõ). Kết quả thi 200 máy (`metadata.json`) vào trang Quản lý mô hình
+  (macro-F1, đường cơ sở, đường cong k, ma trận nhầm lẫn) và cổng "Đưa vào sử dụng".
+- Bằng chứng: Phần 2 mục D0.9 (bảng 1 và bảng 2); `models.routes.ts:35-110`; `AdminModels.tsx:220-275`; `main.py:40, 99, 146`.
+
 ---
 
 ## 12. Danh sách tự kiểm tra trước khi lên nói
@@ -379,6 +393,8 @@ Mô hình hiện tại (k = 7, uniform) chỉ ra được 0%, 14%, 29%, 43%, 57%
 - [ ] Chỉ được file nào chia 800/200 (`train.py:83`), file nào học (`classifier.py:50`), file nào dữ liệu (`catalog_vn.csv`).
 - [ ] Nói thẳng được "nhãn là dữ liệu tổng hợp" mà không bị lúng túng (mục 3b, H9).
 - [ ] Không nói "tập test đóng băng" (mục D0.7).
+- [ ] Giải thích được vì sao 80/20 kèm 2 con số: điểm trung bình gần như không đổi, độ dao động ±0,03 ở 200 máy (mục D0.8).
+- [ ] Chỉ được màn hình nào dùng `model.joblib` và màn hình nào dùng `metadata.json` (mục D0.9).
 - [ ] Giải thích được CV bằng ví dụ "5 đề ôn, lần lượt lấy 1 đề thi thử" (mục D8).
 - [ ] Nói đúng khi đổi ngưỡng: chỉ áp dụng máy mới, và 0,6 với 0,7 giống nhau khi k = 7 (mục D7b).
 
@@ -535,7 +551,80 @@ Kiểm tra thực tế (10/2026):
   dòng 63-64 vì thế chưa đúng với cách chạy thật.
 - **Khi trình bày:** không nói "mô hình được chấm trên tập test đóng băng". Nói "200 máy giữ riêng cố định bằng seed 42".
 
-### D0.8 Tổng kết 30 giây
+### D0.8 Vì sao chia 80/20?
+
+**Nói thẳng:** 80/20 là tỷ lệ phổ biến được chọn ở khâu thiết kế (docs/04 mục 3; `train.py:83`, `test_size=0.2`), **không** phải kết quả của một thí nghiệm
+chọn tỷ lệ. Để biết lựa chọn có hợp lý không, mình chạy thí nghiệm kiểm tra bằng `python -m app.lifecycle.split_ratio` (chỉ đọc, từ thư mục `ml-service`):
+giữ cố định bộ tham số đang dùng (k = 7, uniform, euclidean), chia ngẫu nhiên có giữ tỷ lệ phân khúc **40 lần** cho mỗi tỷ lệ, huấn luyện lại trên phần học
+rồi chấm trên phần thi.
+
+| Phần thi | Học | Thi | CREATOR trong phần thi | macro-F1 trung bình | Độ lệch | Nhỏ nhất đến lớn nhất | Recall CREATOR trung bình (độ lệch) |
+|---|---|---|---|---|---|---|---|
+| 10% | 900 | 100 | 12 | 0,7781 | 0,0496 | 0,675 đến 0,858 | 0,494 (0,150) |
+| **20% (đang dùng)** | **800** | **200** | **24** | **0,7751** | **0,0305** | **0,682 đến 0,829** | **0,471 (0,101)** |
+| 30% | 700 | 300 | 36 | 0,7784 | 0,0238 | 0,732 đến 0,827 | 0,476 (0,081) |
+| 40% | 600 | 400 | 48 | 0,7768 | 0,0198 | 0,735 đến 0,818 | 0,468 (0,060) |
+
+**Cách đọc:**
+1. **Điểm trung bình gần như không đổi** theo tỷ lệ (0,775 đến 0,778): đổi tỷ lệ chia không làm mô hình tốt hay xấu đi. Với 600 đến 900 máy học, thêm bớt vài trăm máy
+   ảnh hưởng rất nhỏ đến kNN.
+2. **Thứ thay đổi là độ nhiễu của con số chấm.** Phần thi càng nhỏ càng dao động: độ lệch 0,050 ở 10%, 0,031 ở 20%, 0,020 ở 40%. Phần thi 100 máy chỉ có 12 máy CREATOR,
+   nên recall CREATOR dao động tới ±0,15.
+3. **80/20 là điểm cân bằng hợp lý:** vẫn còn 800 máy để chọn tham số (kiểm thử chéo 5 phần chia 640/160, cũng là tỷ lệ 80/20), trong khi 200 máy thi cho con số dao động khoảng
+   ±0,03. Tăng phần thi lên 30 đến 40% ổn định hơn chút nhưng bớt máy học, và không thấy lợi về điểm.
+4. **Con số 0,7866 của lần huấn luyện (seed 42) cao hơn trung bình 0,775 khoảng 0,011**, vẫn trong một độ lệch. Vì vậy khi báo cáo nên nêu thêm 0,773 (kiểm thử chéo 5 phần
+   trên cả 1.000 máy, `evaluate.py`) và nói rõ "dao động khoảng ±0,03".
+
+**Hạn chế nói thẳng:** thí nghiệm giữ k = 7 cố định (không chọn lại k cho từng tỷ lệ), mà k = 7 vốn được chọn trên chính dữ liệu này nên điểm hơi lạc quan; dữ liệu lại là dữ liệu tổng hợp.
+**Cách nói:** "80/20 là tỷ lệ chuẩn. Chúng em có kiểm tra lại: đổi sang 70/30 hay 60/40 điểm trung bình gần như giữ nguyên, chỉ khác độ ổn định; 80/20 đủ máy để học và đủ máy để chấm."
+
+### D0.9 Đầu ra của "học 800 máy" và "thử 200 máy", và nơi dùng trên giao diện
+
+**Luồng tổng quát**
+
+```
+catalog_vn.csv ─► train.py ─┬─ học 800 máy ─► model.joblib ─► ML (registry.activate_latest, main.py:40)
+                            │                                   ├─► AI gợi ý phân khúc / Lưu laptop (Dữ liệu → Laptop)
+                            │                                   ├─► nút Chi tiết (cùng chỗ) và Chi tiết ở Duyệt nhãn
+                            │                                   └─► Wizard khi khách không chọn phân khúc rõ (/infer-segment)
+                            └─ thử 200 máy ─► metadata.json ─► backend POST /models/train ─► bảng ModelVersion
+                                                                  ├─► Trí tuệ → Quản lý mô hình (bảng và "Xem chi tiết")
+                                                                  └─► cổng "Đưa vào sử dụng" (models.routes.ts:65-110)
+```
+
+**Bảng 1. Đầu ra** (phiên bản đang dùng `clf-2026.09.27-160831`; thư mục `ml-service/artifacts/<phiên bản>/`)
+
+| Đầu ra | Sinh ở | Nằm ở | Giá trị |
+|---|---|---|---|
+| Mô hình đã học: 800 dòng chuẩn hóa + nhãn, trung bình/độ lệch chuẩn, tham số kNN | `train.py:129` | `model.joblib` (166 KB) | `knn._fit_X` = (800, 11) |
+| Tham số tốt nhất `best_params` | `train.py:97-98` (kết quả `grid_search`) | `metadata.json` | k = 7, uniform, euclidean |
+| Điểm kiểm thử chéo trên 800 máy (`cv_f1_macro_mean`, `cv_f1_macro_std`) | `train.py:96` | `metadata.json` | 0,7938 ± 0,0463 |
+| Đường cong chọn k (`k_curve`, 16 điểm) | `train.py:123` | `metadata.json` + `k_curve.png` | k = 7 cao nhất, 0,7938 |
+| **Kết quả thi 200 máy** (`test_metrics`): `f1_macro`, `report` (precision/recall/F1 từng phân khúc, accuracy), `confusion_matrix`, `labels` | `train.py:104-112` | `metadata.json` + `confusion_matrix.png` | 0,7866; recall CREATOR 0,375 |
+| Hai mốc so sánh `baseline`, chấm trên cùng 200 máy | `train.py:115-120` | `metadata.json` | 0,128 và 0,632 |
+| Thông tin kèm: `version`, `trained_at`, `dataset_hash`, `n_samples`, `class_counts`, `feature_list` | `train.py` (bước 8) | `metadata.json` | 1000 máy, 11 đặc trưng |
+| Tên bản đang dùng | `train.py:182` (chỉ lần đầu); sau đó là nút "Đưa vào sử dụng" | `artifacts/LATEST` | `clf-2026.09.27-160831` |
+
+**Bảng 2. Nơi dùng trên giao diện và cách kiểm tra**
+
+| Đầu ra | Màn hình dùng | Dùng để làm gì | Cách tự kiểm tra |
+|---|---|---|---|
+| `model.joblib` (kết quả của việc **học 800 máy**) | Dữ liệu → Laptop: nút **AI gợi ý phân khúc** và khi bấm **Lưu**; cửa sổ **Chi tiết**; trang **Duyệt nhãn** (nút Chi tiết); Wizard khi khách không chọn phân khúc rõ, ví dụ "Chưa rõ" (`recommend.service.ts:134` gọi ML `/infer-segment`, `main.py:146`) | dự đoán phân khúc và 7 láng giềng cho máy mới | Cửa sổ Chi tiết ghi "800 máy đã ghi nhớ" (chính là số dòng của `model.joblib`); `GET :8001/health` trả `clfVersion` đang nạp |
+| `test_metrics`, `baseline`, `k_curve`, `cv` (kết quả của việc **thử 200 máy** và chọn tham số) | Trí tuệ → **Quản lý mô hình**. Backend lưu vào bảng `ModelVersion` khi huấn luyện qua `POST /models/train` (`models.routes.ts:35-60`: params, cv, test, baseline, k_curve, datasetHash, nSamples). Cột "macro-F1 (test)" = `test.f1_macro`, cột "Số mẫu" = `n_samples`. **Xem chi tiết** hiện 4 khối: so với đường cơ sở (78,7% / 12,8% / 63,2%), đường cong chọn k có vạch "k đã chọn", precision/recall/F1 từng phân khúc, ma trận nhầm lẫn (`AdminModels.tsx:220-275`) | cho người quản trị xem mô hình tốt đến đâu và yếu ở đâu trước khi quyết định dùng | Mở `metadata.json`, đối chiếu từng con số với màn hình (78,7% ↔ 0,7866; hàng CREATOR của ma trận 9/14/1/0) |
+| `test_metrics.f1_macro` và `report` | Nút **Đưa vào sử dụng** (`models.routes.ts:65-110`) | cổng 2 quy tắc: macro-F1 không thấp hơn bản đang dùng quá 0,02, và F1 của mọi phân khúc không dưới 0,5 | CREATOR hiện F1 = 0,5000, **đúng bằng ngưỡng** nên vừa đủ qua; chỉ cần thấp hơn một chút là bị từ chối |
+| `k_curve.png`, `confusion_matrix.png` | **Không màn hình nào của app hiển thị** (app tự vẽ lại từ `metadata.json`) | dùng đưa vào slide, báo cáo | mở file trong `artifacts/<phiên bản>/` |
+
+**Điểm cần nhớ:** màn "Quản lý mô hình" đọc số liệu **thử 200 máy** từ cơ sở dữ liệu, còn dự đoán phân khúc ở các màn khác dùng **mô hình đã học 800 máy** do ML nạp vào RAM.
+Hai luồng này tách rời: sửa bảng `ModelVersion` không làm đổi mô hình đang dự đoán.
+
+**Kịch bản kiểm tra trên giao diện (không ghi dữ liệu):**
+1. Trí tuệ → Quản lý mô hình → dòng **Đang sử dụng**: macro-F1 (test) 78,7%, Số mẫu 1000.
+2. Bấm **Xem chi tiết** → nhìn bảng đường cơ sở (78,7% / 12,8% / 63,2%) và recall CREATOR 37,5%. Ba số đầu chính là `test_f1_macro`, `dummy_f1`, `rule_f1` chấm trên 200 máy.
+3. Mở `ml-service/artifacts/clf-2026.09.27-160831/metadata.json`, tìm `test_metrics` và `baseline` để thấy cùng các con số.
+4. Dữ liệu → Laptop → máy `Predator Helios 0051` (thuộc 200 máy thi) → AI gợi ý → Chi tiết: thấy mô hình **học** (800 máy) đoán máy **thi** (chưa từng thấy) ra sao; ô tương ứng trong ma trận nhầm lẫn
+   của trang Quản lý mô hình được đếm từ chính các lần đoán như thế này.
+
+### D0.10 Tổng kết 30 giây
 
 - **Một câu:** dữ liệu là 1.000 máy tổng hợp trong `catalog_vn.csv`; `train.py:83` chia 800 để học, 200 để thử; "học" của kNN là ghi nhớ
   800 máy đã chuẩn hóa vào `model.joblib`, rồi chấm trên 200 máy chưa thấy.
