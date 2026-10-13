@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Alert, Button, Card, Empty, Select, Space, message } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import { Alert, Button, Card, Empty, Input, Pagination, Select, Space, message } from 'antd';
 import { CheckCircleOutlined, DownloadOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { api } from '../../lib/api';
 import { segmentColors, t } from '../../theme/tokens';
@@ -37,6 +37,15 @@ interface QueueItem {
   waitingSince: string;
 }
 
+type SortKey = 'conf-asc' | 'conf-desc' | 'wait-asc' | 'price-desc' | 'name-asc';
+const SORT_OPTIONS: { label: string; value: SortKey }[] = [
+  { label: 'Tin cậy thấp nhất trước', value: 'conf-asc' },
+  { label: 'Tin cậy cao nhất trước', value: 'conf-desc' },
+  { label: 'Chờ lâu nhất trước', value: 'wait-asc' },
+  { label: 'Giá cao nhất trước', value: 'price-desc' },
+  { label: 'Tên A → Z', value: 'name-asc' },
+];
+
 const SEGMENT_OPTIONS = ['OFFICE', 'ULTRABOOK', 'GAMING', 'CREATOR'].map((s) => ({
   label: segmentColors[s].label,
   value: s,
@@ -55,6 +64,13 @@ export function AdminReviewQueue() {
   const [detail, setDetail] = useState<{ item: QueueItem; pred: SegmentPrediction } | null>(null);
   const [mathView, setMathView] = useState<MathView | null>(null); // bảng đang mở (null = đóng)
   const [detailLoading, setDetailLoading] = useState<number | null>(null); // laptopId đang chờ tính
+  // Bộ lọc, sắp xếp và phân trang chạy phía giao diện (API hàng đợi trả về toàn bộ máy đang chờ)
+  const [keyword, setKeyword] = useState('');
+  const [brandFilter, setBrandFilter] = useState<string | undefined>();
+  const [segmentFilter, setSegmentFilter] = useState<string | undefined>(); // phân khúc AI đang gán tạm
+  const [sortBy, setSortBy] = useState<SortKey>('conf-asc');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   function load() {
     setLoading(true);
@@ -150,6 +166,38 @@ export function AdminReviewQueue() {
     }
   }
 
+  const brandOptions = useMemo(
+    () => [...new Set(items.map((i) => i.laptop.brand.name))].sort().map((b) => ({ label: b, value: b })),
+    [items]
+  );
+  const filtered = useMemo(() => {
+    const kw = keyword.trim().toLowerCase();
+    const list = items.filter(
+      (i) =>
+        (!kw || `${i.laptop.name} ${i.laptop.sku} ${i.laptop.brand.name}`.toLowerCase().includes(kw)) &&
+        (!brandFilter || i.laptop.brand.name === brandFilter) &&
+        (!segmentFilter || i.segment === segmentFilter)
+    );
+    const conf = (i: QueueItem) => i.confidence ?? 0;
+    const sorters: Record<SortKey, (a: QueueItem, b: QueueItem) => number> = {
+      'conf-asc': (a, b) => conf(a) - conf(b),
+      'conf-desc': (a, b) => conf(b) - conf(a),
+      'wait-asc': (a, b) => new Date(a.waitingSince).getTime() - new Date(b.waitingSince).getTime(),
+      'price-desc': (a, b) => b.laptop.priceVnd - a.laptop.priceVnd,
+      'name-asc': (a, b) => a.laptop.name.localeCompare(b.laptop.name, 'vi'),
+    };
+    return [...list].sort(sorters[sortBy]);
+  }, [items, keyword, brandFilter, segmentFilter, sortBy]);
+  const hasFilter = !!keyword.trim() || !!brandFilter || !!segmentFilter;
+  // Sau khi duyệt, danh sách ngắn lại: kéo trang hiện tại về trang cuối còn lại thay vì hiện trang trống
+  const maxPage = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, maxPage);
+  const pageItems = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const changeFilter = (apply: () => void) => {
+    apply();
+    setPage(1); // đổi bộ lọc thì về trang đầu
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -167,8 +215,58 @@ export function AdminReviewQueue() {
         <Empty description="Không có máy nào đang chờ xác minh — mọi nhãn hiện tại đều đáng tin cậy." />
       )}
 
+      {items.length > 0 && (
+        <Card size="small" style={{ marginBottom: 12 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
+            <Input.Search
+              allowClear
+              placeholder="Tìm theo tên, mã SKU hoặc hãng"
+              value={keyword}
+              onChange={(e) => changeFilter(() => setKeyword(e.target.value))}
+              style={{ width: 300 }}
+            />
+            <Select
+              allowClear
+              placeholder="Hãng"
+              value={brandFilter}
+              options={brandOptions}
+              onChange={(v) => changeFilter(() => setBrandFilter(v))}
+              style={{ width: 160 }}
+              showSearch
+            />
+            <Select
+              allowClear
+              placeholder="Phân khúc AI gán"
+              value={segmentFilter}
+              options={SEGMENT_OPTIONS}
+              onChange={(v) => changeFilter(() => setSegmentFilter(v))}
+              style={{ width: 200 }}
+            />
+            <Select value={sortBy} options={SORT_OPTIONS} onChange={(v) => changeFilter(() => setSortBy(v))} style={{ width: 220 }} />
+            {hasFilter && (
+              <Button
+                onClick={() =>
+                  changeFilter(() => {
+                    setKeyword('');
+                    setBrandFilter(undefined);
+                    setSegmentFilter(undefined);
+                  })
+                }
+              >
+                Xóa lọc
+              </Button>
+            )}
+            <span style={{ color: t.textSecondary, marginLeft: 'auto' }}>
+              {hasFilter ? `${filtered.length}/${items.length} máy khớp bộ lọc` : `${items.length} máy đang chờ`}
+            </span>
+          </div>
+        </Card>
+      )}
+
+      {!loading && items.length > 0 && filtered.length === 0 && <Empty description="Không có máy nào khớp bộ lọc." />}
+
       <Space direction="vertical" style={{ width: '100%' }} size={12}>
-        {items.map((item) => {
+        {pageItems.map((item) => {
           const chosen = choices[item.laptopId] ?? item.segment;
           const changed = chosen !== item.segment;
           return (
@@ -224,6 +322,23 @@ export function AdminReviewQueue() {
           );
         })}
       </Space>
+
+      {filtered.length > pageSize && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+          <Pagination
+            current={currentPage}
+            pageSize={pageSize}
+            total={filtered.length}
+            showSizeChanger
+            pageSizeOptions={[10, 20, 50]}
+            showTotal={(total, range) => `${range[0]}-${range[1]} / ${total} máy`}
+            onChange={(p, size) => {
+              setPage(size !== pageSize ? 1 : p);
+              setPageSize(size);
+            }}
+          />
+        </div>
+      )}
 
       {/* Cửa sổ toán học dùng chung với màn AI gợi ý (SegmentMathModal) */}
       {detail?.pred.explain && (
