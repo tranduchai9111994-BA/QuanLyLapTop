@@ -22,6 +22,12 @@ from app.data.data_check import check_catalog_format
 from app.data.features import MODEL_A_FEATURES, enrich_catalog
 from app.models.text_classifier import NeedTextModel, build_text_pipeline, normalize_text
 
+# Windows mặc định in bằng cp1252 khi chạy dưới uvicorn: print tiếng Việt sẽ ném UnicodeEncodeError giữa chừng
+# (huấn luyện xong nhưng endpoint /train trả 500). Ép UTF-8, ký tự lạ thì thay thế thay vì báo lỗi.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+
 ROOT = Path(__file__).resolve().parents[3]
 DATA_DIR = ROOT / "data"
 ARTIFACTS_DIR = Path(__file__).resolve().parents[2] / "artifacts"
@@ -33,14 +39,14 @@ def dataset_hash(path: Path) -> str:
 
 
 def load_dataset() -> tuple[pd.DataFrame, Path]:
-    """BƯỚC 1: Đọc 1.000 laptop từ CSV, tra bảng benchmark CPU/GPU để có điểm số, làm giàu các cột số.
+    """BƯỚC 1: Đọc toàn bộ laptop trong catalog_vn.csv (hiện 1.000 máy mẫu), tra bảng benchmark CPU/GPU để có điểm số, làm giàu các cột số.
 
     Đầu vào:
-    - catalog_vn.csv: 1.000 máy với tên CPU/GPU, cấu hình (RAM, SSD...)
+    - catalog_vn.csv: toàn bộ máy (hiện 1.000 máy mẫu) với tên CPU/GPU, cấu hình (RAM, SSD...)
     - cpu_benchmark.csv, gpu_benchmark.csv: bảng tra cứu điểm hiệu năng
 
     Đầu ra:
-    - DataFrame 1.000 máy với 11 cột số (sau chuẩn hóa) + nhãn segment
+    - DataFrame toàn bộ máy trong CSV với 11 cột số (sau chuẩn hóa) + nhãn segment
     - Đường dẫn file CSV (để tính hash)
     """
     catalog_path = DATA_DIR / "processed" / "catalog_vn.csv"
@@ -55,13 +61,13 @@ def load_dataset() -> tuple[pd.DataFrame, Path]:
 
 
 def run_training() -> dict:
-    """CHẠY TOÀN BỘ HUẤN LUYỆN TRÊN 1.000 MÁY — 11 bước (xem dòng 48-150).
+    """CHẠY TOÀN BỘ HUẤN LUYỆN TRÊN TOÀN BỘ MÁY TRONG catalog_vn.csv (hiện 1.000 máy mẫu) — 11 bước (xem dòng 48-150).
 
     Luồng:
     1. Đọc dữ liệu (load_dataset)
-    2. Chia 80/20 (800 học, 200 test)
+    2. Chia 80/20 theo tỷ lệ (hiện 1.000 máy → 800 học, 200 test)
     3. GridSearchCV thử 64 tổ hợp × 5 phần = 320 lần → chọn k, metric, weights tốt nhất
-    4. Chấm điểm trên 200 máy test
+    4. Chấm điểm trên phần 20% test (hiện 200 máy)
     5. So sánh 2 baseline (dummy 0.128, rule 0.632)
     6. Vẽ đường cong k (macro-F1 vs k)
     7. Lưu model.joblib vào thư mục phiên bản (tên ngày giờ)
@@ -73,25 +79,19 @@ def run_training() -> dict:
     Trả về: metadata dict (tham số, điểm, baseline, k_curve)
     ⚠ KHÔNG đổi LATEST tự động (đã quy định D-08)
     """
-    df, catalog_path = load_dataset()  # Bước 1: đọc 1.000 máy, tra benchmark
+    df, catalog_path = load_dataset()  # Bước 1: đọc toàn bộ máy trong CSV, tra benchmark
     X = df
     y = df["segment"]
 
-    # Bước 2: chia 80% (800 máy) để học, 20% (200 máy) để kiểm tra
+    # Bước 2: chia 80% để học, 20% để kiểm tra (hiện 1.000 máy → 800 học, 200 kiểm tra)
     # stratify=y: giữ đúng tỷ lệ 4 phân khúc trong cả train lẫn test (OFFICE, GAMING, ULTRABOOK, CREATOR)
     # random_state=42: cố định seed để mỗi lần chạy chia giống nhau
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, stratify=y, random_state=RANDOM_STATE
     )
 
-    golden_path = ARTIFACTS_DIR / "golden_test.csv"  # đóng băng tập kiểm tra ở lần train đầu tiên
-    if not golden_path.exists():
-        ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
-        X_test.to_csv(golden_path, index=False)
-        print(f"Đã đóng băng golden_test.csv ({len(X_test)} mẫu)")
-
     # Bước 3: GridSearchCV thử 64 tổ hợp (16 k × 2 weights × 2 metric) × 5 phần CV = 320 lần học
-    # Mỗi lần: fit StandardScaler + kNN trên 640 máy, test trên 160 máy, ghi macro-F1
+    # Mỗi lần: fit StandardScaler + kNN trên 4 phần, test trên 1 phần (hiện 640 và 160 máy), ghi macro-F1
     # Chọn bộ tham số (k, weights, metric) có macro-F1 cao nhất trung bình 5 phần
     search = grid_search(X_train, y_train)
     best_pipe = search.best_estimator_  # Pipeline đã fit (chuẩn hóa + kNN) với bộ tham số tốt nhất
@@ -99,13 +99,13 @@ def run_training() -> dict:
     print("Best params:", best_params)
     print(f"CV f1_macro mean={search.best_score_:.4f}")  # macro-F1 trung bình 5 phần
 
-    # Bước 4: Dự đoán 200 máy test (chưa từng thấy trong huấn luyện)
-    # best_pipe sẽ chuẩn hóa 200 máy này dùng σ từ 800 máy (không rò rỉ dữ liệu)
+    # Bước 4: Dự đoán phần máy test (hiện 200 máy) (chưa từng thấy trong huấn luyện)
+    # best_pipe sẽ chuẩn hóa các máy này dùng σ từ tập học (không rò rỉ dữ liệu)
     y_pred_test = best_pipe.predict(X_test[MODEL_A_FEATURES])
     # ⚠ DÙNG MACRO-F1 CHỨ KHÔNG PHẢI ACCURACY (lý do: dữ liệu lệch lớp)
     # Dữ liệu: GAMING 33,5%, OFFICE 34,4%, ULTRABOOK 20%, CREATOR 12% ← lệch lớp
-    # Nếu dùng accuracy, lớp CREATOR (12%) có thể bị "hy sinh" mà ta không nhận ra
-    # Macro-F1 = (F1_GAMING + F1_OFFICE + F1_ULTRABOOK + F1_CREATOR) / 4 → buộc chăm sóc đều 4 lớp
+    # Nếu dùng accuracy, lớp CREATOR (12%) có thể bị sai mà không nhận ra
+    # Macro-F1 = (F1_GAMING + F1_OFFICE + F1_ULTRABOOK + F1_CREATOR) / 4 
     # Ví dụ: accuracy 0.85 (cao ảo) nhưng CREATOR recall = 0.375 (yếu) → macro-F1 bắt được (0.787)
     test_f1_macro = f1_score(y_test, y_pred_test, average="macro")  # macro-F1 trên test (thực tế)
     report = classification_report(y_test, y_pred_test, output_dict=True)  # precision, recall, F1 per class
@@ -135,13 +135,20 @@ def run_training() -> dict:
         "type": "classifier",
         "trained_at": datetime.now(timezone.utc).isoformat(),
         "dataset_hash": dataset_hash(catalog_path),  # Hash của CSV input (phát hiện dữ liệu đổi)
-        "n_samples": len(df),  # 1000
+        "n_samples": len(df),  # số máy trong CSV (hiện 1000)
         "class_counts": y.value_counts().to_dict(),  # OFFICE 344, GAMING 335, ULTRABOOK 201, CREATOR 120
         "best_params": best_params,  # k=7, weights=uniform, metric=euclidean
         "cv_f1_macro_mean": float(search.best_score_),  # 0.7938 (CV trung bình 5 phần)
         "cv_f1_macro_std": float(search.cv_results_["std_test_score"][search.best_index_]),  # dao động
-        "test_metrics": {"f1_macro": float(test_f1_macro), "report": report, "confusion_matrix": cm.tolist(), "labels": sorted(y.unique().tolist())},  # điểm test 200 máy
-        "baseline": {"dummy_f1_macro": float(dummy_f1), "rule_f1_macro": float(rule_f1)},  # mốc so sánh: 0.128, 0.632
+        # macro-F1 của từng phần trong 5 phần CV (bộ tham số tốt nhất); mean và std ở trên được tính từ 5 số này
+        "cv_fold_scores": [float(search.cv_results_[f"split{i}_test_score"][search.best_index_]) for i in range(5)],
+        "test_metrics": {"f1_macro": float(test_f1_macro), "report": report, "confusion_matrix": cm.tolist(), "labels": sorted(y.unique().tolist())},  # điểm trên phần test (hiện 200 máy)
+        "baseline": {
+            "dummy_f1_macro": float(dummy_f1),
+            "rule_f1_macro": float(rule_f1),
+            # Ma trận nhầm lẫn của luật if-else trên máy test (cùng thứ tự nhãn với test_metrics.labels) để giao diện giải thích cách ra rule_f1_macro
+            "rule_confusion_matrix": confusion_matrix(y_test, rule_pred, labels=sorted(y.unique())).tolist(),
+        },  # mốc so sánh: 0.128, 0.632
         "k_curve": curve,  # [(k=1, 0.7566), (k=3, 0.7647), ..., (k=31, 0.6968)] → dùng vẽ biểu đồ
         "feature_list": MODEL_A_FEATURES,  # 11 đặc trưng: ram_gb, ssd_gb, cpu_score, ...
         "sklearn_version": sklearn.__version__,

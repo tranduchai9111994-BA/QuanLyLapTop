@@ -3,7 +3,7 @@ import { Button, Card, Empty, Result, Tag } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { segmentColors, t } from '../theme/tokens';
-import { formatVnd } from '../utils/format';
+import { formatDateTime, formatVnd } from '../utils/format';
 import type { RecommendationResult } from '../types';
 
 interface SessionRow {
@@ -94,7 +94,7 @@ export function History() {
                 <Tag color={segmentColors[row.usedSegment]?.color}>{segmentColors[row.usedSegment]?.label ?? row.usedSegment}</Tag>
                 {row.isFallback && <Tag color="warning">Chế độ dự phòng</Tag>}
               </div>
-              <span style={{ color: t.textTertiary, fontSize: 13 }}>{new Date(row.createdAt).toLocaleString('vi-VN')}</span>
+              <span style={{ color: t.textTertiary, fontSize: 13 }}>{formatDateTime(row.createdAt)}</span>
             </div>
             <div style={{ color: t.textSecondary, fontSize: 14 }}>
               {row.items.slice(0, 3).map((it) => it.laptop.name).join(' · ')}

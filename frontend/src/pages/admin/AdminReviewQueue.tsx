@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Button, Card, Checkbox, Empty, Select, Space, message } from 'antd';
+import { Alert, Button, Card, Empty, Select, Space, message } from 'antd';
 import { CheckCircleOutlined, DownloadOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { api } from '../../lib/api';
 import { segmentColors, t } from '../../theme/tokens';
@@ -35,7 +35,6 @@ interface QueueItem {
   distribution: Record<string, number>;
   predictedBy: string | null;
   waitingSince: string;
-  locked: boolean;
 }
 
 const SEGMENT_OPTIONS = ['OFFICE', 'ULTRABOOK', 'GAMING', 'CREATOR'].map((s) => ({
@@ -51,7 +50,6 @@ export function AdminReviewQueue() {
   const [items, setItems] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [choices, setChoices] = useState<Record<number, string>>({});
-  const [lockChoices, setLockChoices] = useState<Record<number, boolean>>({});
   const [saving, setSaving] = useState<number | null>(null);
   // Cửa sổ "Chi tiết cách tính" của một máy trong hàng đợi
   const [detail, setDetail] = useState<{ item: QueueItem; pred: SegmentPrediction } | null>(null);
@@ -71,10 +69,9 @@ export function AdminReviewQueue() {
 
   async function verify(item: QueueItem) {
     const segment = choices[item.laptopId] ?? item.segment;
-    const locked = lockChoices[item.laptopId] ?? item.locked;
     setSaving(item.laptopId);
     try {
-      await api.patch(`/labels/review-queue/${item.laptopId}`, { segment, locked });
+      await api.patch(`/labels/review-queue/${item.laptopId}`, { segment });
       message.success(`Đã duyệt "${item.laptop.name}" → ${segmentColors[segment]?.label ?? segment}`);
       load();
       window.dispatchEvent(new Event('smartlap:review-queue-changed'));
@@ -176,8 +173,9 @@ export function AdminReviewQueue() {
           const changed = chosen !== item.segment;
           return (
             <Card key={item.laptopId} loading={loading}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-                <div style={{ minWidth: 260 }}>
+              {/* 3 cột có độ rộng cố định theo tỉ lệ (không theo độ dài chữ) để các thẻ thẳng hàng với nhau */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 24 }}>
+                <div style={{ flex: '1 1 300px', minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: 16 }}>{item.laptop.name}</div>
                   <div style={{ color: t.textSecondary, fontSize: 13 }}>
                     {item.laptop.sku} · {item.laptop.brand.name} · {item.laptop.cpu.displayName} ·{' '}
@@ -188,7 +186,7 @@ export function AdminReviewQueue() {
                   </div>
                 </div>
 
-                <div style={{ flex: '1 1 260px', minWidth: 220 }}>
+                <div style={{ flex: '1.6 1 340px', minWidth: 0 }}>
                   <ConfidenceIndicator distribution={item.distribution} />
                   {/* Mở bảng toán học: chuẩn hóa, khoảng cách tới các máy đã ghi nhớ, bỏ phiếu, so ngưỡng */}
                   <Button
@@ -203,28 +201,22 @@ export function AdminReviewQueue() {
                   </Button>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 220 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: '0 0 250px' }}>
                   <Select
                     value={chosen}
                     options={SEGMENT_OPTIONS}
                     onChange={(v) => setChoices((prev) => ({ ...prev, [item.laptopId]: v }))}
                   />
                   {changed && (
-                    <Alert type="warning" showIcon message="Đang chọn khác nhãn AI — sẽ lưu với nguồn nhân viên." />
+                    <Alert type="warning" showIcon message="Đang chọn khác nhãn AI: sẽ lưu nhãn bạn chọn, mô hình không tự đổi lại." />
                   )}
-                  <Checkbox
-                    checked={lockChoices[item.laptopId] ?? item.locked}
-                    onChange={(e) => setLockChoices((prev) => ({ ...prev, [item.laptopId]: e.target.checked }))}
-                  >
-                    Khóa nhãn, không cho mô hình thay đổi
-                  </Checkbox>
                   <Button
                     type="primary"
                     icon={<CheckCircleOutlined />}
                     loading={saving === item.laptopId}
                     onClick={() => verify(item)}
                   >
-                    {changed ? 'Duyệt với nhãn đã chọn' : 'Duyệt (giữ nhãn AI)'}
+                    Duyệt
                   </Button>
                 </div>
               </div>

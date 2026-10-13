@@ -50,7 +50,7 @@ def z_to_raw(z_row: np.ndarray, scaling: list[dict]) -> list[float]:
 
 
 def training_names(pipeline: Pipeline) -> list[str] | None:
-    """Tên 800 máy mà mô hình đã ghi nhớ, theo đúng thứ tự các dòng của `knn._fit_X`; None nếu không dựng lại chắc chắn được.
+    """Tên các máy (hiện 800) mà mô hình đã ghi nhớ, theo đúng thứ tự các dòng của `knn._fit_X`; None nếu không dựng lại chắc chắn được.
 
     Mô hình chỉ lưu SỐ, không lưu tên. Cách dựng lại: đọc `catalog_vn.csv`, chia 80/20 đúng như lúc huấn luyện
     (seed 42, giữ tỷ lệ phân khúc) rồi lấy tên của 80%. Chỉ dùng kết quả khi CẢ HAI điều kiện đúng: số liệu chuẩn hóa của các máy

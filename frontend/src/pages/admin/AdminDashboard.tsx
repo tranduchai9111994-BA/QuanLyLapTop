@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { formatDateTime } from '../../utils/format';
 import { Alert, Button, Card, Statistic, Table, Tag, message } from 'antd';
 import {
   CheckCircleOutlined,
@@ -172,7 +173,7 @@ export function AdminDashboard() {
           { title: 'Mức', dataIndex: 'severity', render: (v: string) => <Tag color={SEVERITY_COLOR[v]}>{v}</Tag> },
           { title: 'Mã', dataIndex: 'code' },
           { title: 'Nội dung', dataIndex: 'message' },
-          { title: 'Lúc', dataIndex: 'createdAt', render: (v: string) => new Date(v).toLocaleString('vi-VN') },
+          { title: 'Lúc', dataIndex: 'createdAt', render: (v: string) => formatDateTime(v) },
           {
             title: '',
             render: (_: unknown, r: AlertRow) => (

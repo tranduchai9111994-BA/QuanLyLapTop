@@ -15,7 +15,8 @@ import { computePpi } from './laptops.service';
  *    của Mô hình A, `ADMIN` nếu khác.
  *  - Không chọn -> dùng dự đoán Mô hình A (nguồn `MODEL`): độ tin cậy >= `confidence_threshold`
  *    (mặc định 0,6) -> VERIFIED, thấp hơn -> NEEDS_REVIEW (hàng đợi "Cần xác minh").
- *  - Nhãn đã khóa (`locked`) và người dùng không chọn lại -> giữ nguyên.
+ *  - Nhãn do người đã quyết định (nhân viên/nhà bán đã chọn hoặc duyệt, nguồn khác `MODEL`, đã VERIFIED)
+ *    và người dùng không chọn lại -> giữ nguyên, mô hình không tự ghi đè. Cờ `locked` cũ vẫn được tôn trọng.
  *  - ML service lỗi và không chọn -> không gán được nhãn, trả cảnh báo (vẫn lưu laptop).
  */
 
@@ -57,6 +58,15 @@ async function getConfidenceThreshold(): Promise<number> {
   const row = await prisma.knowledgeConfig.findUnique({ where: { key: 'confidence_threshold' } });
   const value = fromJson<number | null>(row?.valueJson, null);
   return typeof value === 'number' ? value : DEFAULT_CONFIDENCE_THRESHOLD;
+}
+
+/**
+ * Nhãn do người quyết định: đã VERIFIED và (nguồn không phải MODEL, hoặc có người xác nhận `verifiedById` — gồm cả
+ * trường hợp người tự chọn trùng với dự đoán nên nguồn vẫn ghi MODEL), hoặc còn cờ `locked` từ trước. Mô hình không được ghi đè.
+ * Nhãn do mô hình tự gán đủ tin cậy (MODEL, không có người xác nhận) thì vẫn được tính lại khi sửa máy.
+ */
+function isHumanDecided(label: { status: string; source: string; locked: boolean; verifiedById: number | null }): boolean {
+  return label.locked || (label.status === 'VERIFIED' && (label.source !== 'MODEL' || label.verifiedById !== null));
 }
 
 /** Hàm A: gọi sang ML (hàm B `predict_segment`) để lấy phân khúc dự đoán của 1 máy. */
@@ -117,8 +127,8 @@ export async function applySegmentLabel(
   userId: number | undefined
 ) {
   const existing = await prisma.segmentLabel.findUnique({ where: { laptopId } });
-  // Nhãn đã khóa và người dùng không chọn lại -> tôn trọng quyết định cũ
-  if (existing?.locked && !requested) {
+  // Nhãn do người đã quyết định và người dùng không chọn lại -> tôn trọng quyết định cũ
+  if (existing && isHumanDecided(existing) && !requested) {
     return { label: existing, warning: null as string | null };
   }
 

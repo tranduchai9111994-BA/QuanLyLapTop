@@ -33,7 +33,6 @@ labelsRouter.get('/review-queue', requireAuth, requireRole('STAFF', 'ADMIN'), as
       distribution: fromJson<Record<string, number>>(r.probaJson, {}),
       predictedBy: r.predictedBy,
       waitingSince: r.updatedAt,
-      locked: r.locked,
     }));
     res.json({ success: true, data });
   } catch (err) {
@@ -62,10 +61,6 @@ labelsRouter.get('/export', requireAuth, requireRole('ADMIN'), async (req, res, 
 const verifySchema = z.object({
   // Nhan cuoi cung - co the giu nguyen nhan AI da gan tam, hoac doi sang nhan khac
   segment: z.enum(SEGMENTS),
-  // docs/08_FRONTEND_SPEC.md muc 11: "Khoa nhan, khong cho mo hinh thay doi" - khi bat, lan sua
-  // laptop tiep theo (khong tu chon lai phan khuc) se GIU NGUYEN nhan nay thay vi de Mo hinh A
-  // gan de (xem segment.service.ts applySegmentLabel, dieu kien `existing?.locked && !requested`).
-  locked: z.boolean().optional(),
 });
 
 labelsRouter.patch('/review-queue/:laptopId', requireAuth, requireRole('STAFF', 'ADMIN'), async (req, res, next) => {
@@ -85,7 +80,6 @@ labelsRouter.patch('/review-queue/:laptopId', requireAuth, requireRole('STAFF', 
         source: 'ADMIN',
         status: 'VERIFIED',
         verifiedById: req.user!.id,
-        locked: body.locked ?? existing.locked,
       },
     });
     await snapshotSync();

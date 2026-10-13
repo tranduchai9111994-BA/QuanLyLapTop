@@ -37,7 +37,7 @@ python -m app.lifecycle.evaluate   # in P@5/nDCG@5, cap nhat artifacts/evaluatio
 
 ## Việc còn thiếu
 
-- `registry.py` hỗ trợ activate theo version cục bộ, chưa có "kiểm quy tắc" so sánh với
-  `golden_test` khi promote (xem `docs/09_VONG_DOI_TRI_TUE.md` §2.3).
+- `registry.py` hỗ trợ activate theo version cục bộ, chưa có "kiểm quy tắc" khi promote; quy tắc này chạy ở backend
+  (`models.routes.ts`, xem `docs/09_VONG_DOI_TRI_TUE.md` §2.3), so `test.f1_macro` đã lưu của hai phiên bản.
 - Hạn chế về dữ liệu/thực nghiệm (Kaggle, ablation khuyến mãi, quy mô Mô hình C…): xem
   [`../docs/14_KET_QUA_THUC_NGHIEM.md`](../docs/14_KET_QUA_THUC_NGHIEM.md) mục 7.

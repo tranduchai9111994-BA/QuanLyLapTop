@@ -32,3 +32,26 @@ export function formatInch(v: number | null | undefined): string {
   if (v == null) return '—';
   return `${v.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} inch`;
 }
+
+/** Ngày giờ dạng "hh:mm:ss dd/mm/yyyy", múi giờ Asia/Ho_Chi_Minh, luôn đủ 2 chữ số: 2026-10-04T12:44:55Z -> "19:44:55 04/10/2026". */
+export function formatDateTime(value: string | number | Date | null | undefined): string {
+  if (value == null) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '—';
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      hour12: false,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
+      .formatToParts(d)
+      .map((x) => [x.type, x.value])
+  );
+  const hour = p.hour === '24' ? '00' : p.hour; // một số trình duyệt trả "24" lúc nửa đêm
+  return `${hour}:${p.minute}:${p.second} ${p.day}/${p.month}/${p.year}`;
+}

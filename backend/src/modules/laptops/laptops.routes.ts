@@ -265,11 +265,11 @@ laptopsRouter.post('/predict-segment', requireAuth, requireRole('STAFF', 'ADMIN'
 
 laptopsRouter.patch('/:id/segment', requireAuth, requireRole('STAFF', 'ADMIN'), async (req, res, next) => {
   try {
-    const { segment, locked, note } = req.body;
+    const { segment, note } = req.body;
     const data = await prisma.segmentLabel.upsert({
       where: { laptopId: Number(req.params.id) },
-      create: { laptopId: Number(req.params.id), segment, source: 'ADMIN', status: 'VERIFIED', locked: !!locked, note },
-      update: { segment, source: 'ADMIN', status: 'VERIFIED', locked: !!locked, note },
+      create: { laptopId: Number(req.params.id), segment, source: 'ADMIN', status: 'VERIFIED', note },
+      update: { segment, source: 'ADMIN', status: 'VERIFIED', note },
     });
     await snapshotSync();
     res.json({ success: true, data });

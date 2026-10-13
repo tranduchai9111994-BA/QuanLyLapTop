@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { formatDateTime } from '../../utils/format';
 import { Button, Card, Form, Input, Modal, Select, Switch, Table, Tabs, Tag, message } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { api } from '../../lib/api';
@@ -195,7 +196,7 @@ function AuditTab() {
         dataSource={rows}
         scroll={{ x: 'max-content' }}
         columns={[
-          { title: 'Lúc', dataIndex: 'createdAt', render: (v: string) => new Date(v).toLocaleString('vi-VN'), width: 170 },
+          { title: 'Lúc', dataIndex: 'createdAt', render: (v: string) => formatDateTime(v), width: 170 },
           { title: 'Người thực hiện', render: (_: unknown, r: AuditRow) => r.user?.fullName ?? '—' },
           { title: 'Hành động', dataIndex: 'action', render: (v: string) => <Tag>{ACTION_LABELS[v] ?? v}</Tag> },
           { title: 'Đối tượng', render: (_: unknown, r: AuditRow) => `${r.entity}${r.entityId ? ` #${r.entityId}` : ''}` },

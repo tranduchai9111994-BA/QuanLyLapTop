@@ -43,7 +43,7 @@ modelsRouter.post('/train', requireAuth, requireRole('ADMIN'), async (req, res, 
         status: 'CHALLENGER',
         paramsJson: toJson(metadata.best_params),
         metricsJson: toJson({
-          cv: { f1_macro_mean: metadata.cv_f1_macro_mean, f1_macro_std: metadata.cv_f1_macro_std },
+          cv: { f1_macro_mean: metadata.cv_f1_macro_mean, f1_macro_std: metadata.cv_f1_macro_std, fold_scores: metadata.cv_fold_scores },
           test: metadata.test_metrics,
           baseline: metadata.baseline,
           k_curve: metadata.k_curve,
@@ -61,7 +61,9 @@ modelsRouter.post('/train', requireAuth, requireRole('ADMIN'), async (req, res, 
 });
 
 /** Kiem quy tac truoc khi promote (docs/09 §2.3): challenger khong duoc te hon champion
- * qua 0.02 macro-F1 tren tap test dong bang, va macro-F1 tung lop >= 0.5. */
+ * qua 0.02 macro-F1, va macro-F1 tung lop >= 0.5.
+ * So test.f1_macro da luu trong metricsJson cua moi phien ban; moi con so duoc cham tren
+ * 200 may giu rieng (seed 42) cua chinh lan huan luyen do. */
 modelsRouter.post('/:version/promote', requireAuth, requireRole('ADMIN'), async (req, res, next) => {
   try {
     const challenger = await prisma.modelVersion.findUnique({ where: { version: req.params.version } });

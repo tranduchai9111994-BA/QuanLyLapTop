@@ -2,7 +2,7 @@
 mà kNN tính khoảng cách được (xem docs/03 SS3, SS5).
 
 kNN không biết "Intel Core i5" mạnh hay yếu hơn "AMD Ryzen 5", nên mọi thứ phải được quy đổi về
-con số so sánh được (điểm hiệu năng, tỷ lệ, 0/1,...). File này lo đúng việc đó.
+con số so sánh được (điểm hiệu năng, tỷ lệ, 0/1,...). 
 """
 from __future__ import annotations
 
@@ -25,8 +25,7 @@ NUMERIC = ["cpu_score", "gpu_score", "screen_inch", "ppi", "refresh_hz", "weight
 # Đặc trưng nhị phân (0/1), giữ nguyên vì đã ở thang 0-1
 BINARY = ["gpu_dedicated", "srgb_100"]  # nhóm 3 (2 cột): giữ nguyên 0/1
 
-# Đặc trưng đầu vào của MÔ HÌNH A (phân lớp phân khúc). price_vnd cố ý KHÔNG có (quyết định D-04):
-# nếu có, mô hình sẽ học phân khúc theo GIÁ thay vì CẤU HÌNH THẬT.
+# Đặc trưng đầu vào của MÔ HÌNH A (phân lớp phân khúc). 
 MODEL_A_FEATURES = NUMERIC_LOG + NUMERIC + BINARY  # 11 cột = 2 + 7 + 2; đầu vào Mô hình A
 
 # Đặc trưng đầu vào của MÔ HÌNH B (truy hồi/xếp hạng). Ngược với Mô hình A, giá và độ "đáng tiền"
