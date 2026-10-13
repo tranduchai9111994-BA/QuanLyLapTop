@@ -258,8 +258,8 @@ kiểm thử chéo 5 phần trên 1.000 máy; chạy lại bằng `python -m app
 
 ## 9. Hàng đợi Duyệt nhãn và vòng đời mô hình
 
-**Lời nói:** "Khi AI không chắc thì không tự quyết. Máy vào hàng đợi, nhân viên chọn nhãn, có thể khóa nhãn để
-mô hình không ghi đè quyết định của người."
+**Lời nói:** "Khi AI không chắc thì không tự quyết. Máy vào hàng đợi, nhân viên chọn nhãn rồi duyệt;
+nhãn đã duyệt thì mô hình không ghi đè lại quyết định của người."
 
 - Ngưỡng 0,6 tương ứng **từ 5/7 phiếu trở lên** (5/7 = 0,714 qua ngưỡng; 4/7 = 0,571 chưa qua), `segment.service.ts:138`.
 - Xuất nhãn người đã duyệt ra CSV (nút "Xuất nhãn đã duyệt (CSV)") rồi đưa vào dữ liệu huấn luyện lần sau, khép vòng phản hồi.
@@ -298,10 +298,12 @@ mô hình không ghi đè quyết định của người."
 
 **Demo 4: hàng đợi Duyệt nhãn**
 Menu **Dữ liệu → Duyệt nhãn** (huy hiệu số 6). Mỗi thẻ có phân bố xác suất, ô chọn phân khúc, checkbox
-"Khóa nhãn, không cho mô hình thay đổi", nút **Duyệt (giữ nhãn AI)**; góc trên có nút **Xuất nhãn đã duyệt (CSV)**.
-**Lưu ý trung thực:** 6 thẻ này là **dữ liệu mẫu** do `backend/scripts/seedReviewQueue.ts` tạo (cột `predictedBy` =
-`demo-seed-review-queue`), không phải mô hình hiện tại đoán. Dấu hiệu: xác suất như 52%, 47% không phải bội số của 1/7.
-Mô hình hiện tại (k = 7, uniform) chỉ ra được 0%, 14%, 29%, 43%, 57%, 71%, 86%, 100%. Nếu hội đồng hỏi thì nói đúng như vậy.
+nút **Duyệt**; góc trên có nút **Xuất nhãn đã duyệt (CSV)**.
+**Nguồn dữ liệu:** 6 thẻ là 6 máy mà mô hình đang dùng **thật sự** đoán với độ tin cậy dưới ngưỡng 60%, do script
+`backend/scripts/seedReviewQueue.ts` quét 1.000 máy rồi đưa vào hàng đợi (xác suất, phân bố và phiên bản mô hình lấy thẳng từ ML,
+cột `predictedBy` = `clf-2026.09.27-160831`). Script chỉ chọn máy **chưa nằm trong tập huấn luyện** (láng giềng gần nhất cách > 0),
+nên không bị hiện tượng máy tự bỏ phiếu cho chính nó. Xác suất đều là bội số của 1/7 (43% hoặc 57%). Bấm **Chi tiết** tính lại ra đúng số đã lưu.
+Nhãn gốc của các máy này vẫn nằm trong `data/processed/catalog_vn.csv` (nhãn do người/nhà bán đặt, trước khi vào hàng đợi).
 
 ---
 
@@ -337,7 +339,7 @@ Mô hình hiện tại (k = 7, uniform) chỉ ra được 0%, 14%, 29%, 43%, 57%
 - Ví dụ: hai máy cùng cấu hình khác giá vẫn phải cùng phân khúc.
 
 **H7. Khi AI không chắc thì sao?**
-- Trả lời: độ tin cậy dưới 0,6 thì NEEDS_REVIEW, người xác nhận, có thể khóa nhãn.
+- Trả lời: độ tin cậy dưới 0,6 thì NEEDS_REVIEW, người xác nhận, nhãn đã duyệt được bảo vệ khỏi mô hình.
 - Bằng chứng: `segment.service.ts:138`; Demo 2 (Helios 0051, 43%).
 
 **H8. Điểm yếu lớn nhất?**
@@ -539,17 +541,13 @@ cao giả (như Demo 1 với TUF Gaming 0001). 200 máy giữ riêng đóng vai 
 `random_state=42` nên 200 máy giữ riêng cố định miễn là `catalog_vn.csv` không đổi. Đã kiểm: mã băm (SHA-256) của CSV hiện tại,
 `8f75c4cc7a44...`, **trùng** `dataset_hash` ghi trong `metadata.json` của phiên bản đang dùng, tức mô hình này được huấn luyện đúng trên file hiện tại.
 
-### D0.7 Một điểm lệch cần biết: `golden_test.csv`
+### D0.7 Tập kiểm tra: không có "golden test"
 
-Ở lần huấn luyện đầu tiên, `train.py:87-91` lưu 200 máy giữ riêng ra `artifacts/golden_test.csv` với chú thích "đóng băng".
-Kiểm tra thực tế (10/2026):
-- File này có 200 dòng nhưng phân bố nhãn khác tập giữ riêng hiện tại (71/65/38/26 so với 69/67/40/24) và **chỉ 9 mã SKU còn
-  trùng catalog hiện tại**, vì catalog đã được sinh lại sau ngày 27/9.
-- **Không có đoạn code nào đọc file này** (tìm trong `ml-service` và `backend/src` chỉ thấy đoạn ghi file).
-- Cổng khi bấm "Đưa vào sử dụng" (`models.routes.ts:63-83`) so `test.f1_macro` đã lưu của hai phiên bản, mỗi con số
-  chấm trên tập giữ riêng **của lần huấn luyện đó**, chứ không phải trên `golden_test.csv`. Comment "tập test đóng băng" ở
-  dòng 63-64 vì thế chưa đúng với cách chạy thật.
-- **Khi trình bày:** không nói "mô hình được chấm trên tập test đóng băng". Nói "200 máy giữ riêng cố định bằng seed 42".
+Hệ thống **không** có tập test đóng băng và không có file `golden_test.csv`. Mỗi lần huấn luyện tự chia 800/200 bằng `random_state=42`
+(`train.py:83`); 200 máy giữ riêng này cố định miễn là `catalog_vn.csv` không đổi.
+- Cổng khi bấm "Đưa vào sử dụng" (`models.routes.ts:63-86`) so `test.f1_macro` đã lưu của hai phiên bản, mỗi con số
+  chấm trên 200 máy giữ riêng **của lần huấn luyện đó**.
+- **Khi trình bày:** không nói "tập test đóng băng". Nói "200 máy giữ riêng cố định bằng seed 42".
 
 ### D0.8 Vì sao chia 80/20?
 
@@ -631,7 +629,7 @@ Hai luồng này tách rời: sửa bảng `ModelVersion` không làm đổi mô
 - **Luồng:** `generate_catalog.py` → `catalog_vn.csv` → `load_dataset` (`train.py:35`) → `train_test_split` (`:83`)
   → `grid_search` (`classifier.py:43`) → `predict` 200 máy (`:104`) → `model.joblib` (`:129`).
 - **Cách đọc:** chia dữ liệu và seed là cấu hình; "học" do scikit-learn làm, không có hàm học tự viết; điểm cuối ở `metadata.json`.
-- **Lưu ý:** nhãn là dữ liệu tổng hợp; `golden_test.csv` đã lệch và không được dùng.
+- **Lưu ý:** nhãn là dữ liệu tổng hợp; tập kiểm tra là 200 máy giữ riêng cố định bằng seed 42 (D0.7).
 
 **Tự kiểm tra bằng tay (chạy từ thư mục `ml-service`, PowerShell):**
 
@@ -996,7 +994,7 @@ z của 7 láng giềng. Giao diện (`SegmentMathModal.tsx`) dùng đúng các 
 
 | Dòng | Code | Làm gì |
 |---|---|---|
-| 112-116 | `if (existing?.locked && !requested) return ...` | nhãn đã **khóa** và người không chọn lại → giữ nguyên, không hỏi AI |
+| 112-116 | `if (existing && isHumanDecided(existing) && !requested) return ...` | nhãn do **người đã quyết định** (VERIFIED, nguồn khác MODEL) và người không chọn lại → giữ nguyên, không hỏi AI |
 | 119-124 | `try { prediction = await predictSegment(features) } catch { logger.warn(...) }` | ML lỗi vẫn lưu được laptop (không trả lỗi 500) |
 | 126-133 | `if (!requested && !prediction) return { warning: ... }` | không chọn và AI lỗi → báo máy sẽ chưa được gợi ý |
 | 135 | `const threshold = await getConfidenceThreshold()` | đọc ngưỡng từ bảng cấu hình tri thức, mặc định 0,6 (dòng 25, 52-56) |
@@ -1283,21 +1281,28 @@ trên tập học.
 ## D12. Hàng đợi Duyệt nhãn và nút Xuất CSV
 
 **(a) Trên giao diện.** Dữ liệu → **Duyệt nhãn** (huy hiệu 6). Mỗi thẻ: tên máy, CPU/GPU, giá, "Dự đoán: … %",
-**Cần xác minh**, 4 phần trăm, ô chọn phân khúc, checkbox **Khóa nhãn, không cho mô hình thay đổi**, nút **Duyệt (giữ nhãn AI)**.
+**Cần xác minh**, 4 phần trăm, ô chọn phân khúc, nút **Duyệt**.
 Nút **Xuất nhãn đã duyệt (CSV)** ở trên cùng. Chỉ xem, không bấm Duyệt nếu không định đổi dữ liệu.
 
 Mỗi thẻ có thêm nút **"! Chi tiết"** dưới thanh xác suất (`AdminReviewQueue.tsx`, hàm `openDetail`): bấm vào mở cùng cửa sổ 5 bước như ở màn AI
 gợi ý. Hàng đợi chỉ lưu nhãn và xác suất tại lúc gán, không lưu số liệu trung gian, nên giao diện **tính lại** bằng mô hình đang dùng
-cho đúng cấu hình của máy (gọi `POST /laptops/predict-segment`). Đầu cửa sổ có ghi chú so sánh với nhãn đang lưu: với thẻ mẫu
-`Avita Pura 0874`, ghi chú nêu "đang lưu Văn phòng 52% (do demo-seed-review-queue dự đoán)" còn bảng tính lại ra **100%** (7/7 láng giềng
-là Văn phòng). Đó là bằng chứng trực quan rằng 6 thẻ này là dữ liệu mẫu.
+cho đúng cấu hình của máy (gọi `POST /laptops/predict-segment`). Đầu cửa sổ có ghi chú so sánh với nhãn đang lưu; với 6 thẻ hiện tại
+ghi chú là "Khớp với nhãn đang lưu" vì nhãn lưu và số tính lại cùng do một mô hình tạo ra.
 
-**(c) Kiểm tra số trên thẻ.** Thẻ "Avita Pura 0874: Văn phòng 52%, Mỏng nhẹ 41%, Gaming 5%, Đồ họa 2%". Với k = 7 uniform,
-xác suất chỉ có thể là 0/7 … 7/7, tức 0%, 14%, 29%, 43%, 57%, 71%, 86%, 100%. 52% không nằm trong danh sách, nên thẻ này không
-do mô hình hiện tại tạo ra. Đúng vậy: trong DB, cột `predictedBy` của 6 thẻ là `demo-seed-review-queue`, tạo bởi
-`backend/scripts/seedReviewQueue.ts` để có sẵn dữ liệu demo hàng đợi.
-**Cách nói:** "Sáu thẻ này là dữ liệu mẫu để minh họa giao diện. Một máy thật vào hàng đợi thì xác suất sẽ là bội số của 1/7,
-như Helios 0051 ở Demo 2 là 43%."
+**(c) Kiểm tra số trên thẻ.** Với k = 7 uniform, xác suất chỉ có thể là 0/7 … 7/7, tức 0%, 14%, 29%, 43%, 57%, 71%, 86%, 100%.
+Sáu thẻ hiện tại đều ở 43% hoặc 57% (3/7 hoặc 4/7 phiếu), khớp danh sách đó:
+
+| Máy | Nhãn gốc | Mô hình đoán | Tin cậy | Láng giềng gần nhất |
+|---|---|---|---|---|
+| Acer Predator Helios 0051 | Đồ họa | Mỏng nhẹ | 43% | 1,80 |
+| MSI Katana 0102 | Gaming | Văn phòng | 43% | 0,73 |
+| Gigabyte G5 0552 | Văn phòng | Văn phòng | 43% | 1,16 |
+| Acer Nitro 0088 | Gaming | Gaming | 57% | 0,46 |
+| LG Gram Pro 0108 | Gaming | Đồ họa | 57% | 1,50 |
+| LG Gram 0100 | Mỏng nhẹ | Mỏng nhẹ | 57% | 0,86 |
+
+**Cách nói:** "Sáu máy này là sáu máy mà mô hình thật sự chưa chắc, dưới ngưỡng 60%. Mô hình chỉ đưa ra tỉ lệ phiếu của 7 láng giềng,
+như 3/7 = 43%, nên không có con số như 52%. Nhân viên xem lại và duyệt hoặc sửa nhãn."
 
 **(d) Tổng kết 30 giây.** Máy dưới ngưỡng vào hàng đợi; người chọn nhãn, có thể khóa; nhãn đã duyệt xuất CSV để huấn luyện lần sau.
 

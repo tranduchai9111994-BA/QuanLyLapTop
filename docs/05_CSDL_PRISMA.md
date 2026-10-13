@@ -129,7 +129,7 @@ model SegmentLabel {
   confidence   Float?                           // xác suất lớp thắng khi source = MODEL
   predictedBy  String?  @db.NVarChar(40)        // phiên bản model (vd "clf-2026.10.05-01")
   probaJson    String?  @db.NVarChar(Max)       // phân phối xác suất theo phân khúc: {"GAMING":0.71,...}
-  locked       Boolean  @default(false)         // true = khóa nhãn, Mô hình A không được ghi đè
+  locked       Boolean  @default(false)         // cờ cũ (giao diện không còn đặt): true = Mô hình A không được ghi đè; nhãn do người duyệt (source ≠ MODEL) đã tự được bảo vệ
   note         String?  @db.NVarChar(500)
   verifiedById Int?
   updatedAt    DateTime @updatedAt
@@ -285,9 +285,9 @@ Không có `enum` Prisma nào trong schema — mọi giá trị dạng liệt k�
 - **`priceVnd` / `originalPriceVnd`**: chỉ lưu giá hiện tại và giá gốc (nullable); phần trăm giảm giá luôn tính từ hai cột này tại thời điểm đọc, không lưu riêng cột `discountPercent` để tránh lệch dữ liệu khi một trong hai giá đổi mà quên đồng bộ.
 - **`Brand.tier`**: hạng uy tín 1–5 do quản trị viên gán, dùng làm đặc trưng phụ trợ cho Mô hình B (không do mô hình tự học).
 - **`Laptop.salesCount`**: mô phỏng "độ phổ biến" như các sàn TMĐT thật — máy bán chạy được ưu tiên hiển thị dù không phải khớp nhu cầu hoàn hảo nhất.
-- **`SegmentLabel.locked`**: cơ chế ghi đè tri thức của con người lên mô hình — khi `true`, lần cập nhật laptop tiếp theo (nếu người dùng không chủ động chọn lại phân khúc) sẽ giữ nguyên nhãn thay vì để Mô hình A gán đè (xem `segment.service.ts`, `docs/09` mục 2).
+- **`SegmentLabel.locked`**: cờ cũ, giao diện không còn đặt. Nhãn do người duyệt/chọn (`source ≠ MODEL`, `status = VERIFIED`) đã tự được bảo vệ; cờ này (nếu còn `true`) cũng có tác dụng như vậy: lần cập nhật laptop tiếp theo (nếu người dùng không chủ động chọn lại phân khúc) sẽ giữ nguyên nhãn thay vì để Mô hình A gán đè (xem `segment.service.ts`, `docs/09` mục 2).
 - **`SegmentLabel.probaJson`**: lưu toàn bộ phân phối xác suất theo 4 phân khúc (không chỉ nhãn thắng) để phục vụ hàng đợi xác minh và giải thích cho nhân viên.
-- **`ModelVersion`** không tách bảng riêng cho "golden test"/"confusion matrix" — toàn bộ nằm trong `metricsJson` (cv, test, baseline, k_curve, report theo từng lớp) để không phải thêm bảng mỗi khi cần thêm chỉ số mới.
+- **`ModelVersion`** không tách bảng riêng cho "confusion matrix" — toàn bộ nằm trong `metricsJson` (cv, test, baseline, k_curve, report theo từng lớp) để không phải thêm bảng mỗi khi cần thêm chỉ số mới.
 - **`RecommendationSession` + `RecommendationItem` + `InteractionEvent`**: ba bảng telemetry tách rời — `Session` ghi ngữ cảnh 1 lượt tư vấn (nhu cầu, phân khúc dùng, trọng số, độ trễ, cờ dự phòng), `Item` ghi từng máy được xếp hạng trong lượt đó, `InteractionEvent` ghi hành vi người dùng sau đó (xem chi tiết, thích, không thích + lý do). Tách để có thể ghi hành vi không thuộc phiên nào (`sessionId` nullable) và đo tỷ lệ hài lòng theo hạng.
 - **`KnowledgeConfig`** là bảng key–value chung (`key` là khóa chính, `valueJson` là chuỗi JSON) thay vì nhiều cột cấu hình cứng — cho phép thêm loại cấu hình mới (vd `alert_thresholds`) mà không cần migration. Hai key đang được code đọc/ghi thực tế: `confidence_threshold` (số thực, mặc định `0.6`, dùng trong `segment.service.ts`) và `alert_thresholds` (object, dùng trong `alertScan.ts`, xem `docs/09`).
 - **`AlertLog`** chống trùng lặp cảnh báo bằng quy tắc nghiệp vụ ở tầng service (không phải ràng buộc DB): trước khi tạo dòng mới cho một `code`, service kiểm tra đã có dòng cùng `code` với `resolved = false` hay chưa.

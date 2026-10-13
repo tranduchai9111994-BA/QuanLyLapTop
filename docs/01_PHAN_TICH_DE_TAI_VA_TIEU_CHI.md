@@ -48,7 +48,7 @@ Hệ thống dùng kNN theo **hai vai trò**:
 | C3 | Giám sát tiêu chí thành công | Dashboard KPI + cảnh báo ngưỡng | 09 §6 |
 | C3 | Kiểm tra các tương tác (telemetry) | `RecommendationSession`, `InteractionEvent` | 05, 09 §5 |
 | C3 | Cân bằng trải nghiệm | Ngưỡng tin cậy: dưới 0,6 thì hỏi lại thay vì khẳng định | 04 §7, 09 §3 |
-| C3 | Ghi đè tri thức | Admin khóa nhãn, ghim / loại máy, chỉnh trọng số mặc định | 09 §3 |
+| C3 | Ghi đè tri thức | Admin duyệt/chọn nhãn, ghim / loại máy, chỉnh trọng số mặc định | 09 §3 |
 | C3 | Tạo tri thức mới | Nhãn admin xác nhận + phản hồi → tập huấn luyện mới | 09 §2 |
 | C3 | Giảm nhẹ sai lầm | Chế độ dự phòng khi ML lỗi, rollback phiên bản mô hình | 09 §4 |
 | C4 | Phát triển ứng dụng | Kiến trúc 3 dịch vụ, API contract, frontend AntD | 06, 07, 08 |

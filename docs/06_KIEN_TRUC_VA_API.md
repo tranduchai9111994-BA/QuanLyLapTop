@@ -89,7 +89,7 @@ Tất cả route mount dưới tiền tố `/api` (khai báo trong `app.ts`), c�
 | GET | `/:id/price-history` | công khai | Lịch sử giá 1 laptop |
 | POST | `/bulk-price` | ADMIN | Điều chỉnh giá hàng loạt theo %, theo hãng/phân khúc, có chế độ `dryRun` |
 | POST | `/predict-segment` | STAFF, ADMIN | Chỉ dự đoán phân khúc, không lưu (dùng khi đang nhập form) |
-| PATCH | `/:id/segment` | STAFF, ADMIN | Gán nhãn phân khúc thủ công, có thể kèm `locked` |
+| PATCH | `/:id/segment` | STAFF, ADMIN | Gán nhãn phân khúc thủ công |
 | GET | `/:id/similar` | công khai | Danh sách laptop tương tự (Mô hình B item-item) |
 
 ### 3.3 `recommendations` — `/api/recommendations`
@@ -110,7 +110,7 @@ Tất cả route mount dưới tiền tố `/api` (khai báo trong `app.ts`), c�
 | Method | Path | Quyền | Mô tả |
 |---|---|---|---|
 | GET | `/review-queue` | STAFF, ADMIN | Hàng đợi nhãn `NEEDS_REVIEW`, sắp xếp theo `updatedAt` tăng dần (máy chờ lâu nhất trước) |
-| PATCH | `/review-queue/:laptopId` | STAFF, ADMIN | Duyệt/sửa nhãn: `{segment, locked?}` → `source = ADMIN`, `status = VERIFIED`; nếu không truyền `locked` thì giữ nguyên giá trị cũ |
+| PATCH | `/review-queue/:laptopId` | STAFF, ADMIN | Duyệt/sửa nhãn: `{segment}` → `source = ADMIN`, `status = VERIFIED` |
 | GET | `/export` | ADMIN | Tải CSV (23 cột như `catalog_vn.csv`) các nhãn `VERIFIED` do người quyết định (`source` ADMIN/RETAILER); `?all=1` lấy thêm nhãn do mô hình tự gán. Chỉ đọc, không ghi DB |
 
 ### 3.6 `knowledge` — `/api/knowledge`

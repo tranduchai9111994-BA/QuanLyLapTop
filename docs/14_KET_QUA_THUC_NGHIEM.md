@@ -185,7 +185,7 @@ Câu cụ thể được sửa đúng: *"cần máy chỉnh ảnh cưới hàng 
 Hệ thống chỉ nhận câu có phản hồi 👍 vào tập huấn luyện — không tự tin vào dự đoán của chính mình,
 tránh hiệu ứng "buồng vọng âm" (echo chamber).
 
-### 5.3 Hàng đợi "Cần xác minh" và khóa nhãn (UC-10, human-in-the-loop)
+### 5.3 Hàng đợi "Cần xác minh" (UC-10, human-in-the-loop)
 
 Máy được Mô hình A tự gán nhãn với độ tin cậy dưới ngưỡng (`confidence_threshold`, mặc định 0,6)
 vào trạng thái `NEEDS_REVIEW` thay vì chặn lưu — máy **vẫn được gợi ý tạm** cho khách bằng nhãn đó
@@ -193,8 +193,7 @@ vào trạng thái `NEEDS_REVIEW` thay vì chặn lưu — máy **vẫn được
 mới hoạt động"). Màn quản trị `/admin/review-queue`: hiện huy hiệu số lượng đang chờ ngay trên menu
 (cập nhật tức thì sau mỗi lần duyệt, không cần tải lại trang), liệt kê từng máy kèm phân bố xác
 suất đầy đủ (`ConfidenceIndicator`, xem mục 5.9), cho phép giữ nguyên nhãn AI hoặc chọn nhãn khác
-rồi duyệt. Khi duyệt còn có checkbox "Khóa nhãn, không cho mô hình thay đổi" — set cờ
-`SegmentLabel.locked` để nhãn không bị ghi đè bởi các lượt gán nhãn tự động sau này.
+rồi bấm Duyệt. Nhãn đã duyệt có `source = ADMIN` nên không bị ghi đè bởi các lượt gán nhãn tự động sau này.
 
 Đã kiểm thử trên trình duyệt: hạ tạm ngưỡng để ép máy mới vào hàng đợi, xác nhận huy hiệu "1" hiện
 trên menu, màn hiện đúng thông tin máy + phân bố xác suất, bấm duyệt xong hàng đợi rỗng và huy hiệu

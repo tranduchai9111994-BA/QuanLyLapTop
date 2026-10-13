@@ -22,7 +22,7 @@
 | UC-07 | Yêu thích, lịch sử tư vấn | KH | |
 | UC-08 | Đăng nhập / đăng xuất | KH, Staff, Admin | |
 | UC-09 | Thêm / sửa laptop, nhận gợi ý phân khúc tự động | Staff, Admin | ✅ Mô hình A |
-| UC-10 | Duyệt hàng đợi nhãn "Cần xác minh", khóa nhãn | Staff, Admin | ✅ (human-in-the-loop) |
+| UC-10 | Duyệt hàng đợi nhãn "Cần xác minh" | Staff, Admin | ✅ (human-in-the-loop) |
 | UC-11 | Quản lý danh mục kỹ thuật: hãng máy, bảng benchmark CPU / GPU | Staff (xem), Admin (sửa) | |
 | UC-12 | Xem chỉ số mô hình, huấn luyện lại, duyệt / rollback phiên bản (champion/challenger) | Admin | ✅ |
 | UC-13 | Cấu hình tri thức: trọng số mặc định, ghim / loại máy, ngưỡng | Admin | ✅ (ghi đè tri thức) |
@@ -59,11 +59,11 @@
 - Khi nhập đủ đặc trưng, nút "Gợi ý phân khúc bằng AI" → nhãn dự đoán, xác suất từng lớp, danh sách k láng giềng đã bỏ phiếu.
 - Nhân viên chấp nhận / chọn nhãn khác. Nhãn lưu với `source = ADMIN` nếu người sửa, `MODEL` nếu chấp nhận nguyên.
 - Độ tin cậy < ngưỡng → tự vào hàng đợi "Cần xác minh" (UC-10).
-- Cờ **"Khóa nhãn"**: khi bật, lần sửa laptop tiếp theo sẽ giữ nguyên nhãn đã duyệt thay vì để Mô hình A gán đè lại.
+- Nhãn đã do người duyệt/chọn thì lần sửa laptop tiếp theo giữ nguyên, Mô hình A không gán đè lại.
 
 ### FR-10 Duyệt hàng đợi nhãn "Cần xác minh" (UC-10)
 - Danh sách máy có nhãn `NEEDS_REVIEW`, sắp xếp máy chờ lâu nhất lên trước, kèm xác suất từng phân khúc và độ tin cậy.
-- Nhân viên/Admin giữ nguyên hoặc đổi sang phân khúc khác, có thể bật cờ "Khóa nhãn" khi duyệt.
+- Nhân viên/Admin giữ nguyên hoặc đổi sang phân khúc khác rồi bấm Duyệt; nhãn đã duyệt được bảo vệ khỏi việc mô hình ghi đè.
 - Sau khi duyệt, danh sách gợi ý (snapshot cho ML service) được đồng bộ lại ngay.
 
 ### FR-11 Quản lý danh mục kỹ thuật (UC-11)

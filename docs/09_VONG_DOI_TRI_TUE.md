@@ -6,7 +6,7 @@ Hệ thống tự "thông minh lên" theo thời gian qua 4 cơ chế phối h�
 
 Khi một laptop được tạo mới hoặc sửa (`POST/PUT /api/laptops`), backend gọi `applySegmentLabel()` trong `backend/src/modules/laptops/segment.service.ts` để gán/giữ nhãn `SegmentLabel`. Quy tắc quyết định:
 
-1. **Nhãn đang bị khóa (`locked = true`) và người dùng không chủ động chọn lại phân khúc** → giữ nguyên nhãn cũ, không gọi mô hình, không ghi đè. Đây là cơ chế cho phép nhân viên "chốt" một nhãn để Mô hình A không bao giờ tự sửa lại (bật ở hàng đợi xác minh, xem mục 3).
+1. **Nhãn do người đã quyết định (đã VERIFIED và nguồn khác `MODEL` hoặc có người xác nhận `verifiedById`, hoặc còn cờ `locked` cũ) và người dùng không chủ động chọn lại phân khúc** → giữ nguyên nhãn cũ, không gọi mô hình, không ghi đè. Nhân viên duyệt hoặc chọn nhãn ở hàng đợi xác minh (mục 3) là nhãn được bảo vệ tự động, không cần thao tác khóa riêng.
 2. **Người dùng chủ động chọn phân khúc** (`requested`) → lưu đúng phân khúc đó, `status = VERIFIED`. `source = MODEL` nếu trùng với dự đoán của Mô hình A, `source = ADMIN` nếu khác — phân biệt "người dùng xác nhận đúng dự đoán" với "người dùng tự quyết định khác dự đoán".
 3. **Người dùng không chọn, có gọi được Mô hình A** → dùng nhãn dự đoán (`source = MODEL`). So sánh xác suất dự đoán với ngưỡng tin cậy đọc từ `KnowledgeConfig` khóa `confidence_threshold` (mặc định `0.6` nếu chưa cấu hình):
    - Xác suất ≥ ngưỡng → `status = VERIFIED`, nhãn được dùng ngay cho gợi ý.
@@ -28,7 +28,7 @@ Phản hồi được dùng theo 2 cách:
 
 Nhãn có `status = NEEDS_REVIEW` (do Mô hình A dự đoán với độ tin cậy dưới ngưỡng, xem mục 1) được liệt kê ở `GET /api/labels/review-queue` (`backend/src/modules/labels/labels.routes.ts`), sắp xếp theo `updatedAt` tăng dần — máy chờ xác minh lâu nhất hiển thị trước. Mỗi dòng trả kèm phân phối xác suất (giải mã từ `probaJson`) và thời gian chờ.
 
-Nhân viên/quản trị viên duyệt qua `PATCH /api/labels/review-queue/:laptopId` với `{segment, locked?}`. Khi duyệt: `source = ADMIN`, `status = VERIFIED`, ghi `verifiedById`; nếu không truyền `locked` thì giữ nguyên giá trị cũ của nhãn. Màn hình quản trị (`AdminReviewQueue.tsx`) có checkbox **"Khóa nhãn, không cho mô hình thay đổi"** ứng với trường `locked` này — khi bật, lần sửa laptop tiếp theo (nếu không chủ động chọn lại phân khúc) sẽ giữ nguyên nhãn thay vì để Mô hình A gán đè (đúng quy tắc 1 ở mục 1).
+Nhân viên/quản trị viên duyệt qua `PATCH /api/labels/review-queue/:laptopId` với `{segment}`. Khi duyệt: `source = ADMIN`, `status = VERIFIED`, ghi `verifiedById`. Màn hình quản trị (`AdminReviewQueue.tsx`) chỉ có ô chọn phân khúc và nút **Duyệt**; vì nhãn đã duyệt có `source = ADMIN` nên lần sửa laptop tiếp theo (nếu không chủ động chọn lại phân khúc) sẽ giữ nguyên nhãn thay vì để Mô hình A gán đè (đúng quy tắc 1 ở mục 1).
 
 ## 4. Vòng đời champion/challenger cho Mô hình A
 
@@ -47,7 +47,7 @@ Quản lý qua `backend/src/modules/models/models.routes.ts`, lưu ở bảng `M
 
 | Cơ chế | Bảng | Tác dụng |
 |---|---|---|
-| Khóa nhãn (`locked`) | `SegmentLabel.locked` | Mô hình A không được tự đổi nhãn máy này (mục 1, 3) |
+| Nhãn do người quyết định | `SegmentLabel.source ≠ MODEL` và `status = VERIFIED` (cột `locked` cũ vẫn được tôn trọng) | Mô hình A không được tự đổi nhãn máy này (mục 1, 3) |
 | Ghim (PIN) | `LaptopPin` (`action = PIN`) | Ưu tiên đưa máy vào kết quả gợi ý |
 | Cấm (BAN) | `LaptopPin` (`action = BAN`) | Loại máy khỏi mọi gợi ý (vd ngừng kinh doanh) |
 | Cấu hình ngưỡng/trọng số | `KnowledgeConfig` | `confidence_threshold` (mục 1), `alert_thresholds` (mục 6) và các khóa cấu hình khác đọc/ghi qua `GET/PUT /api/knowledge/config/:key` |

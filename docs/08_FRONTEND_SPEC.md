@@ -133,7 +133,7 @@ Bố cục ≥ 992 px (lg): cột trái danh sách thẻ, cột phải panel dí
 
 ## 17. Duyệt nhãn phân khúc `/admin/review-queue`
 - Danh sách máy có nhãn AI gán nhưng độ tin cậy dưới ngưỡng cấu hình (`GET /labels/review-queue`); máy trong hàng đợi vẫn đang được gợi ý tạm bằng nhãn hiện tại.
-- Mỗi thẻ: thông tin máy, `ConfidenceIndicator` theo phân bố xác suất, `Select` đổi phân khúc (hiện `Alert warning` nếu chọn khác nhãn AI), checkbox **"Khóa nhãn, không cho mô hình thay đổi"**, nút Duyệt (`PATCH /labels/review-queue/:laptopId`) — phát sự kiện `smartlap:review-queue-changed` để badge trên Sider cập nhật ngay.
+- Mỗi thẻ: thông tin máy, `ConfidenceIndicator` theo phân bố xác suất, `Select` đổi phân khúc (hiện `Alert warning` nếu chọn khác nhãn AI), nút **Duyệt** (`PATCH /labels/review-queue/:laptopId`) — phát sự kiện `smartlap:review-queue-changed` để badge trên Sider cập nhật ngay.
 
 ## 18. ✨ Quản lý mô hình `/admin/models`
 - Form huấn luyện nhanh (ghi chú tuỳ chọn) + nút "Huấn luyện mô hình mới" (`POST /models/train`) — luôn tạo bản "Dự phòng" (`CHALLENGER`), không tự thay mô hình đang phục vụ khách.

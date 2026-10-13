@@ -81,7 +81,7 @@ search = GridSearchCV(
 
 - `train_test_split(test_size=0.2, stratify=y, random_state=42)` trên toàn bộ catalog đã làm giàu đặc trưng.
 - `GridSearchCV` chỉ chạy trên 80% train (5-fold CV nội bộ). 20% test chỉ được chạm **một lần** để tính `test_metrics` cuối cùng.
-- Lần chạy `python -m app.lifecycle.train` đầu tiên sẽ đóng băng 20% test đó thành `artifacts/golden_test.csv` (chỉ ghi nếu file chưa tồn tại) để so sánh công bằng giữa các phiên bản huấn luyện sau này.
+- Mỗi phiên bản được chấm trên 200 máy giữ riêng (seed 42) của chính lần huấn luyện đó.
 
 ### 3.4 Vì sao macro-F1
 
@@ -254,7 +254,6 @@ Không phải văn bản do AI sinh: so từng đặc trưng của máy với ve
 ```
 ml-service/artifacts/
 ├── LATEST                        # tên version đang active (text thuần)
-├── golden_test.csv               # 20% test đóng băng từ lần train đầu tiên
 ├── evaluation.json               # kết quả python -m app.lifecycle.evaluate (P@5, nDCG@5, search effort)
 └── clf-2026.09.27-160831/        # 1 thư mục / lần chạy python -m app.lifecycle.train
     ├── model.joblib               # Pipeline Mô hình A đầy đủ (prep + knn)

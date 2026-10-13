@@ -213,7 +213,7 @@ Có test chặn lỗi này: `ml-service/tests/test_classifier.py` (`test_scaler_
 | Endpoint `/predict-segment` | `ml-service/app/main.py` (hàm `predict_segment`, dòng 86–120) |
 | Backend: gọi mô hình + quyết định VERIFIED/NEEDS_REVIEW | `backend/src/modules/laptops/segment.service.ts` (`predictSegment` dòng 59; `applySegmentLabel` dòng 104) |
 | Giao diện gợi ý phân khúc + 7 láng giềng | `frontend/src/components/admin/SegmentSuggester.tsx` |
-| Hàng đợi duyệt nhãn + khóa nhãn | `frontend/src/pages/admin/AdminReviewQueue.tsx` |
+| Hàng đợi duyệt nhãn | `frontend/src/pages/admin/AdminReviewQueue.tsx` |
 | Kiểm thử | `ml-service/tests/test_classifier.py` |
 | Tham số/kết quả từng phiên bản | `ml-service/artifacts/<phiên bản>/metadata.json` |
 
@@ -382,7 +382,7 @@ Tác động lên mô hình chỉ xảy ra ở bước 3; bản thân nút xuấ
 3. **Xóa máy thử** sau khi demo (icon thùng rác ở cuối dòng đó).
 
 **Demo 4 — hàng đợi "Duyệt nhãn"**: menu **Dữ liệu → Duyệt nhãn** (có huy hiệu số máy đang chờ). Mỗi thẻ hiện
-phân bố xác suất, ô chọn phân khúc, checkbox "Khóa nhãn, không cho mô hình thay đổi", nút Duyệt.
+phân bố xác suất, ô chọn phân khúc, nút Duyệt.
 
 ---
 

@@ -50,7 +50,7 @@ Dùng macro-F1 thay accuracy, so 3 cách: không xử lý, bỏ phiếu theo kho
 Ba lớp: kiểm tra đồng nhất và leave-one-out segment precision@5 (ngoại tuyến), 30 persona có ràng buộc kiểm chứng được, và tỷ lệ 👍 / tương tác thực tế (trực tuyến).
 
 **H8. Hệ thống tốt lên theo thời gian bằng cách nào?**
-Ba đường: máy mới làm giàu tập mẫu ngay (lazy learning), nhãn được nhân viên xác nhận → huấn luyện challenger → so golden test → duyệt, và phản hồi 👎 sinh đề xuất chỉnh trọng số.
+Ba đường: máy mới làm giàu tập mẫu ngay (lazy learning), nhãn được nhân viên xác nhận → huấn luyện challenger → so macro-F1 với bản đang dùng → duyệt, và phản hồi 👎 sinh đề xuất chỉnh trọng số.
 
 **H9. Vì sao không tự động promote mô hình mới?**
 Sai lầm của mô hình ảnh hưởng trực tiếp người mua. Quy tắc định lượng lọc trước, con người duyệt sau; có rollback một chạm.
